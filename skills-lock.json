@@ -1,6 +1,18 @@
 {
   "version": 1,
   "skills": {
+    "wp-block-themes": {
+      "source": "WordPress/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/wp-block-themes/SKILL.md",
+      "computedHash": "c3eac9e3af48647e13409944a38270dc13b516f4df7f070954568ae3521afe95"
+    },
+    "wp-patterns": {
+      "source": "WordPress/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/wp-patterns/SKILL.md",
+      "computedHash": "8214f7ea3a4f3be733d0ba45ae1ed0993c508f504798dc26b34d60550a1dfb89"
+    },
     "wp-plugin-development": {
       "source": "WordPress/agent-skills",
       "sourceType": "github",
