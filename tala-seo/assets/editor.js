@@ -1,6 +1,7 @@
 /**
- * Tala SEO in the block editor: the "SEO" panel (search preview, title, meta description,
- * minor edit, noindex, canonical) and a checklist in the pre-publish sidebar.
+ * Tala SEO in the block editor: the "SEO" panel (search preview, title and meta description with
+ * length meters, primary category, minor edit, noindex, canonical, redirect) and a checklist in the
+ * pre-publish sidebar.
  * Publishing is enforced on the server; this only explains what is missing.
  */
 ( function ( wp, cfg ) {
@@ -13,7 +14,8 @@
 	const el = wp.element.createElement;
 	const Fragment = wp.element.Fragment;
 	const { __, _n, sprintf } = wp.i18n;
-	const { TextControl, TextareaControl, ToggleControl } = wp.components;
+	const { SelectControl, TextControl, TextareaControl, ToggleControl } = wp.components;
+	const decodeEntities = wp.htmlEntities.decodeEntities;
 	const { useSelect } = wp.data;
 	const { useEntityProp } = wp.coreData;
 	const editorApi = wp.editor || {};
@@ -22,6 +24,99 @@
 	const PrePublishPanel = editorApi.PluginPrePublishPanel || legacyApi.PluginPrePublishPanel;
 	const KEYS = cfg.keys;
 	const NONE = [];
+
+	/*
+	 * Google shortens titles and descriptions by their width on screen, not their number of
+	 * characters: "W" takes far more room than "i". These widths are measured in Google's results
+	 * font.
+	 */
+	const GUIDE = {
+		title: { font: '18px arial, helvetica, sans-serif', lower: 200, goodLower: 280, goodUpper: 520, upper: 600 },
+		description: { font: '13px arial, helvetica, sans-serif', lower: 256, goodLower: 455, goodUpper: 910, upper: 1820 },
+	};
+	let measureContext = null;
+
+	function textWidth( text, font ) {
+		if ( ! measureContext ) {
+			measureContext = document.createElement( 'canvas' ).getContext( '2d' );
+		}
+		measureContext.font = font;
+		return Math.round( measureContext.measureText( text ).width );
+	}
+
+	// Cuts text to the width Google shows, after the last whole word, ending with an ellipsis.
+	function fitToWidth( text, font, max ) {
+		if ( textWidth( text, font ) <= max ) {
+			return text;
+		}
+		let low = 0;
+		let high = text.length;
+		while ( low < high ) {
+			const mid = Math.ceil( ( low + high ) / 2 );
+			if ( textWidth( text.slice( 0, mid ).trimEnd() + ' …', font ) <= max ) {
+				low = mid;
+			} else {
+				high = mid - 1;
+			}
+		}
+		const cut = text.slice( 0, low );
+		// Keep the last word when the cut falls right before a space; otherwise drop the partial one.
+		const space = /\s/.test( text.charAt( low ) ) ? low : cut.lastIndexOf( ' ' );
+		return ( space > 0 ? cut.slice( 0, space ) : cut ).replace( /[\s,;:.–—-]+$/, '' ) + ' …';
+	}
+
+	function lengthVerdict( kind, width ) {
+		const g = GUIDE[ kind ];
+		const name = kind === 'title' ? __( 'title', 'tala-seo' ) : __( 'description', 'tala-seo' );
+		if ( ! width ) {
+			return { state: 'empty', text: '' };
+		}
+		if ( width > g.upper ) {
+			/* translators: 1: "title" or "description", 2: width in pixels, 3: width Google shows. */
+			return { state: 'bad', text: sprintf( __( 'Too long: Google will cut this %1$s (%2$d px; about %3$d px fit).', 'tala-seo' ), name, width, g.goodUpper ) };
+		}
+		if ( width > g.goodUpper ) {
+			/* translators: 1: "title" or "description", 2: width in pixels, 3: width Google shows. */
+			return { state: 'okay', text: sprintf( __( 'Long: Google may shorten this %1$s on some screens (%2$d px; about %3$d px fit).', 'tala-seo' ), name, width, g.goodUpper ) };
+		}
+		if ( width < g.lower ) {
+			/* translators: 1: "title" or "description", 2: width in pixels. */
+			return { state: 'bad', text: sprintf( __( 'Very short: this %1$s says little about the page (%2$d px).', 'tala-seo' ), name, width ) };
+		}
+		if ( width < g.goodLower ) {
+			/* translators: 1: "title" or "description", 2: width in pixels. */
+			return { state: 'okay', text: sprintf( __( 'A little short: this %1$s has room for more (%2$d px).', 'tala-seo' ), name, width ) };
+		}
+		/* translators: 1: "title" or "description", 2: width in pixels, 3: width Google shows. */
+		return { state: 'good', text: sprintf( __( 'Good length: this %1$s fits in Google (%2$d of about %3$d px).', 'tala-seo' ), name, width, g.goodUpper ) };
+	}
+
+	/*
+	 * Rendered inside the field's help text (spans only: help is a <p>), so screen readers hear the
+	 * verdict with the field's description.
+	 */
+	function LengthMeter( props ) {
+		const g = GUIDE[ props.kind ];
+		const width = textWidth( props.text, g.font );
+		const verdict = lengthVerdict( props.kind, width );
+		if ( verdict.state === 'empty' ) {
+			return null;
+		}
+		return el(
+			'span',
+			{ className: 'tala-seo-meter is-' + verdict.state },
+			el( 'meter', {
+				min: 0,
+				max: g.upper,
+				low: g.goodLower,
+				high: g.goodUpper,
+				optimum: ( g.goodLower + g.goodUpper ) / 2,
+				value: Math.min( width, g.upper ),
+				'aria-hidden': 'true',
+			} ),
+			el( 'span', { className: 'tala-seo-meter__text' }, verdict.text )
+		);
+	}
 
 	function countImagesWithoutAlt( blocks ) {
 		let count = 0;
@@ -50,6 +145,7 @@
 				featuredId: featuredId,
 				media: featuredId ? core.getMedia( featuredId ) : null,
 				categories: editor.getEditedPostAttribute( 'categories' ) || NONE,
+				hasCategories: cfg.primaryTypes.indexOf( editor.getCurrentPostType() ) !== -1,
 				author: authorId ? core.getEntityRecord( 'root', 'user', authorId, { context: 'view' } ) : null,
 				imagesWithoutAlt: countImagesWithoutAlt( select( 'core/block-editor' ).getBlocks() ),
 			};
@@ -80,6 +176,12 @@
 			advice.push( {
 				ok: false,
 				label: __( 'The whole site is hidden from search engines (Settings → Reading)', 'tala-seo' ),
+			} );
+		}
+		if ( String( s.meta[ KEYS.redirect ] || '' ).trim() ) {
+			advice.push( {
+				ok: false,
+				label: __( 'This post redirects to another address, so visitors won\'t see it', 'tala-seo' ),
 			} );
 		}
 		if ( needed.indexOf( 'description' ) !== -1 ) {
@@ -195,11 +297,15 @@
 		}
 	}
 
+	function fullTitle( s ) {
+		const custom = String( s.meta[ KEYS.title ] || '' ).trim();
+		return ( custom || s.title || __( '(no title)', 'tala-seo' ) ) + ' ' + cfg.separator + ' ' + cfg.siteName;
+	}
+
 	function SearchPreview( props ) {
 		const s = props.seo;
-		const custom = String( s.meta[ KEYS.title ] || '' ).trim();
-		const title = ( custom || s.title || __( '(no title)', 'tala-seo' ) ) + ' ' + cfg.separator + ' ' + cfg.siteName;
-		const description = String( s.meta[ KEYS.description ] || '' ).trim();
+		const title = fitToWidth( fullTitle( s ), GUIDE.title.font, GUIDE.title.upper );
+		const description = fitToWidth( String( s.meta[ KEYS.description ] || '' ).trim(), GUIDE.description.font, GUIDE.description.goodUpper );
 		return el(
 			'div',
 			{ className: 'tala-seo-preview', role: 'img', 'aria-label': __( 'Preview of the Google search result', 'tala-seo' ) },
@@ -212,6 +318,38 @@
 				description || __( 'Add a meta description to choose the text shown here.', 'tala-seo' )
 			)
 		);
+	}
+
+	function PrimaryCategory( props ) {
+		const s = props.seo;
+		const ids = s.categories;
+		const terms = useSelect(
+			function ( select ) {
+				return ids.length > 1
+					? select( 'core' ).getEntityRecords( 'taxonomy', 'category', { include: ids, per_page: 100, context: 'view' } )
+					: null;
+			},
+			[ ids.join( ',' ) ]
+		);
+		if ( ! s.hasCategories || ids.length < 2 || ! terms ) {
+			return null;
+		}
+		const current = Number( s.meta[ KEYS.primary ] || 0 );
+		return el( SelectControl, {
+			__nextHasNoMarginBottom: true,
+			__next40pxDefaultSize: true,
+			label: __( 'Primary category', 'tala-seo' ),
+			value: ids.indexOf( current ) !== -1 ? current : 0,
+			options: [ { label: __( 'Automatic (the first category)', 'tala-seo' ), value: 0 } ].concat(
+				terms.map( function ( term ) {
+					return { label: decodeEntities( term.name ), value: term.id };
+				} )
+			),
+			help: __( 'Leads the breadcrumbs, and the address too if it contains the category.', 'tala-seo' ),
+			onChange: function ( value ) {
+				s.set( KEYS.primary, Number( value ) );
+			},
+		} );
 	}
 
 	function SeoPanel() {
@@ -237,7 +375,13 @@
 				label: __( 'SEO title', 'tala-seo' ),
 				value: s.meta[ KEYS.title ] || '',
 				placeholder: s.title,
-				help: __( 'Leave empty to use the post title. The site name is added at the end.', 'tala-seo' ),
+				help: el(
+					Fragment,
+					null,
+					el( LengthMeter, { kind: 'title', text: fullTitle( s ) } ),
+					' ',
+					__( 'Leave empty to use the post title. The site name is added at the end.', 'tala-seo' )
+				),
 				onChange: function ( value ) {
 					s.set( KEYS.title, value );
 				},
@@ -247,11 +391,18 @@
 				label: descriptionRequired ? __( 'Meta description (required)', 'tala-seo' ) : __( 'Meta description', 'tala-seo' ),
 				value: description,
 				rows: 4,
-				help: count + ' ' + __( 'Summarize the page in a sentence or two. Google may shorten long descriptions in results.', 'tala-seo' ),
+				help: el(
+					Fragment,
+					null,
+					el( LengthMeter, { kind: 'description', text: description.trim() } ),
+					' ',
+					count + ' ' + __( 'Summarize the page in a sentence or two.', 'tala-seo' )
+				),
 				onChange: function ( value ) {
 					s.set( KEYS.description, value );
 				},
 			} ),
+			el( PrimaryCategory, { seo: s } ),
 			s.isLive
 				? el( ToggleControl, {
 						__nextHasNoMarginBottom: true,
@@ -282,6 +433,18 @@
 				help: __( 'Only when this content was first published at another address. Leave empty otherwise.', 'tala-seo' ),
 				onChange: function ( value ) {
 					s.set( KEYS.canonical, value );
+				},
+			} ),
+			el( TextControl, {
+				__nextHasNoMarginBottom: true,
+				__next40pxDefaultSize: true,
+				type: 'url',
+				label: __( 'Redirect to (advanced)', 'tala-seo' ),
+				value: s.meta[ KEYS.redirect ] || '',
+				placeholder: 'https://',
+				help: __( 'Sends visitors and search engines from this post to another address (301), for example after merging two guides. Leave empty otherwise.', 'tala-seo' ),
+				onChange: function ( value ) {
+					s.set( KEYS.redirect, value );
 				},
 			} ),
 			el( Checks, { seo: s } )

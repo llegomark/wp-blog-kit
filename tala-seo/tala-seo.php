@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Tala SEO
  * Description:       Lean SEO for blogs: titles, meta descriptions, canonicals, Open Graph, JSON-LD structured data, visible breadcrumbs, sitemap and robots.txt tuning, and a publish check that blocks posts without a meta description or featured image.
- * Version:           1.2.0
+ * Version:           1.3.0
  * Requires at least: 6.6
  * Requires PHP:      8.1
  * Author:            Mark Anthony Llego
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const TALA_SEO_VERSION = '1.2.0';
+const TALA_SEO_VERSION = '1.3.0';
 const TALA_SEO_FILE    = __FILE__;
 
 // Post meta keys. The leading underscore hides them from the Custom Fields box.
@@ -26,10 +26,15 @@ const TALA_SEO_DESCRIPTION = '_tala_seo_description';
 const TALA_SEO_CANONICAL   = '_tala_seo_canonical';
 const TALA_SEO_NOINDEX     = '_tala_seo_noindex';
 
+// Post meta: the category that leads the breadcrumbs, and an address the post sends visitors to.
+const TALA_SEO_PRIMARY_CATEGORY = '_tala_seo_primary_category';
+const TALA_SEO_REDIRECT         = '_tala_seo_redirect';
+
 // Post and term meta: addresses a page or term archive had before it moved (see redirects.php).
 const TALA_SEO_OLD_PATH = '_tala_seo_old_path';
 
 require __DIR__ . '/includes/helpers.php';
+require __DIR__ . '/includes/terms.php';
 require __DIR__ . '/includes/head.php';
 require __DIR__ . '/includes/schema.php';
 require __DIR__ . '/includes/breadcrumbs.php';
@@ -40,6 +45,8 @@ require __DIR__ . '/includes/redirects.php';
 
 if ( is_admin() ) {
 	require __DIR__ . '/includes/admin.php';
+	require __DIR__ . '/includes/admin-fields.php';
+	require __DIR__ . '/includes/admin-columns.php';
 }
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
@@ -131,6 +138,32 @@ function tala_seo_register_meta(): void {
 				'auth_callback' => $can_edit,
 			)
 		);
+		register_post_meta(
+			$type,
+			TALA_SEO_REDIRECT,
+			array(
+				'type'              => 'string',
+				'single'            => true,
+				'default'           => '',
+				'show_in_rest'      => true,
+				'sanitize_callback' => 'tala_seo_sanitize_redirect',
+				'auth_callback'     => $can_edit,
+			)
+		);
+		if ( is_object_in_taxonomy( $type, 'category' ) ) {
+			register_post_meta(
+				$type,
+				TALA_SEO_PRIMARY_CATEGORY,
+				array(
+					'type'              => 'integer',
+					'single'            => true,
+					'default'           => 0,
+					'show_in_rest'      => true,
+					'sanitize_callback' => 'absint',
+					'auth_callback'     => $can_edit,
+				)
+			);
+		}
 	}
 
 	// Crops in the three aspect ratios Google recommends for article images. Sized so that any

@@ -97,21 +97,17 @@ function tala_seo_term_ancestor_crumbs( $term ) {
 }
 
 /**
- * The category a post belongs to "most": the primary category set in Yoast or Rank Math if any,
- * otherwise the first category that isn't the default "Uncategorized" one.
+ * The category a post belongs to "most": the primary category chosen in the SEO panel, else one
+ * chosen in Yoast SEO, Rank Math, The SEO Framework or SEOPress, else the first category that isn't
+ * the default "Uncategorized" one. A choice only counts while the post is still in that category.
  *
  * @param int $post_id Post ID.
  * @return WP_Term|null
  */
 function tala_seo_primary_category( $post_id ) {
-	foreach ( array( '_yoast_wpseo_primary_category', 'rank_math_primary_category' ) as $key ) {
-		$id = (int) get_post_meta( $post_id, $key, true );
-		if ( $id && has_term( $id, 'category', $post_id ) ) {
-			$term = get_term( $id, 'category' );
-			if ( $term instanceof WP_Term ) {
-				return $term;
-			}
-		}
+	$chosen = tala_seo_chosen_primary_category( $post_id );
+	if ( $chosen ) {
+		return $chosen;
 	}
 	$categories = get_the_category( $post_id );
 	if ( ! $categories ) {
@@ -124,6 +120,43 @@ function tala_seo_primary_category( $post_id ) {
 		}
 	}
 	return $categories[0];
+}
+
+/**
+ * The primary category someone chose for a post (here or in a previous SEO plugin), or null.
+ *
+ * @param int $post_id Post ID.
+ * @return WP_Term|null
+ */
+function tala_seo_chosen_primary_category( $post_id ) {
+	$keys = array( TALA_SEO_PRIMARY_CATEGORY, '_yoast_wpseo_primary_category', 'rank_math_primary_category', '_primary_term_category', '_seopress_robots_primary_cat' );
+	foreach ( $keys as $key ) {
+		$id = (int) get_post_meta( $post_id, $key, true );
+		if ( $id && has_term( $id, 'category', $post_id ) ) {
+			$term = get_term( $id, 'category' );
+			if ( $term instanceof WP_Term ) {
+				return $term;
+			}
+		}
+	}
+	return null;
+}
+
+add_filter( 'post_link_category', 'tala_seo_permalink_category', 10, 3 );
+
+/**
+ * On sites whose permalinks contain %category%, a chosen primary category is the one in the address
+ * too, so the URL and the breadcrumbs agree. That includes a choice made in Yoast SEO, Rank Math,
+ * The SEO Framework or SEOPress, which put it in the address as well, so addresses survive the
+ * switch. Without a choice WordPress's own pick stays, so no existing address changes.
+ *
+ * @param WP_Term   $category The category WordPress picked (the one with the lowest ID).
+ * @param WP_Term[] $cats     The post's categories.
+ * @param WP_Post   $post     Post.
+ * @return WP_Term
+ */
+function tala_seo_permalink_category( $category, $cats, $post ) {
+	return tala_seo_chosen_primary_category( $post->ID ) ?? $category;
 }
 
 add_action( 'init', 'tala_seo_register_breadcrumbs_block' );

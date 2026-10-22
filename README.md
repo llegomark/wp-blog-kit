@@ -12,30 +12,33 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 ## What Tala SEO does
 
 - **Won't publish a post without** a meta description, a featured image, and alternative text on that image (pages need a description only). This is enforced on the server, so it holds for the editor, Quick Edit, the REST API and WP-CLI. Already-published posts stay editable.
-- **SEO panel in the editor:** Google-style preview, SEO title, meta description, "minor edit" switch (keeps the Updated date for typo fixes), hide from search engines, canonical URL. When you press Publish, a checklist shows what's needed and what Google recommends.
+- **SEO panel in the editor:** Google-style preview, SEO title and meta description with pixel-length meters (Google cuts by width, not characters), primary category, "minor edit" switch (keeps the Updated date for typo fixes), hide from search engines, canonical URL, redirect. When you press Publish, a checklist shows what's needed and what Google recommends.
+- **SEO column** in the Posts, Pages, Categories and Tags lists: description, image, hidden, redirect and more at a glance. Symbols and words carry the meaning, so it doesn't rely on colour.
+- **Categories, tags and author pages** get their own SEO title, meta description and "hide from search engines" switch.
 - **In `<head>`:**
   - `<title>` as "Title | Site name"
   - meta description
   - self-referencing canonical (each page of an archive is its own canonical)
-  - noindex for search results, 404s, date archives and tag pages with fewer posts than the minimum in Settings → SEO (2 by default)
-  - Open Graph and Twitter card tags
+  - noindex for search results, 404s, date archives, empty categories and tag pages with fewer posts than the minimum in Settings → SEO (2 by default)
+  - Open Graph and Twitter card tags, and `fediverse:creator` for authors with a Fediverse handle
+- **`X-Robots-Tag: noindex, follow`** on feeds and sitemaps, so they don't appear in search results themselves.
 - **JSON-LD** (following Google Search Central, October 2026):
   - home page: WebSite and Organization (or Person), with the home description
   - posts: BlogPosting, with the image in 16:9, 4:3 and 1:1 crops and dates with timezone
   - author pages: ProfilePage
   - breadcrumbs: BreadcrumbList matching the visible trail
   - FAQ, HowTo and SearchAction are deliberately left out; Google retired those rich results.
-- **Sitemap:** WordPress's own `/wp-sitemap.xml`, with accurate `lastmod`, without noindexed posts, small tag pages or post formats. Like WordPress, it exists only while search engines may index the site.
+- **Sitemap:** WordPress's own `/wp-sitemap.xml`, with accurate `lastmod`, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, hidden author pages or post formats. Like WordPress, it exists only while search engines may index the site.
 - **robots.txt:** points to the sitemap and blocks nothing else. AI crawlers are welcome.
-- **Redirects:** when a page, category or tag gets a new address (slug or parent), the old address answers with a 301 to the new one, children and paginated archives included. WordPress does this for posts only.
+- **Redirects:** when a page, category or tag gets a new address (slug or parent), the old address answers with a 301 to the new one, children and paginated archives included. WordPress does this for posts only. A post can also redirect on purpose (SEO panel → Redirect to).
 - **Permalinks:** a one-click switch from plain URLs (`?p=123`) to post-name URLs in the setup checklist, and a warning on Settings → Permalinks before a change gives every published post a new address. Nothing changes without the admin pressing the button.
 - **Hidden-site warning:** while Settings → Reading discourages search engines, every admin screen and the pre-publish checklist say so.
-- **Authors:** a real author photo (no Gravatar request) and social profile links, which feed the Person markup.
+- **Authors:** a real author photo (no Gravatar request), social profile links (TikTok and Mastodon included) that feed the Person markup, and a Fediverse handle.
 - **Settings → SEO:** who runs the site, official profiles, home description, default share image, the minimum posts for an indexable tag page, and a setup checklist (search engine visibility, site icon, logo, tagline, permalinks, author bios).
 - **WP-CLI:**
   - `wp tala-seo audit` lists published posts that are missing something.
-  - `wp tala-seo import` copies titles and descriptions from Yoast SEO or Rank Math.
-  - Post meta keys for agents: `_tala_seo_description`, `_tala_seo_title`, `_tala_seo_noindex`, `_tala_seo_canonical`.
+  - `wp tala-seo import` copies titles, descriptions, canonicals, noindex, primary categories and redirects from Yoast SEO, Rank Math, The SEO Framework or SEOPress, for posts, categories, tags and authors.
+  - Post meta keys for agents: `_tala_seo_description`, `_tala_seo_title`, `_tala_seo_noindex`, `_tala_seo_canonical`, `_tala_seo_redirect`, `_tala_seo_primary_category`.
 
 ## Using it on a new site
 

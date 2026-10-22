@@ -254,3 +254,28 @@ function tala_seo_moved_target( $request, $candidates ) {
 	}
 	return '';
 }
+
+add_action( 'template_redirect', 'tala_seo_redirect_post', 1 );
+
+/**
+ * Sends visitors of a post with a redirect address to that address (301): for a guide merged into
+ * another, or retired in favour of one elsewhere. Previews still show the post to people who may
+ * edit it, so they can see what they are changing.
+ */
+function tala_seo_redirect_post(): void {
+	if ( ! is_singular( tala_seo_post_types() ) ) {
+		return;
+	}
+	$id = get_queried_object_id();
+	if ( is_preview() && current_user_can( 'edit_post', $id ) ) {
+		return;
+	}
+	$target = tala_seo_post_redirect( $id );
+	if ( '' === $target || untrailingslashit( $target ) === untrailingslashit( (string) get_permalink( $id ) ) ) {
+		return;
+	}
+	// wp_redirect(), not wp_safe_redirect(): the target may be on another site on purpose, and only
+	// people who may edit the post can set it.
+	wp_redirect( $target, 301, 'Tala SEO' ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- see above.
+	exit;
+}

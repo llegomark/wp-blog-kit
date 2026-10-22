@@ -21,7 +21,7 @@ function tala_seo_editor_assets(): void {
 	wp_enqueue_script(
 		'tala-seo-editor',
 		$base . 'editor.js',
-		array( 'wp-components', 'wp-core-data', 'wp-data', 'wp-edit-post', 'wp-editor', 'wp-element', 'wp-i18n', 'wp-plugins', 'wp-block-editor' ),
+		array( 'wp-components', 'wp-core-data', 'wp-data', 'wp-edit-post', 'wp-editor', 'wp-element', 'wp-html-entities', 'wp-i18n', 'wp-plugins', 'wp-block-editor' ),
 		TALA_SEO_VERSION,
 		true
 	);
@@ -31,14 +31,18 @@ function tala_seo_editor_assets(): void {
 	foreach ( tala_seo_post_types() as $type ) {
 		$requirements[ $type ] = tala_seo_publish_requirements( $type );
 	}
-	$config = array(
+	$category_types = array_values( array_filter( tala_seo_post_types(), static fn( $type ) => is_object_in_taxonomy( $type, 'category' ) ) );
+	$config         = array(
 		'keys'            => array(
 			'title'       => TALA_SEO_TITLE,
 			'description' => TALA_SEO_DESCRIPTION,
 			'canonical'   => TALA_SEO_CANONICAL,
 			'noindex'     => TALA_SEO_NOINDEX,
 			'minorEdit'   => TALA_SEO_MINOR_EDIT,
+			'redirect'    => TALA_SEO_REDIRECT,
+			'primary'     => TALA_SEO_PRIMARY_CATEGORY,
 		),
+		'primaryTypes'    => $category_types,
 		'requirements'    => $requirements,
 		'siteName'        => tala_seo_site_name(),
 		'separator'       => '|',

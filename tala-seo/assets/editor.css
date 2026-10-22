@@ -29,13 +29,10 @@
 	color: #1a0dab;
 }
 
+/* Not clamped by lines: editor.js shortens it to the width Google shows. */
 .tala-seo-preview__description {
 	font-size: 13px;
 	color: #4d5156;
-	display: -webkit-box;
-	-webkit-line-clamp: 3;
-	-webkit-box-orient: vertical;
-	overflow: hidden;
 }
 
 .tala-seo-preview__description.is-empty {
@@ -80,4 +77,35 @@
 
 .tala-seo-prepublish__note {
 	color: #d63638;
+}
+
+/* Length meters, inside the field's help: the words carry the verdict; the bar and colour only help. */
+.tala-seo-meter {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	margin-bottom: 6px;
+}
+
+.tala-seo-meter meter {
+	width: 100%;
+	height: 6px;
+}
+
+.tala-seo-meter.is-good .tala-seo-meter__text {
+	color: #007017;
+}
+
+.tala-seo-meter.is-okay .tala-seo-meter__text {
+	color: #8a5a00;
+}
+
+.tala-seo-meter.is-bad .tala-seo-meter__text {
+	color: #b32d2e;
+}
+
+@media (forced-colors: active) {
+	.tala-seo-meter .tala-seo-meter__text {
+		color: CanvasText;
+	}
 }

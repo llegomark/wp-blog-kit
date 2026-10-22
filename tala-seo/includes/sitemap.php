@@ -44,8 +44,9 @@ function tala_seo_sitemap_taxonomies( $taxonomies ) {
 add_filter( 'wp_sitemaps_taxonomies_query_args', 'tala_seo_sitemap_skip_thin_terms', 10, 2 );
 
 /**
- * Lists only tag pages with enough posts; smaller ones carry noindex until they grow. Core counts
- * the sitemap's pages with the same arguments, so paging stays correct.
+ * Lists only the category and tag pages that may be indexed: not the ones marked hidden, nor tag
+ * pages with too few posts. Core counts the sitemap's pages with the same arguments, so paging
+ * stays correct.
  *
  * @param array<string, mixed> $args     WP_Term_Query arguments.
  * @param string               $taxonomy Taxonomy.
@@ -60,30 +61,31 @@ function tala_seo_sitemap_skip_thin_terms( $args, $taxonomy ) {
 }
 
 /**
- * IDs of the terms whose archives are big enough to be indexed, or null when every archive of the
- * taxonomy may be indexed (it isn't one with a minimum, or the minimum is off).
+ * IDs of the terms whose archives may be indexed, or null when all of them may (nothing to leave
+ * out). A term is left out when it is marked hidden or, for tags, has too few posts.
  *
  * @param string $taxonomy Taxonomy.
  * @return int[]|null
  */
 function tala_seo_indexable_term_ids( $taxonomy ) {
 	static $cache = array();
-	if ( tala_seo_settings()['tag_min_posts'] < 2 || ! in_array( $taxonomy, tala_seo_thin_taxonomies(), true ) ) {
-		return null;
-	}
-	if ( ! isset( $cache[ $taxonomy ] ) ) {
-		$cache[ $taxonomy ] = array();
-		$terms              = get_terms(
+	if ( ! array_key_exists( $taxonomy, $cache ) ) {
+		$ids    = array();
+		$hidden = 0;
+		$terms  = get_terms(
 			array(
 				'taxonomy'   => $taxonomy,
 				'hide_empty' => true,
 			)
 		);
 		foreach ( is_array( $terms ) ? $terms : array() as $term ) {
-			if ( ! tala_seo_is_thin_term( $term ) ) {
-				$cache[ $taxonomy ][] = $term->term_id;
+			if ( tala_seo_is_thin_term( $term ) || '1' === tala_seo_term_value( $term, 'noindex' ) ) {
+				++$hidden;
+			} else {
+				$ids[] = $term->term_id;
 			}
 		}
+		$cache[ $taxonomy ] = $hidden ? $ids : null;
 	}
 	return $cache[ $taxonomy ];
 }
@@ -91,25 +93,83 @@ function tala_seo_indexable_term_ids( $taxonomy ) {
 add_filter( 'wp_sitemaps_posts_query_args', 'tala_seo_sitemap_skip_noindex' );
 
 /**
- * Leaves posts marked "hide from search engines" out of the sitemap.
+ * Leaves out of the sitemap the posts marked "hide from search engines", and the ones that redirect
+ * elsewhere (their address is no longer a page of their own).
  *
  * @param array<string, mixed> $args WP_Query arguments.
  * @return array<string, mixed>
  */
 function tala_seo_sitemap_skip_noindex( $args ) {
-	$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- sitemap pages are cached.
+	$args = tala_seo_add_meta_query(
+		$args,
+		array(
+			'relation' => 'AND',
+			tala_seo_meta_unset_query( TALA_SEO_NOINDEX, '1', '!=' ),
+			tala_seo_meta_unset_query( TALA_SEO_REDIRECT, '', '=' ),
+		)
+	);
+	// With %category% in the address, every URL reads the post's primary category from its meta:
+	// load the meta of the whole page in one query instead of one per post.
+	if ( str_contains( (string) get_option( 'permalink_structure' ), '%category%' ) ) {
+		$args['update_post_meta_cache'] = true;
+	}
+	return $args;
+}
+
+add_filter( 'wp_sitemaps_users_query_args', 'tala_seo_sitemap_skip_hidden_authors' );
+
+/**
+ * Lists the author pages that have something to show: authors of published posts (author
+ * archives list posts only, so someone who only wrote pages has an empty, noindexed one), without
+ * the ones marked "hide from search engines".
+ *
+ * @param array<string, mixed> $args WP_User_Query arguments.
+ * @return array<string, mixed>
+ */
+function tala_seo_sitemap_skip_hidden_authors( $args ) {
+	$args['has_published_posts'] = array( 'post' );
+	return tala_seo_add_meta_query( $args, tala_seo_meta_unset_query( TALA_SEO_NOINDEX, '1', '!=' ) );
+}
+
+/**
+ * Adds a meta query clause to query arguments, keeping any clause another plugin set.
+ *
+ * @param array<string, mixed>     $args   WP_Query or WP_User_Query arguments.
+ * @param array<int|string, mixed> $clause Meta query clause.
+ * @return array<string, mixed>
+ */
+function tala_seo_add_meta_query( $args, $clause ) {
+	$existing = $args['meta_query'] ?? array();
+	// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- runs on sitemap requests only.
+	$args['meta_query'] = is_array( $existing ) && $existing ? array(
+		'relation' => 'AND',
+		$existing,
+		$clause,
+	) : $clause;
+	return $args;
+}
+
+/**
+ * A meta query clause: the key isn't set, or its value compares as given (e.g. noindex != '1').
+ *
+ * @param string $key     Meta key.
+ * @param string $value   Value.
+ * @param string $compare Comparison operator.
+ * @return array<int|string, mixed>
+ */
+function tala_seo_meta_unset_query( $key, $value, $compare ) {
+	return array(
 		'relation' => 'OR',
 		array(
-			'key'     => TALA_SEO_NOINDEX,
+			'key'     => $key,
 			'compare' => 'NOT EXISTS',
 		),
 		array(
-			'key'     => TALA_SEO_NOINDEX,
-			'value'   => '1',
-			'compare' => '!=',
+			'key'     => $key,
+			'value'   => $value,
+			'compare' => $compare,
 		),
 	);
-	return $args;
 }
 
 add_filter( 'wp_sitemaps_posts_entry', 'tala_seo_sitemap_lastmod', 10, 2 );

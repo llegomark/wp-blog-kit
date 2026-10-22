@@ -1,0 +1,49 @@
+/* Tala SEO: the SEO column in post and term lists. Symbols carry the meaning; colours only help.
+   Each colour has at least 4.5:1 contrast on white. */
+
+/* One item per line keeps the column narrow, so the Title column keeps its room. */
+.fixed .column-tala_seo {
+	width: 7.5em;
+}
+
+.tala-seo-status {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin: 0;
+}
+
+.tala-seo-status__item {
+	margin: 0;
+	white-space: nowrap;
+}
+
+.tala-seo-status__mark {
+	display: inline-block;
+	min-width: 1.1em;
+	margin-inline-end: 2px;
+	font-weight: 700;
+	text-align: center;
+}
+
+.tala-seo-status .is-good .tala-seo-status__mark {
+	color: #007017;
+}
+
+.tala-seo-status .is-warn .tala-seo-status__mark {
+	color: #8a5a00;
+}
+
+.tala-seo-status .is-bad .tala-seo-status__mark {
+	color: #b32d2e;
+}
+
+.tala-seo-status .is-info .tala-seo-status__mark {
+	color: #135e96;
+}
+
+@media (forced-colors: active) {
+	.tala-seo-status__mark {
+		color: CanvasText;
+	}
+}

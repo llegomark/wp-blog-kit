@@ -95,8 +95,9 @@ function tala_seo_site_name() {
 }
 
 /**
- * Values another SEO plugin may have left on a post (Yoast SEO, Rank Math), so a migrated
- * site keeps its descriptions until they are imported with `wp tala-seo import`.
+ * Values another SEO plugin may have left on a post (Yoast SEO, Rank Math, The SEO Framework,
+ * SEOPress), so a migrated site keeps its titles and descriptions until they are imported with
+ * `wp tala-seo import`.
  *
  * @param int    $post_id Post ID.
  * @param string $field   title | description | canonical | noindex.
@@ -104,12 +105,14 @@ function tala_seo_site_name() {
  */
 function tala_seo_legacy_value( $post_id, $field ) {
 	$keys = array(
-		'title'       => array( '_yoast_wpseo_title', 'rank_math_title' ),
-		'description' => array( '_yoast_wpseo_metadesc', 'rank_math_description' ),
-		'canonical'   => array( '_yoast_wpseo_canonical', 'rank_math_canonical_url' ),
+		'title'       => array( '_yoast_wpseo_title', 'rank_math_title', '_genesis_title', '_seopress_titles_title' ),
+		'description' => array( '_yoast_wpseo_metadesc', 'rank_math_description', '_genesis_description', '_seopress_titles_desc' ),
+		'canonical'   => array( '_yoast_wpseo_canonical', 'rank_math_canonical_url', '_genesis_canonical_uri', '_seopress_robots_canonical' ),
 	);
 	if ( 'noindex' === $field ) {
-		if ( '1' === get_post_meta( $post_id, '_yoast_wpseo_meta-robots-noindex', true ) ) {
+		if ( '1' === get_post_meta( $post_id, '_yoast_wpseo_meta-robots-noindex', true )
+			|| '1' === (string) get_post_meta( $post_id, '_genesis_noindex', true )
+			|| 'yes' === get_post_meta( $post_id, '_seopress_robots_index', true ) ) {
 			return '1';
 		}
 		$rank = get_post_meta( $post_id, 'rank_math_robots', true );
@@ -251,12 +254,55 @@ function tala_seo_author_profiles( $user_id ) {
  */
 function tala_seo_social_fields() {
 	return array(
-		'tala_facebook'  => __( 'Facebook profile URL', 'tala-seo' ),
-		'tala_x'         => __( 'X (Twitter) profile URL', 'tala-seo' ),
-		'tala_linkedin'  => __( 'LinkedIn profile URL', 'tala-seo' ),
-		'tala_youtube'   => __( 'YouTube channel URL', 'tala-seo' ),
-		'tala_instagram' => __( 'Instagram profile URL', 'tala-seo' ),
+		'tala_facebook'      => __( 'Facebook profile URL', 'tala-seo' ),
+		'tala_x'             => __( 'X (Twitter) profile URL', 'tala-seo' ),
+		'tala_linkedin'      => __( 'LinkedIn profile URL', 'tala-seo' ),
+		'tala_youtube'       => __( 'YouTube channel URL', 'tala-seo' ),
+		'tala_instagram'     => __( 'Instagram profile URL', 'tala-seo' ),
+		'tala_tiktok'        => __( 'TikTok profile URL', 'tala-seo' ),
+		'tala_fediverse_url' => __( 'Mastodon (Fediverse) profile URL', 'tala-seo' ),
 	);
+}
+
+/**
+ * A redirect target: an absolute http(s) address, or ''.
+ *
+ * @param mixed $value Raw value.
+ * @return string
+ */
+function tala_seo_sanitize_redirect( $value ) {
+	$url = esc_url_raw( trim( (string) $value ), array( 'http', 'https' ) );
+	return '' !== $url && wp_parse_url( $url, PHP_URL_HOST ) ? $url : '';
+}
+
+/**
+ * The address a post sends its visitors to (its redirect field), or ''.
+ *
+ * @param int $post_id Post ID.
+ * @return string
+ */
+function tala_seo_post_redirect( $post_id ) {
+	return tala_seo_sanitize_redirect( get_post_meta( $post_id, TALA_SEO_REDIRECT, true ) );
+}
+
+/**
+ * A Fediverse handle in the "@user@instance" form Mastodon expects for fediverse:creator, or ''.
+ * Accepts "user@instance", "@user@instance" and "acct:user@instance". A profile URL is not
+ * accepted: Mastodon reads a URL there as a handle and can drop the whole link preview, and
+ * guessing the handle from a URL can be wrong (the profile URL has a field of its own).
+ *
+ * @param mixed $value Raw value.
+ * @return string
+ */
+function tala_seo_sanitize_fediverse_handle( $value ) {
+	$value = trim( (string) $value );
+	if ( str_starts_with( $value, 'acct:' ) ) {
+		$value = substr( $value, 5 );
+	}
+	if ( ! preg_match( '/^@?([a-z0-9_][a-z0-9_.-]*)@((?:[a-z0-9-]+\.)+[a-z]{2,})$/i', $value, $parts ) ) {
+		return '';
+	}
+	return '@' . $parts[1] . '@' . strtolower( $parts[2] );
 }
 
 /**
