@@ -34,6 +34,8 @@ add_filter( 'document_title_parts', 'tala_seo_title_parts' );
 
 /**
  * Uses the post's SEO title (when set) in place of the post title; the site name stays at the end.
+ * A page whose name is the site name (say, an author named after the brand) gets the name once,
+ * not "Name | Name".
  *
  * @param array<string, string> $parts Title parts.
  * @return array<string, string>
@@ -44,6 +46,10 @@ function tala_seo_title_parts( $parts ) {
 		if ( '' !== $custom ) {
 			$parts['title'] = $custom;
 		}
+	}
+	if ( isset( $parts['title'], $parts['site'] )
+		&& 0 === strcasecmp( tala_seo_clean_text( $parts['title'] ), tala_seo_clean_text( $parts['site'] ) ) ) {
+		unset( $parts['site'] );
 	}
 	return $parts;
 }
@@ -63,8 +69,7 @@ function tala_seo_current_description() {
 		return $text;
 	}
 	if ( is_front_page() || is_home() ) {
-		$text = tala_seo_settings()['home_description'];
-		return '' !== $text ? $text : tala_seo_clean_text( get_bloginfo( 'description' ) );
+		return tala_seo_home_description();
 	}
 	if ( is_category() || is_tag() || is_tax() ) {
 		return tala_seo_clean_text( term_description(), 60 );
@@ -81,7 +86,7 @@ function tala_seo_current_description() {
  * @return string
  */
 function tala_seo_current_canonical() {
-	if ( is_404() || is_search() || is_date() || is_preview() ) {
+	if ( is_404() || is_search() || is_date() || is_preview() || tala_seo_is_thin_archive() ) {
 		return '';
 	}
 	if ( is_singular() ) {
@@ -124,21 +129,36 @@ add_filter( 'wp_robots', 'tala_seo_robots' );
 
 /**
  * Noindex for pages that shouldn't appear in search: internal search results, 404s, date
- * archives (duplicates of the post list) and posts the author marked as hidden.
+ * archives (duplicates of the post list), tag pages with too few posts and posts the author
+ * marked as hidden.
  *
  * @param array<string, bool|string> $robots Robots directives.
  * @return array<string, bool|string>
  */
 function tala_seo_robots( $robots ) {
-	$hide = is_search() || is_404() || is_date();
+	$hide = is_search() || is_404() || is_date() || tala_seo_is_thin_archive();
 	if ( is_singular() && tala_seo_post_noindex( get_queried_object_id() ) ) {
 		$hide = true;
 	}
 	if ( $hide ) {
 		$robots['noindex'] = true;
-		$robots['follow']  = true;
+		// Links on the page stay followable, unless the whole site is hidden (Settings → Reading
+		// adds "nofollow"); "nofollow, follow" would contradict itself.
+		if ( empty( $robots['nofollow'] ) ) {
+			$robots['follow'] = true;
+		}
 	}
 	return $robots;
+}
+
+/**
+ * Whether the current page is a tag (or other term) archive with too few posts for search results.
+ *
+ * @return bool
+ */
+function tala_seo_is_thin_archive() {
+	$term = get_queried_object();
+	return ( is_category() || is_tag() || is_tax() ) && $term instanceof WP_Term && tala_seo_is_thin_term( $term );
 }
 
 add_action( 'wp_head', 'tala_seo_print_head', 1 );

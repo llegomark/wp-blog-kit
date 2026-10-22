@@ -5,7 +5,7 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 | Folder | What it is |
 |---|---|
 | `tala-blog/` | Block theme. Pad-paper look, automatic chalkboard dark mode, system fonts (no downloads), labelled Published/Updated dates, author box with bio under every article, breadcrumbs. |
-| `tala-seo/` | SEO plugin. Titles, meta descriptions, canonicals, robots rules, Open Graph, JSON-LD, sitemap and robots.txt tuning, and a publish check. |
+| `tala-seo/` | SEO plugin. Titles, meta descriptions, canonicals, robots rules, Open Graph, JSON-LD, sitemap and robots.txt tuning, redirects for moved pages and categories, and a publish check. |
 | `dev/` | Demo content and a WordPress Playground blueprint for local testing (not deployed). |
 | `build.sh` | Packages both as zips in `dist/`. |
 
@@ -17,18 +17,20 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
   - `<title>` as "Title | Site name"
   - meta description
   - self-referencing canonical (each page of an archive is its own canonical)
-  - noindex for search results, 404s and date archives
+  - noindex for search results, 404s, date archives and tag pages with fewer posts than the minimum in Settings → SEO (2 by default)
   - Open Graph and Twitter card tags
 - **JSON-LD** (following Google Search Central, October 2026):
-  - home page: WebSite and Organization (or Person)
+  - home page: WebSite and Organization (or Person), with the home description
   - posts: BlogPosting, with the image in 16:9, 4:3 and 1:1 crops and dates with timezone
   - author pages: ProfilePage
   - breadcrumbs: BreadcrumbList matching the visible trail
   - FAQ, HowTo and SearchAction are deliberately left out; Google retired those rich results.
-- **Sitemap:** WordPress's own `/wp-sitemap.xml`, with accurate `lastmod`, without noindexed posts or post formats.
+- **Sitemap:** WordPress's own `/wp-sitemap.xml`, with accurate `lastmod`, without noindexed posts, small tag pages or post formats. Like WordPress, it exists only while search engines may index the site.
 - **robots.txt:** points to the sitemap and blocks nothing else. AI crawlers are welcome.
+- **Redirects:** when a page, category or tag gets a new address (slug or parent), the old address answers with a 301 to the new one, children and paginated archives included. WordPress does this for posts only.
+- **Hidden-site warning:** while Settings → Reading discourages search engines, every admin screen and the pre-publish checklist say so.
 - **Authors:** a real author photo (no Gravatar request) and social profile links, which feed the Person markup.
-- **Settings → SEO:** who runs the site, official profiles, home description, default share image, and a setup checklist (site icon, logo, tagline, permalinks, author bios).
+- **Settings → SEO:** who runs the site, official profiles, home description, default share image, the minimum posts for an indexable tag page, and a setup checklist (search engine visibility, site icon, logo, tagline, permalinks, author bios).
 - **WP-CLI:**
   - `wp tala-seo audit` lists published posts that are missing something.
   - `wp tala-seo import` copies titles and descriptions from Yoast SEO or Rank Math.

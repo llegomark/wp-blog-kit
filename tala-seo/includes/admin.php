@@ -43,6 +43,7 @@ function tala_seo_editor_assets(): void {
 		'siteName'        => tala_seo_site_name(),
 		'separator'       => '|',
 		'defaultCategory' => (int) get_option( 'default_category' ),
+		'sitePublic'      => (bool) get_option( 'blog_public' ),
 	);
 	wp_add_inline_script( 'tala-seo-editor', 'window.talaSeo = ' . wp_json_encode( $config ) . ';', 'before' );
 	wp_set_script_translations( 'tala-seo-editor', 'tala-seo' );
@@ -145,6 +146,9 @@ function tala_seo_settings_fields(): void {
 	add_settings_section( 'tala_seo_sharing', __( 'Home page and sharing', 'tala-seo' ), '__return_null', 'tala-seo' );
 	add_settings_field( 'tala_seo_home_description', __( 'Home page description', 'tala-seo' ), 'tala_seo_field_home_description', 'tala-seo', 'tala_seo_sharing', array( 'label_for' => 'tala-seo-home-description' ) );
 	add_settings_field( 'tala_seo_default_image', __( 'Default share image', 'tala-seo' ), 'tala_seo_field_default_image', 'tala-seo', 'tala_seo_sharing' );
+
+	add_settings_section( 'tala_seo_search', __( 'Search results', 'tala-seo' ), '__return_null', 'tala-seo' );
+	add_settings_field( 'tala_seo_tag_min_posts', __( 'Tag pages', 'tala-seo' ), 'tala_seo_field_tag_min_posts', 'tala-seo', 'tala_seo_search', array( 'label_for' => 'tala-seo-tag-min-posts' ) );
 }
 
 /**
@@ -211,13 +215,26 @@ function tala_seo_field_default_image(): void {
 }
 
 /**
+ * Field: minimum number of posts before a tag page is shown to search engines.
+ */
+function tala_seo_field_tag_min_posts(): void {
+	printf(
+		'<input type="number" class="small-text" id="tala-seo-tag-min-posts" name="tala_seo[tag_min_posts]" value="%d" min="0" max="100" step="1" aria-describedby="tala-seo-tag-min-posts-help"><p class="description" id="tala-seo-tag-min-posts-help">%s</p>',
+		(int) tala_seo_settings()['tag_min_posts'],
+		esc_html__( 'Minimum number of posts a tag page needs before search engines may index it. Smaller tag pages get noindex and stay out of the sitemap: a page that lists a single post adds nothing to search results. 0 or 1 lets every tag page be indexed.', 'tala-seo' )
+	);
+}
+
+/**
  * Renders Settings → SEO.
  */
 function tala_seo_settings_page(): void {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		return;
 	}
-	$sitemap = (string) get_sitemap_url( 'index' );
+	// get_sitemap_url() answers even while sitemaps are off, so ask the sitemap server first.
+	$server  = wp_sitemaps_get_server();
+	$sitemap = $server->sitemaps_enabled() ? (string) get_sitemap_url( 'index' ) : '';
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'SEO', 'tala-seo' ); ?></h1>
@@ -235,8 +252,12 @@ function tala_seo_settings_page(): void {
 			<?php endforeach; ?>
 		</ul>
 		<p>
-			<?php esc_html_e( 'Sitemap:', 'tala-seo' ); ?> <a href="<?php echo esc_url( $sitemap ); ?>"><?php echo esc_html( $sitemap ); ?></a>.
-			<?php esc_html_e( 'Submit it in Google Search Console. Verify the domain there with a DNS record in Cloudflare; no plugin is needed for that.', 'tala-seo' ); ?>
+			<?php if ( '' !== $sitemap ) : ?>
+				<?php esc_html_e( 'Sitemap:', 'tala-seo' ); ?> <a href="<?php echo esc_url( $sitemap ); ?>"><?php echo esc_html( $sitemap ); ?></a>.
+				<?php esc_html_e( 'Submit it in Google Search Console. Verify the domain there with a DNS record in Cloudflare; no plugin is needed for that.', 'tala-seo' ); ?>
+			<?php else : ?>
+				<?php esc_html_e( 'The sitemap is published once search engines may index the site.', 'tala-seo' ); ?>
+			<?php endif; ?>
 		</p>
 
 		<form method="post" action="options.php">
@@ -263,6 +284,33 @@ function tala_seo_admin_assets( $hook ): void {
 	}
 	wp_enqueue_media();
 	wp_enqueue_script( 'tala-seo-admin', plugins_url( 'assets/admin.js', TALA_SEO_FILE ), array( 'media-editor' ), TALA_SEO_VERSION, true );
+}
+
+add_action( 'admin_notices', 'tala_seo_hidden_site_notice' );
+
+/**
+ * On every admin screen while the site is hidden from search engines (Settings → Reading): an
+ * easy switch to forget at launch, and nothing appears in Google until it is turned back.
+ * The block editor shows the same warning in its pre-publish checklist (editor.js).
+ */
+function tala_seo_hidden_site_notice(): void {
+	$screen = get_current_screen();
+	if ( get_option( 'blog_public' ) || ! current_user_can( 'manage_options' ) || ( $screen && 'options-reading' === $screen->id ) ) {
+		return;
+	}
+	wp_admin_notice(
+		sprintf(
+			'<strong>%s</strong> %s <a href="%s">%s</a>',
+			esc_html__( 'Search engines are blocked.', 'tala-seo' ),
+			esc_html__( 'Nothing on this site can appear in Google. When the site is ready, untick "Discourage search engines from indexing this site".', 'tala-seo' ),
+			esc_url( admin_url( 'options-reading.php' ) ),
+			esc_html__( 'Open Reading settings', 'tala-seo' )
+		),
+		array(
+			'type'               => 'error',
+			'additional_classes' => array( 'tala-seo-hidden-site' ),
+		)
+	);
 }
 
 add_action( 'admin_notices', 'tala_seo_dashboard_notice' );

@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Plugin settings (Settings → SEO), with defaults.
  *
- * @return array{publisher_type:string,publisher_name:string,same_as:string[],home_description:string,default_image:int}
+ * @return array{publisher_type:string,publisher_name:string,same_as:string[],home_description:string,default_image:int,tag_min_posts:int}
  */
 function tala_seo_settings() {
 	$saved = get_option( 'tala_seo', array() );
@@ -22,7 +22,40 @@ function tala_seo_settings() {
 		'same_as'          => array_values( array_map( 'strval', (array) ( $saved['same_as'] ?? array() ) ) ),
 		'home_description' => (string) ( $saved['home_description'] ?? '' ),
 		'default_image'    => (int) ( $saved['default_image'] ?? 0 ),
+		'tag_min_posts'    => min( 100, max( 0, (int) ( $saved['tag_min_posts'] ?? 2 ) ) ),
 	);
+}
+
+/**
+ * The description of the site as a whole: Settings → SEO, else the tagline.
+ * Used for the home page meta description and the Organization (or Person) markup.
+ *
+ * @return string
+ */
+function tala_seo_home_description() {
+	$text = tala_seo_settings()['home_description'];
+	return '' !== $text ? $text : tala_seo_clean_text( get_bloginfo( 'description' ) );
+}
+
+/**
+ * Whether a tag page has too few posts to be worth showing in search results. Such pages get
+ * noindex and stay out of the sitemap until they reach the minimum set in Settings → SEO.
+ *
+ * @param WP_Term $term Term.
+ * @return bool
+ */
+function tala_seo_is_thin_term( $term ) {
+	$min = tala_seo_settings()['tag_min_posts'];
+	return $min > 1 && in_array( $term->taxonomy, tala_seo_thin_taxonomies(), true ) && (int) $term->count < $min;
+}
+
+/**
+ * Taxonomies whose archives need a minimum number of posts to be indexed (tags by default).
+ *
+ * @return string[]
+ */
+function tala_seo_thin_taxonomies() {
+	return array_map( 'strval', (array) apply_filters( 'tala_seo_thin_taxonomies', array( 'post_tag' ) ) );
 }
 
 /**
@@ -248,7 +281,7 @@ function tala_seo_paged_url( $url, $paged ) {
  * Cleans the submitted settings.
  *
  * @param mixed $input Submitted values.
- * @return array{publisher_type: string, publisher_name: string, same_as: string[], home_description: string, default_image: int}
+ * @return array{publisher_type: string, publisher_name: string, same_as: string[], home_description: string, default_image: int, tag_min_posts: int}
  */
 function tala_seo_sanitize_settings( $input ) {
 	$input   = is_array( $input ) ? $input : array();
@@ -266,5 +299,6 @@ function tala_seo_sanitize_settings( $input ) {
 		'same_as'          => array_values( array_unique( $same_as ) ),
 		'home_description' => tala_seo_clean_text( $input['home_description'] ?? '' ),
 		'default_image'    => absint( $input['default_image'] ?? 0 ),
+		'tag_min_posts'    => min( 100, absint( $input['tag_min_posts'] ?? 2 ) ),
 	);
 }

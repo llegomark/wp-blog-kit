@@ -10,19 +10,82 @@
 
 defined( 'ABSPATH' ) || exit;
 
-add_filter( 'wp_sitemaps_enabled', '__return_true' );
+add_filter( 'wp_sitemaps_enabled', 'tala_seo_sitemaps_enabled' );
+
+/**
+ * The sitemap exists exactly when search engines may index the site (Settings → Reading), even if
+ * a previously used SEO plugin switched WordPress's sitemap off. A hidden site publishes none.
+ *
+ * @return bool
+ */
+function tala_seo_sitemaps_enabled() {
+	return (bool) get_option( 'blog_public' );
+}
 
 add_filter( 'wp_sitemaps_taxonomies', 'tala_seo_sitemap_taxonomies' );
 
 /**
- * Leaves post formats out of the sitemap (they aren't real archive pages on a blog).
+ * Leaves post formats out of the sitemap (they aren't real archive pages on a blog), and tags
+ * altogether while no tag page has enough posts to be indexed (Settings → SEO).
  *
  * @param WP_Taxonomy[] $taxonomies Taxonomies.
  * @return WP_Taxonomy[]
  */
 function tala_seo_sitemap_taxonomies( $taxonomies ) {
 	unset( $taxonomies['post_format'] );
+	foreach ( array_keys( $taxonomies ) as $taxonomy ) {
+		if ( array() === tala_seo_indexable_term_ids( (string) $taxonomy ) ) {
+			unset( $taxonomies[ $taxonomy ] );
+		}
+	}
 	return $taxonomies;
+}
+
+add_filter( 'wp_sitemaps_taxonomies_query_args', 'tala_seo_sitemap_skip_thin_terms', 10, 2 );
+
+/**
+ * Lists only tag pages with enough posts; smaller ones carry noindex until they grow. Core counts
+ * the sitemap's pages with the same arguments, so paging stays correct.
+ *
+ * @param array<string, mixed> $args     WP_Term_Query arguments.
+ * @param string               $taxonomy Taxonomy.
+ * @return array<string, mixed>
+ */
+function tala_seo_sitemap_skip_thin_terms( $args, $taxonomy ) {
+	$ids = tala_seo_indexable_term_ids( $taxonomy );
+	if ( $ids ) {
+		$args['include'] = $ids;
+	}
+	return $args;
+}
+
+/**
+ * IDs of the terms whose archives are big enough to be indexed, or null when every archive of the
+ * taxonomy may be indexed (it isn't one with a minimum, or the minimum is off).
+ *
+ * @param string $taxonomy Taxonomy.
+ * @return int[]|null
+ */
+function tala_seo_indexable_term_ids( $taxonomy ) {
+	static $cache = array();
+	if ( tala_seo_settings()['tag_min_posts'] < 2 || ! in_array( $taxonomy, tala_seo_thin_taxonomies(), true ) ) {
+		return null;
+	}
+	if ( ! isset( $cache[ $taxonomy ] ) ) {
+		$cache[ $taxonomy ] = array();
+		$terms              = get_terms(
+			array(
+				'taxonomy'   => $taxonomy,
+				'hide_empty' => true,
+			)
+		);
+		foreach ( is_array( $terms ) ? $terms : array() as $term ) {
+			if ( ! tala_seo_is_thin_term( $term ) ) {
+				$cache[ $taxonomy ][] = $term->term_id;
+			}
+		}
+	}
+	return $cache[ $taxonomy ];
 }
 
 add_filter( 'wp_sitemaps_posts_query_args', 'tala_seo_sitemap_skip_noindex' );

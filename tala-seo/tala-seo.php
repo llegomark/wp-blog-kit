@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Tala SEO
  * Description:       Lean SEO for blogs: titles, meta descriptions, canonicals, Open Graph, JSON-LD structured data, visible breadcrumbs, sitemap and robots.txt tuning, and a publish check that blocks posts without a meta description or featured image.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.6
  * Requires PHP:      8.1
  * License:           GPL-2.0-or-later
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const TALA_SEO_VERSION = '1.0.0';
+const TALA_SEO_VERSION = '1.1.0';
 const TALA_SEO_FILE    = __FILE__;
 
 // Post meta keys. The leading underscore hides them from the Custom Fields box.
@@ -24,6 +24,9 @@ const TALA_SEO_DESCRIPTION = '_tala_seo_description';
 const TALA_SEO_CANONICAL   = '_tala_seo_canonical';
 const TALA_SEO_NOINDEX     = '_tala_seo_noindex';
 
+// Post and term meta: addresses a page or term archive had before it moved (see redirects.php).
+const TALA_SEO_OLD_PATH = '_tala_seo_old_path';
+
 require __DIR__ . '/includes/helpers.php';
 require __DIR__ . '/includes/head.php';
 require __DIR__ . '/includes/schema.php';
@@ -31,6 +34,7 @@ require __DIR__ . '/includes/breadcrumbs.php';
 require __DIR__ . '/includes/sitemap.php';
 require __DIR__ . '/includes/publish-guard.php';
 require __DIR__ . '/includes/users.php';
+require __DIR__ . '/includes/redirects.php';
 
 if ( is_admin() ) {
 	require __DIR__ . '/includes/admin.php';

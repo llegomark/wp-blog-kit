@@ -75,6 +75,13 @@
 		const required = [];
 		const advice = [];
 
+		// The block editor doesn't show admin notices, so the hidden-site warning goes here.
+		if ( ! cfg.sitePublic ) {
+			advice.push( {
+				ok: false,
+				label: __( 'The whole site is hidden from search engines (Settings → Reading)', 'tala-seo' ),
+			} );
+		}
 		if ( needed.indexOf( 'description' ) !== -1 ) {
 			required.push( {
 				ok: description.length > 0,

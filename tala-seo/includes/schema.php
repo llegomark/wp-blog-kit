@@ -1,7 +1,7 @@
 <?php
 /**
  * JSON-LD structured data, following Google Search Central (checked October 2026):
- * - Home page only: WebSite (site name) and Organization/Person (logo, profiles).
+ * - Home page only: WebSite (site name) and Organization/Person (description, logo, profiles).
  * - Posts: BlogPosting with headline, description, image in 16:9/4:3/1:1, ISO 8601 dates with
  *   timezone, and the author as a Person with name and url.
  * - Author archives: ProfilePage whose mainEntity is the Person.
@@ -89,15 +89,19 @@ function tala_seo_website_node() {
  * @return array<string, mixed>
  */
 function tala_seo_publisher_node() {
-	$settings = tala_seo_settings();
-	$is_org   = 'person' !== $settings['publisher_type'];
-	$node     = array(
+	$settings    = tala_seo_settings();
+	$is_org      = 'person' !== $settings['publisher_type'];
+	$node        = array(
 		'@type' => $is_org ? 'Organization' : 'Person',
 		'@id'   => home_url( '/#publisher' ),
 		'name'  => '' !== $settings['publisher_name'] ? $settings['publisher_name'] : tala_seo_site_name(),
 		'url'   => home_url( '/' ),
 	);
-	$logo     = tala_seo_logo();
+	$description = tala_seo_home_description();
+	if ( '' !== $description ) {
+		$node['description'] = $description;
+	}
+	$logo = tala_seo_logo();
 	if ( $logo ) {
 		$image                              = array(
 			'@type'  => 'ImageObject',
