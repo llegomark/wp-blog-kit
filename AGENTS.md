@@ -41,5 +41,8 @@ Then test on the local site (http://127.0.0.1:8080):
 
 ## Commits
 
+GitHub re-runs WPCS, PHPStan and Plugin Check on every push and pull request (`.github/workflows/checks.yml`). Pushing doesn't replace running `composer check` first; it catches what slipped through. If a run fails, fix it in a new commit.
+
+
 Commit to `main` only after `composer check` passes. Commits are signed by the maintainer's key.
 When an AI agent contributed, end the message with a `Co-Authored-By:` trailer.

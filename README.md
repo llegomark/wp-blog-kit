@@ -75,6 +75,8 @@ dev/serve.sh                  # http://127.0.0.1:8080 (admin login: ~/Sites/blog
 
 Without a local PHP, `dev/phpcs.sh` and `dev/plugin-check.sh` run the same checks in PHP compiled to WebAssembly and WordPress Playground. The PHPCS downloads are verified against the release key.
 
+GitHub runs the same checks on every push to `main` and every pull request (`.github/workflows/checks.yml`): coding standards and PHPStan on PHP 8.5, and Plugin Check through [WordPress/plugin-check-action](https://github.com/WordPress/plugin-check-action) against the latest WordPress. Every Monday it also checks the plugin against WordPress trunk, the release in development; a finding there is an early warning and doesn't fail the build. The actions are pinned to commit SHAs, and Dependabot proposes updates. Theme Check isn't part of CI; run `wp theme-check run tala-blog` on the local site.
+
 The one deliberate exception is Plugin Check's `plugin_updater_detected`. It flags the `Update URI: false` header, which keeps this private plugin from ever being "updated" by an unrelated wordpress.org plugin with the same name.
 
 ### AI agents

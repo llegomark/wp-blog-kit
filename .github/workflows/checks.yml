@@ -1,0 +1,75 @@
+# The same checks as `composer check`, on GitHub's servers: WordPress Coding Standards and
+# PHPStan level 8 for the theme and the plugin, and WordPress's Plugin Check for the plugin.
+# Every action is pinned to a full commit SHA (the comment names the release); Dependabot
+# proposes updates (.github/dependabot.yml).
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Mondays 01:00 UTC (09:00 Manila): test against WordPress's next release even when nothing changed.
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  standards:
+    name: Coding standards and PHPStan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP 8.5 (the version the servers run)
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.5'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install the tools from composer.lock
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: WordPress Coding Standards
+        run: composer lint
+
+      - name: PHPStan level 8
+        run: composer analyse
+
+  plugin-check:
+    name: Plugin Check (WordPress ${{ matrix.wordpress }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        wordpress: [latest, trunk]
+    # trunk is the WordPress release in development: a finding there is an early warning, not a
+    # failed build.
+    continue-on-error: ${{ matrix.wordpress == 'trunk' }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Plugin Check
+        uses: WordPress/plugin-check-action@10857da14b6c2246d15402b3e69f777edcf8c12e # v1.1.9
+        with:
+          build-dir: ./tala-seo
+          wp-version: ${{ matrix.wordpress }}
+          include-experimental: true
+          # Deliberate: "Update URI: false" keeps this private plugin from ever being "updated"
+          # by an unrelated wordpress.org plugin of the same name (as in dev/plugin-check.sh).
+          ignore-codes: plugin_updater_detected
