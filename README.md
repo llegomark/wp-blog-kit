@@ -34,7 +34,7 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 - **Permalinks:** a one-click switch from plain URLs (`?p=123`) to post-name URLs in the setup checklist, and a warning on Settings → Permalinks before a change gives every published post a new address. Nothing changes without the admin pressing the button.
 - **Hidden-site warning:** while Settings → Reading discourages search engines, every admin screen and the pre-publish checklist say so.
 - **Authors:** a real author photo (no Gravatar request), social profile links (TikTok and Mastodon included) that feed the Person markup, and a Fediverse handle.
-- **Settings → SEO:** who runs the site, official profiles, home description, default share image, the minimum posts for an indexable tag page, and a setup checklist (search engine visibility, site icon, logo, tagline, permalinks, author bios).
+- **Settings → SEO:** who runs the site, official profiles, home description, default share image, the minimum posts for an indexable tag page, and Google Search Console and Bing Webmaster Tools verification codes (for the HTML-tag method; a DNS record needs nothing), and a setup checklist (search engine visibility, site icon, logo, tagline, permalinks, author bios).
 - **WP-CLI:**
   - `wp tala-seo audit` lists published posts that are missing something.
   - `wp tala-seo import` copies titles, descriptions, canonicals, noindex, primary categories and redirects from Yoast SEO, Rank Math, The SEO Framework or SEOPress, for posts, categories, tags and authors.

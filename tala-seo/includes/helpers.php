@@ -10,11 +10,16 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Plugin settings (Settings → SEO), with defaults.
  *
- * @return array{publisher_type:string,publisher_name:string,same_as:string[],home_description:string,default_image:int,tag_min_posts:int}
+ * @return array{publisher_type:string,publisher_name:string,same_as:string[],home_description:string,default_image:int,tag_min_posts:int,verify:array<string,string>}
  */
 function tala_seo_settings() {
-	$saved = get_option( 'tala_seo', array() );
-	$saved = is_array( $saved ) ? $saved : array();
+	$saved       = get_option( 'tala_seo', array() );
+	$saved       = is_array( $saved ) ? $saved : array();
+	$saved_codes = is_array( $saved['verify'] ?? null ) ? $saved['verify'] : array();
+	$codes       = array();
+	foreach ( array_keys( tala_seo_verification_services() ) as $service ) {
+		$codes[ $service ] = is_string( $saved_codes[ $service ] ?? null ) ? $saved_codes[ $service ] : '';
+	}
 	// Each value is cast, so a damaged option can never hand the wrong type to the rest of the plugin.
 	return array(
 		'publisher_type'   => 'person' === ( $saved['publisher_type'] ?? '' ) ? 'person' : 'organization',
@@ -23,6 +28,7 @@ function tala_seo_settings() {
 		'home_description' => (string) ( $saved['home_description'] ?? '' ),
 		'default_image'    => (int) ( $saved['default_image'] ?? 0 ),
 		'tag_min_posts'    => min( 100, max( 0, (int) ( $saved['tag_min_posts'] ?? 2 ) ) ),
+		'verify'           => $codes,
 	);
 }
 
@@ -327,10 +333,15 @@ function tala_seo_paged_url( $url, $paged ) {
  * Cleans the submitted settings.
  *
  * @param mixed $input Submitted values.
- * @return array{publisher_type: string, publisher_name: string, same_as: string[], home_description: string, default_image: int, tag_min_posts: int}
+ * @return array{publisher_type: string, publisher_name: string, same_as: string[], home_description: string, default_image: int, tag_min_posts: int, verify: array<string, string>}
  */
 function tala_seo_sanitize_settings( $input ) {
-	$input   = is_array( $input ) ? $input : array();
+	$input  = is_array( $input ) ? $input : array();
+	$codes  = is_array( $input['verify'] ?? null ) ? $input['verify'] : array();
+	$verify = array();
+	foreach ( array_keys( tala_seo_verification_services() ) as $service ) {
+		$verify[ $service ] = tala_seo_sanitize_verification( $codes[ $service ] ?? '', $service );
+	}
 	$same_as = array();
 	$lines   = is_array( $input['same_as'] ?? null ) ? $input['same_as'] : (array) preg_split( '/\R/', (string) ( $input['same_as'] ?? '' ) );
 	foreach ( $lines as $line ) {
@@ -346,5 +357,66 @@ function tala_seo_sanitize_settings( $input ) {
 		'home_description' => tala_seo_clean_text( $input['home_description'] ?? '' ),
 		'default_image'    => absint( $input['default_image'] ?? 0 ),
 		'tag_min_posts'    => min( 100, absint( $input['tag_min_posts'] ?? 2 ) ),
+		'verify'           => $verify,
 	);
+}
+
+/**
+ * Search engines whose site verification codes Settings → SEO accepts: the meta tag name the code
+ * goes in, what a code looks like, and the tool's name.
+ *
+ * @return array<string, array{meta: string, pattern: string, label: string}>
+ */
+function tala_seo_verification_services() {
+	return array(
+		'google' => array(
+			'meta'    => 'google-site-verification',
+			'pattern' => '/^[A-Za-z0-9_-]{10,100}$/',
+			'label'   => 'Google Search Console',
+		),
+		'bing'   => array(
+			'meta'    => 'msvalidate.01',
+			'pattern' => '/^[A-Za-z0-9]{10,100}$/',
+			'label'   => 'Bing Webmaster Tools',
+		),
+	);
+}
+
+/**
+ * A verification code from what was pasted: the code alone, or the whole <meta> tag the tool shows.
+ * Anything else keeps the code saved before, and the settings screen says why.
+ *
+ * @param mixed  $value   Pasted value.
+ * @param string $service Key in tala_seo_verification_services().
+ * @return string
+ */
+function tala_seo_sanitize_verification( $value, $service ) {
+	$services = tala_seo_verification_services();
+	$value    = trim( is_scalar( $value ) ? (string) $value : '' );
+	if ( '' === $value || ! isset( $services[ $service ] ) ) {
+		return '';
+	}
+	$expected = $services[ $service ];
+	$problem  = '';
+	if ( preg_match( '/<meta\b/i', $value ) ) {
+		$name  = preg_match( '/\bname\s*=\s*["\']([^"\']*)["\']/i', $value, $m ) ? strtolower( $m[1] ) : '';
+		$value = preg_match( '/\bcontent\s*=\s*["\']([^"\']*)["\']/i', $value, $m ) ? trim( $m[1] ) : '';
+		if ( $name !== $expected['meta'] ) {
+			/* translators: %s: name of a webmaster tool, e.g. Google Search Console. */
+			$problem = __( 'The pasted tag is not a %s verification tag.', 'tala-seo' );
+		}
+	}
+	if ( '' === $problem && ! preg_match( $expected['pattern'], $value ) ) {
+		/* translators: %s: name of a webmaster tool, e.g. Google Search Console. */
+		$problem = __( 'That doesn\'t look like a %s verification code. Paste the code, or the whole meta tag.', 'tala-seo' );
+	}
+	if ( '' === $problem ) {
+		return $value;
+	}
+	// The Settings API can run this twice in one save; report the problem once.
+	$code = 'tala_seo_verify_' . $service;
+	if ( function_exists( 'add_settings_error' ) && ! in_array( $code, wp_list_pluck( get_settings_errors( 'tala_seo' ), 'code' ), true ) ) {
+		add_settings_error( 'tala_seo', $code, sprintf( $problem, $expected['label'] ) . ' ' . __( 'The code saved before was kept.', 'tala-seo' ) );
+	}
+	return tala_seo_settings()['verify'][ $service ] ?? '';
 }

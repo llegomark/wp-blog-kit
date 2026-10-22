@@ -158,6 +158,47 @@ function tala_seo_settings_fields(): void {
 
 	add_settings_section( 'tala_seo_search', __( 'Search results', 'tala-seo' ), '__return_null', 'tala-seo' );
 	add_settings_field( 'tala_seo_tag_min_posts', __( 'Tag pages', 'tala-seo' ), 'tala_seo_field_tag_min_posts', 'tala-seo', 'tala_seo_search', array( 'label_for' => 'tala-seo-tag-min-posts' ) );
+
+	add_settings_section(
+		'tala_seo_verification',
+		__( 'Search engine verification', 'tala-seo' ),
+		static function () {
+			echo '<p>' . esc_html__( 'Only for verifying with an HTML tag. Verifying the domain with a DNS record (a "Domain" property in Search Console) covers every address of the site and needs nothing here.', 'tala-seo' ) . '</p>';
+		},
+		'tala-seo'
+	);
+	foreach ( tala_seo_verification_services() as $service => $details ) {
+		add_settings_field(
+			'tala_seo_verify_' . $service,
+			$details['label'],
+			'tala_seo_field_verification',
+			'tala-seo',
+			'tala_seo_verification',
+			array(
+				'label_for' => 'tala-seo-verify-' . $service,
+				'service'   => $service,
+			)
+		);
+	}
+}
+
+/**
+ * Field: a site verification code.
+ *
+ * @param array{label_for: string, service: string} $args Field arguments.
+ */
+function tala_seo_field_verification( $args ): void {
+	$help = array(
+		'google' => __( 'In Search Console, add a "URL prefix" property, choose "HTML tag", and paste the code or the whole tag. Tala SEO adds it to the home page. Keep it: Google checks it again from time to time.', 'tala-seo' ),
+		'bing'   => __( 'Choose "HTML Meta Tag" in Bing Webmaster Tools. Or leave this empty and import the site from Google Search Console there.', 'tala-seo' ),
+	);
+	printf(
+		'<input type="text" class="regular-text code" id="%1$s" name="tala_seo[verify][%2$s]" value="%3$s" autocomplete="off" spellcheck="false" aria-describedby="%1$s-help"><p class="description" id="%1$s-help">%4$s</p>',
+		esc_attr( $args['label_for'] ),
+		esc_attr( $args['service'] ),
+		esc_attr( tala_seo_settings()['verify'][ $args['service'] ] ?? '' ),
+		esc_html( $help[ $args['service'] ] ?? '' )
+	);
 }
 
 /**
@@ -269,7 +310,7 @@ function tala_seo_settings_page(): void {
 		<p>
 			<?php if ( '' !== $sitemap ) : ?>
 				<?php esc_html_e( 'Sitemap:', 'tala-seo' ); ?> <a href="<?php echo esc_url( $sitemap ); ?>"><?php echo esc_html( $sitemap ); ?></a>.
-				<?php esc_html_e( 'Submit it in Google Search Console. Verify the domain there with a DNS record in Cloudflare; no plugin is needed for that.', 'tala-seo' ); ?>
+				<?php esc_html_e( 'Submit it in Google Search Console and Bing Webmaster Tools.', 'tala-seo' ); ?>
 			<?php else : ?>
 				<?php esc_html_e( 'The sitemap is published once search engines may index the site.', 'tala-seo' ); ?>
 			<?php endif; ?>

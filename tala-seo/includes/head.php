@@ -220,7 +220,16 @@ add_action( 'wp_head', 'tala_seo_print_head', 1 );
  * Prints the meta description, canonical link and Open Graph tags.
  */
 function tala_seo_print_head(): void {
-	$tags        = array();
+	$tags = array();
+	// Search engines look for their verification tag on the home page (first page) only.
+	if ( is_front_page() && ! is_paged() ) {
+		$codes = tala_seo_settings()['verify'];
+		foreach ( tala_seo_verification_services() as $service => $details ) {
+			if ( '' !== ( $codes[ $service ] ?? '' ) ) {
+				$tags[] = sprintf( '<meta name="%s" content="%s">', esc_attr( $details['meta'] ), esc_attr( $codes[ $service ] ) );
+			}
+		}
+	}
 	$description = tala_seo_current_description();
 	$canonical   = tala_seo_current_canonical();
 
