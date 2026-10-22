@@ -1,0 +1,83 @@
+.tala-seo-panel .components-base-control {
+	margin-bottom: 16px;
+}
+
+.tala-seo-preview {
+	margin-bottom: 16px;
+	padding: 12px;
+	border: 1px solid #dcdcde;
+	border-radius: 2px;
+	font-family: Arial, sans-serif;
+	line-height: 1.4;
+	overflow-wrap: anywhere;
+}
+
+.tala-seo-preview__site {
+	font-size: 13px;
+	color: #202124;
+}
+
+.tala-seo-preview__url {
+	margin-bottom: 4px;
+	font-size: 12px;
+	color: #4d5156;
+}
+
+.tala-seo-preview__title {
+	margin-bottom: 4px;
+	font-size: 17px;
+	color: #1a0dab;
+}
+
+.tala-seo-preview__description {
+	font-size: 13px;
+	color: #4d5156;
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.tala-seo-preview__description.is-empty {
+	font-style: italic;
+}
+
+.tala-seo-checklist__title {
+	margin: 16px 0 8px;
+	font-weight: 600;
+}
+
+.tala-seo-checklist {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.tala-seo-checklist li {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 6px;
+	line-height: 1.4;
+}
+
+.tala-seo-checklist__mark {
+	flex: 0 0 1em;
+	font-weight: 700;
+	text-align: center;
+}
+
+.tala-seo-checklist .is-ok .tala-seo-checklist__mark {
+	color: #00a32a;
+}
+
+.tala-seo-checklist .is-missing .tala-seo-checklist__mark {
+	color: #d63638;
+}
+
+.tala-seo-checklist .is-advice .tala-seo-checklist__mark {
+	color: #996800;
+}
+
+.tala-seo-prepublish__note {
+	color: #d63638;
+}

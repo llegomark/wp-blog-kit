@@ -1,0 +1,4 @@
+dev/.tools/
+dist/
+vendor/
+node_modules/

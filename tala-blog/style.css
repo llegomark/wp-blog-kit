@@ -1,0 +1,15 @@
+/*
+Theme Name: Tala Blog
+Description: A minimal, fast blog theme for long reads on phones. Pad-paper look in light mode, chalkboard in dark mode (follows the reader's device), system fonts only, labelled published and updated dates, and an author box with biography under every article. Pairs with the Tala SEO plugin for breadcrumbs and structured data.
+Version: 1.0.0
+Requires at least: 6.6
+Tested up to: 7.1
+Requires PHP: 8.1
+License: GNU General Public License v2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: tala-blog
+Tags: blog, one-column, block-styles, full-site-editing
+Update URI: false
+*/
+
+/* The theme's CSS lives in assets/theme.css and is inlined into each page (no extra request). */

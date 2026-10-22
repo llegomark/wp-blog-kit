@@ -1,0 +1,9 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"login": true,
+	"steps": [
+		{ "step": "activatePlugin", "pluginPath": "tala-seo/tala-seo.php" },
+		{ "step": "activateTheme", "themeFolderName": "tala-blog" },
+		{ "step": "runPHP", "code": "<?php require '/wordpress/wp-load.php'; require '/kit-dev/seed.php';" }
+	]
+}

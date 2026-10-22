@@ -1,0 +1,20 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tala-seo/breadcrumbs",
+	"version": "1.0.0",
+	"title": "Breadcrumbs",
+	"category": "theme",
+	"icon": "networking",
+	"description": "Shows where this page sits in the site: Home › Category › Post. Matches the breadcrumb structured data Google reads.",
+	"keywords": [ "breadcrumb", "navigation", "seo" ],
+	"textdomain": "tala-seo",
+	"supports": {
+		"html": false,
+		"color": { "text": true, "link": true, "background": false },
+		"spacing": { "margin": true, "padding": true },
+		"typography": { "fontSize": true }
+	},
+	"editorScript": "file:./index.js",
+	"style": "file:./style.css"
+}

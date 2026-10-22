@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<ruleset name="WP blog kit">
+	<description>WordPress Coding Standards (WordPress-Core, WordPress-Docs, WordPress-Extra) for the Tala Blog theme and the Tala SEO plugin.</description>
+
+	<file>tala-seo</file>
+	<file>tala-blog</file>
+
+	<exclude-pattern>*/dist/*</exclude-pattern>
+	<exclude-pattern>*/dev/*</exclude-pattern>
+	<exclude-pattern>*/.agents/*</exclude-pattern>
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="basepath" value="."/>
+	<arg value="sp"/>
+
+	<config name="minimum_wp_version" value="6.6"/>
+
+	<rule ref="WordPress"/>
+
+	<!-- WordPress itself looks for "index.asset.php" next to a block's "index.js", so that exact
+	     name can't follow the lowercase-with-hyphens rule. Only that rule is skipped, only there. -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude-pattern>*.asset.php</exclude-pattern>
+	</rule>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="tala-seo"/>
+				<element value="tala-blog"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="tala_seo"/>
+				<element value="tala_blog"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>

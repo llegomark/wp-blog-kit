@@ -1,0 +1,39 @@
+{
+	"name": "llegomark/wp-blog-kit",
+	"description": "Tala Blog block theme and Tala SEO plugin, with the WordPress development tools used to check them.",
+	"type": "project",
+	"license": "GPL-2.0-or-later",
+	"require-dev": {
+		"dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+		"php-stubs/wp-cli-stubs": "^2.11",
+		"phpstan/extension-installer": "^1.4",
+		"phpstan/phpstan": "^2.1",
+		"szepeviktor/phpstan-wordpress": "^2.0",
+		"wp-coding-standards/wpcs": "^3.4"
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true,
+			"phpstan/extension-installer": true
+		},
+		"sort-packages": true
+	},
+	"scripts": {
+		"lint": "phpcs",
+		"fix": "phpcbf",
+		"analyse": "phpstan analyse --memory-limit=1G",
+		"plugin-check": "dev/plugin-check.sh",
+		"check": [
+			"@lint",
+			"@analyse",
+			"@plugin-check"
+		]
+	},
+	"scripts-descriptions": {
+		"lint": "Check PHP against the WordPress Coding Standards (phpcs.xml.dist).",
+		"fix": "Apply automatic WordPress Coding Standards fixes.",
+		"analyse": "Static analysis with PHPStan and the WordPress extension (phpstan.neon.dist).",
+		"plugin-check": "Run WordPress Plugin Check on tala-seo against the local site.",
+		"check": "Run every check: coding standards, static analysis and Plugin Check."
+	}
+}
