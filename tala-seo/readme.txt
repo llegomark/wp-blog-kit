@@ -3,7 +3,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,6 +20,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **Sitemap:** WordPress's own `/wp-sitemap.xml` with accurate `lastmod`, without noindexed posts or small tag pages. It exists only while search engines may index the site.
 * **robots.txt:** points to the sitemap; blocks nothing else, and AI crawlers are welcome.
 * **Redirects:** a page, category or tag whose address changes (new slug or parent) sends visitors and search engines from the old address to the new one (301). WordPress does this for posts only. Children move with their parent.
+* **Permalinks:** the setup checklist switches a site with plain URLs to post-name URLs in one click, and Settings → Permalinks warns before a structure change moves every published post. The plugin never changes the permalinks on its own.
 * **Hidden-site warning:** while "Discourage search engines" is on, every admin screen and the pre-publish checklist say so.
 * **Authors:** a real author photo (no Gravatar request) and social profile links for the author markup.
 * **Settings → SEO:** site owner, official profiles, home description (also the Organization description), default share image, the minimum number of posts for tag pages to be indexed (2 by default), and a setup checklist.
@@ -46,6 +47,10 @@ Create a draft, set the featured image with `wp media import <file> --post_id=<i
 Google retired those rich results. The plugin only outputs structured data Google still uses.
 
 == Changelog ==
+
+= 1.2.0 =
+* New: a "Switch to post-name URLs" button in the setup checklist for sites still on plain URLs (?p=123). It appears only where the web server can serve readable URLs; old ?p= links keep working.
+* New: Settings → Permalinks warns, on a site with published posts, that another structure (or category and tag base) gives every post a new address; on a site with plain URLs it recommends "Post name".
 
 = 1.1.1 =
 * Plugin header: author and author URI.

@@ -28,6 +28,7 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 - **Sitemap:** WordPress's own `/wp-sitemap.xml`, with accurate `lastmod`, without noindexed posts, small tag pages or post formats. Like WordPress, it exists only while search engines may index the site.
 - **robots.txt:** points to the sitemap and blocks nothing else. AI crawlers are welcome.
 - **Redirects:** when a page, category or tag gets a new address (slug or parent), the old address answers with a 301 to the new one, children and paginated archives included. WordPress does this for posts only.
+- **Permalinks:** a one-click switch from plain URLs (`?p=123`) to post-name URLs in the setup checklist, and a warning on Settings → Permalinks before a change gives every published post a new address. Nothing changes without the admin pressing the button.
 - **Hidden-site warning:** while Settings → Reading discourages search engines, every admin screen and the pre-publish checklist say so.
 - **Authors:** a real author photo (no Gravatar request) and social profile links, which feed the Person markup.
 - **Settings → SEO:** who runs the site, official profiles, home description, default share image, the minimum posts for an indexable tag page, and a setup checklist (search engine visibility, site icon, logo, tagline, permalinks, author bios).

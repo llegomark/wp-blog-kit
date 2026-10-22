@@ -61,7 +61,7 @@ function tala_seo_admin_menu(): void {
 /**
  * Site-wide SEO setup checks.
  *
- * @return array<int,array{ok:bool,text:string,link:string}>
+ * @return array<int,array{ok:bool,text:string,link:string,action?:string}>
  */
 function tala_seo_readiness() {
 	$checks = array();
@@ -73,12 +73,17 @@ function tala_seo_readiness() {
 		'link' => admin_url( 'options-reading.php' ),
 	);
 
-	$pretty   = '' !== (string) get_option( 'permalink_structure' );
-	$checks[] = array(
+	$pretty = '' !== (string) get_option( 'permalink_structure' );
+	$check  = array(
 		'ok'   => $pretty,
 		'text' => $pretty ? __( 'Readable URLs are on.', 'tala-seo' ) : __( 'Turn on readable URLs: choose "Post name".', 'tala-seo' ),
 		'link' => admin_url( 'options-permalink.php' ),
 	);
+	// The one-click switch, only where the web server can serve readable URLs at all.
+	if ( ! $pretty && got_url_rewrite() ) {
+		$check['action'] = 'pretty_permalinks';
+	}
+	$checks[] = $check;
 
 	$icon     = (int) get_option( 'site_icon' );
 	$checks[] = array(
@@ -245,7 +250,13 @@ function tala_seo_settings_page(): void {
 				<li>
 					<span aria-hidden="true" style="color:<?php echo esc_attr( $check['ok'] ? '#00a32a' : '#d63638' ); ?>"><?php echo $check['ok'] ? '✓' : '✕'; ?></span>
 					<?php echo esc_html( $check['text'] ); ?>
-					<?php if ( ! $check['ok'] ) : ?>
+					<?php if ( ! $check['ok'] && 'pretty_permalinks' === ( $check['action'] ?? '' ) ) : ?>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
+							<input type="hidden" name="action" value="tala_seo_pretty_permalinks">
+							<?php wp_nonce_field( 'tala_seo_pretty_permalinks' ); ?>
+							<?php submit_button( __( 'Switch to post-name URLs', 'tala-seo' ), 'secondary small', 'submit', false ); ?>
+						</form>
+					<?php elseif ( ! $check['ok'] ) : ?>
 						<a href="<?php echo esc_url( $check['link'] ); ?>"><?php esc_html_e( 'Fix', 'tala-seo' ); ?></a>
 					<?php endif; ?>
 				</li>
@@ -310,6 +321,66 @@ function tala_seo_hidden_site_notice(): void {
 			'type'               => 'error',
 			'additional_classes' => array( 'tala-seo-hidden-site' ),
 		)
+	);
+}
+
+add_action( 'admin_post_tala_seo_pretty_permalinks', 'tala_seo_pretty_permalinks' );
+
+/**
+ * The checklist button: switches a site with plain URLs (?p=123) to post-name URLs, as choosing
+ * "Post name" in Settings → Permalinks would. Links in the old form keep working: WordPress
+ * forwards ?p=123 to the post's new address.
+ */
+function tala_seo_pretty_permalinks(): void {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Sorry, you are not allowed to change the permalinks.', 'tala-seo' ), '', array( 'response' => 403 ) );
+	}
+	check_admin_referer( 'tala_seo_pretty_permalinks' );
+
+	global $wp_rewrite;
+	if ( '' === (string) get_option( 'permalink_structure' ) && got_url_rewrite() ) {
+		$wp_rewrite->set_permalink_structure( '/%postname%/' );
+		flush_rewrite_rules();
+		add_settings_error( 'tala_seo', 'tala_seo_permalinks', __( 'Readable URLs are on: every post now has a post-name address.', 'tala-seo' ), 'success' );
+	} else {
+		add_settings_error( 'tala_seo', 'tala_seo_permalinks', __( 'The permalinks were not changed: the site already has readable URLs, or the web server can\'t serve them.', 'tala-seo' ), 'warning' );
+	}
+	// The core way to show a message after a redirect (options-head.php reads it back).
+	set_transient( 'settings_errors', get_settings_errors(), 30 );
+	wp_safe_redirect( add_query_arg( 'settings-updated', 'true', admin_url( 'options-general.php?page=tala-seo' ) ) );
+	exit;
+}
+
+add_action( 'admin_notices', 'tala_seo_permalinks_notice' );
+
+/**
+ * On Settings → Permalinks: plain URLs get a recommendation, and a site that already has published
+ * posts gets a warning, because another structure gives every post a new address.
+ */
+function tala_seo_permalinks_notice(): void {
+	$screen = get_current_screen();
+	if ( ! $screen || 'options-permalink' !== $screen->id || ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+	if ( '' === (string) get_option( 'permalink_structure' ) ) {
+		wp_admin_notice(
+			esc_html__( 'Choose "Post name": short, readable addresses are what Google recommends. Links in the old ?p=123 form keep working, because WordPress forwards them.', 'tala-seo' ),
+			array( 'type' => 'info' )
+		);
+		return;
+	}
+	$counts = wp_count_posts( 'post' );
+	$posts  = isset( $counts->publish ) ? (int) $counts->publish : 0;
+	if ( $posts < 1 ) {
+		return;
+	}
+	wp_admin_notice(
+		sprintf(
+			/* translators: %s: number of published posts. */
+			esc_html( _n( 'This site has %s published post. A different structure gives it a new address, and changing the category or tag base moves those pages too. Links shared elsewhere, bookmarks and Google\'s index keep pointing to the old addresses: WordPress forwards many of them by guessing from the post name, but not all, and Google treats the new addresses as new pages until it crawls them again. Leave these settings as they are unless you have a strong reason.', 'This site has %s published posts. A different structure gives every one of them a new address, and changing the category or tag base moves those pages too. Links shared elsewhere, bookmarks and Google\'s index keep pointing to the old addresses: WordPress forwards many of them by guessing from the post name, but not all, and Google treats the new addresses as new pages until it crawls them again. Leave these settings as they are unless you have a strong reason.', $posts, 'tala-seo' ) ),
+			esc_html( number_format_i18n( $posts ) )
+		),
+		array( 'type' => 'warning' )
 	);
 }
 
