@@ -3,7 +3,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -46,6 +46,9 @@ Create a draft, set the featured image with `wp media import <file> --post_id=<i
 Google retired those rich results. The plugin only outputs structured data Google still uses.
 
 == Changelog ==
+
+= 1.1.1 =
+* Plugin header: author and author URI.
 
 = 1.1.0 =
 * New: 301 redirects for pages, categories and tags whose address changed (new slug or new parent), including their children and paginated archives.
