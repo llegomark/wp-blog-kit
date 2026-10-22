@@ -369,15 +369,20 @@ function tala_seo_sanitize_settings( $input ) {
  */
 function tala_seo_verification_services() {
 	return array(
-		'google' => array(
+		'google'   => array(
 			'meta'    => 'google-site-verification',
 			'pattern' => '/^[A-Za-z0-9_-]{10,100}$/',
 			'label'   => 'Google Search Console',
 		),
-		'bing'   => array(
+		'bing'     => array(
 			'meta'    => 'msvalidate.01',
 			'pattern' => '/^[A-Za-z0-9]{10,100}$/',
 			'label'   => 'Bing Webmaster Tools',
+		),
+		'facebook' => array(
+			'meta'    => 'facebook-domain-verification',
+			'pattern' => '/^[A-Za-z0-9]{10,100}$/',
+			'label'   => 'Meta (Facebook)',
 		),
 	);
 }

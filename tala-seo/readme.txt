@@ -3,7 +3,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,7 +28,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **Permalinks:** the setup checklist switches a site with plain URLs to post-name URLs in one click, and Settings → Permalinks warns before a structure change moves every published post. The plugin never changes the permalinks on its own.
 * **Hidden-site warning:** while "Discourage search engines" is on, every admin screen and the pre-publish checklist say so.
 * **Authors:** a real author photo (no Gravatar request), social profile links (TikTok and Mastodon included) for the author markup, and a Fediverse handle.
-* **Settings → SEO:** site owner, official profiles, home description (also the Organization description), default share image, the minimum number of posts for tag pages to be indexed (2 by default), Google Search Console and Bing Webmaster Tools verification codes, and a setup checklist.
+* **Settings → SEO:** site owner, official profiles, home description (also the Organization description), default share image, the minimum number of posts for tag pages to be indexed (2 by default), Google Search Console, Bing Webmaster Tools and Meta (Facebook) verification codes, and a setup checklist.
 * **WP-CLI:** `wp tala-seo audit` lists published posts that are missing something; `wp tala-seo import` copies data from Yoast SEO, Rank Math, The SEO Framework or SEOPress.
 
 == Installation ==
@@ -56,6 +56,9 @@ Run `wp tala-seo import --dry-run` to see what would be copied, then `wp tala-se
 Google retired those rich results. The plugin only outputs structured data Google still uses.
 
 == Changelog ==
+
+= 1.5.0 =
+* New: Meta (Facebook) domain verification in Settings → SEO → Site verification (formerly Search engine verification), for sites that run Facebook or Instagram ads, use the Meta Pixel or edit their link previews. Paste the code or the whole meta tag from Meta Business Suite.
 
 = 1.4.0 =
 * New: Settings → SEO → Search engine verification. Paste the code from Google Search Console or Bing Webmaster Tools (or the whole meta tag they show) and the verification tag is added to the home page. A value that isn't a valid code is refused, and the code saved before stays.

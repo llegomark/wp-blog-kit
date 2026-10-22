@@ -161,9 +161,9 @@ function tala_seo_settings_fields(): void {
 
 	add_settings_section(
 		'tala_seo_verification',
-		__( 'Search engine verification', 'tala-seo' ),
+		__( 'Site verification', 'tala-seo' ),
 		static function () {
-			echo '<p>' . esc_html__( 'Only for verifying with an HTML tag. Verifying the domain with a DNS record (a "Domain" property in Search Console) covers every address of the site and needs nothing here.', 'tala-seo' ) . '</p>';
+			echo '<p>' . esc_html__( 'Only for verifying with an HTML tag. Verifying the domain with a DNS record covers every address of the site and needs nothing here.', 'tala-seo' ) . '</p>';
 		},
 		'tala-seo'
 	);
@@ -189,8 +189,9 @@ function tala_seo_settings_fields(): void {
  */
 function tala_seo_field_verification( $args ): void {
 	$help = array(
-		'google' => __( 'In Search Console, add a "URL prefix" property, choose "HTML tag", and paste the code or the whole tag. Tala SEO adds it to the home page. Keep it: Google checks it again from time to time.', 'tala-seo' ),
-		'bing'   => __( 'Choose "HTML Meta Tag" in Bing Webmaster Tools. Or leave this empty and import the site from Google Search Console there.', 'tala-seo' ),
+		'google'   => __( 'In Search Console, add a "URL prefix" property, choose "HTML tag", and paste the code or the whole tag. Tala SEO adds it to the home page. Keep it: Google checks it again from time to time.', 'tala-seo' ),
+		'bing'     => __( 'Choose "HTML Meta Tag" in Bing Webmaster Tools. Or leave this empty and import the site from Google Search Console there.', 'tala-seo' ),
+		'facebook' => __( 'In Meta Business Suite, open Business settings → Brand safety → Domains, add the domain, choose "Meta-tag verification" and paste the code or the whole tag. Needed for Facebook and Instagram ads, the Meta Pixel and editing link previews; shared links look right without it.', 'tala-seo' ),
 	);
 	printf(
 		'<input type="text" class="regular-text code" id="%1$s" name="tala_seo[verify][%2$s]" value="%3$s" autocomplete="off" spellcheck="false" aria-describedby="%1$s-help"><p class="description" id="%1$s-help">%4$s</p>',
