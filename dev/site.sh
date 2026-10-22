@@ -23,7 +23,10 @@ if [ -f "$SITE/wp-config.php" ]; then
 fi
 
 mkdir -p "$SITE"
-wp core download --locale=en_US --quiet
+# The .zip, not WP-CLI's default .tar.gz: PHP's PharData unpacks that with file paths cut at 100
+# characters, which loses files in wp-includes/php-ai-client (WordPress 7).
+wp core download https://wordpress.org/latest.zip --quiet
+wp core verify-checksums --quiet
 # Database login through the Unix socket as your Linux user: no password exists or is stored.
 wp config create --dbname="$DB" --dbuser="$USER" --dbpass='' --dbhost=localhost --skip-check --quiet --extra-php <<'PHP'
 define( 'WP_ENVIRONMENT_TYPE', 'local' );
