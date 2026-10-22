@@ -17,6 +17,16 @@
 				{ "slug": "margin", "name": "Margin red", "color": "#d64545" }
 			]
 		},
+		"custom": {
+			"dark": {
+				"base": "#1c2823",
+				"contrast": "#e7ede9",
+				"muted": "#a6b5ad",
+				"accent": "#f0cf6a",
+				"rule": "#33473e",
+				"margin": "#d98080"
+			}
+		},
 		"layout": {
 			"contentSize": "42rem",
 			"wideSize": "60rem"

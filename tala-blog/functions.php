@@ -21,8 +21,8 @@ function tala_blog_setup(): void {
 // Don't fetch pattern directory patterns into the editor.
 add_filter( 'should_load_remote_block_patterns', '__return_false' );
 
-// Inline all block CSS (the navigation block's is larger than core's 20 KB default budget), so
-// a first visit renders without waiting for any stylesheet request.
+// Inline all block CSS rather than only the first 20 KB (core's default budget), so a first visit
+// renders without waiting for any stylesheet request.
 add_filter(
 	'styles_inline_size_limit',
 	static function () {
@@ -63,17 +63,25 @@ function tala_blog_remove_emoji(): void {
 add_action( 'wp_head', 'tala_blog_theme_color', 2 );
 
 /**
- * Browser UI colour for light and dark mode.
+ * Browser UI colour for light and dark mode: the page background of each, both from theme.json
+ * (the "base" palette colour and settings.custom.dark.base), the same values the CSS uses.
  */
 function tala_blog_theme_color(): void {
-	$light = '#ffffff';
+	$light = '';
 	foreach ( (array) wp_get_global_settings( array( 'color', 'palette', 'theme' ) ) as $color ) {
 		if ( isset( $color['slug'], $color['color'] ) && 'base' === $color['slug'] ) {
-			$light = $color['color'];
+			$light = (string) $color['color'];
 		}
 	}
-	printf( '<meta name="theme-color" content="%s" media="(prefers-color-scheme: light)">' . "\n", esc_attr( $light ) );
-	echo '<meta name="theme-color" content="#1c2823" media="(prefers-color-scheme: dark)">' . "\n";
+	$dark = wp_get_global_settings( array( 'custom', 'dark', 'base' ) );
+	foreach ( array(
+		'light' => $light,
+		'dark'  => is_string( $dark ) ? $dark : '',
+	) as $scheme => $color ) {
+		if ( '' !== $color ) {
+			printf( '<meta name="theme-color" content="%s" media="(prefers-color-scheme: %s)">' . "\n", esc_attr( $color ), esc_attr( $scheme ) );
+		}
+	}
 }
 
 add_filter( 'render_block_core/post-date', 'tala_blog_label_dates', 10, 3 );

@@ -4,14 +4,15 @@
 	color-scheme: light dark;
 }
 
+/* Dark mode: the chalkboard palette lives in theme.json (settings.custom.dark). */
 @media (prefers-color-scheme: dark) {
 	:root {
-		--wp--preset--color--base: #1c2823;
-		--wp--preset--color--contrast: #e7ede9;
-		--wp--preset--color--muted: #a6b5ad;
-		--wp--preset--color--accent: #f0cf6a;
-		--wp--preset--color--rule: #33473e;
-		--wp--preset--color--margin: #d98080;
+		--wp--preset--color--base: var(--wp--custom--dark--base);
+		--wp--preset--color--contrast: var(--wp--custom--dark--contrast);
+		--wp--preset--color--muted: var(--wp--custom--dark--muted);
+		--wp--preset--color--accent: var(--wp--custom--dark--accent);
+		--wp--preset--color--rule: var(--wp--custom--dark--rule);
+		--wp--preset--color--margin: var(--wp--custom--dark--margin);
 	}
 }
 
@@ -104,9 +105,9 @@ a {
 	font-size: var(--wp--preset--font-size--small);
 }
 
+/* Links are underlined in the text colour, so they stand apart from the current page (no link). */
 .wp-block-tala-seo-breadcrumbs a {
 	color: inherit;
-	text-decoration-color: var(--wp--preset--color--rule);
 }
 
 /* Dates: "Published 3 October 2026", "Updated 20 October 2026" */
@@ -180,6 +181,22 @@ a {
 	font-size: 1rem;
 }
 
+/* Categories and tags at the end of the article */
+
+.tala-terms {
+	margin-block-start: var(--wp--preset--spacing--40);
+	color: var(--wp--preset--color--muted);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.tala-terms > * {
+	margin-block: 0;
+}
+
+.tala-terms > * + * {
+	margin-block-start: 0.25rem;
+}
+
 .tala-post-nav {
 	margin-block-start: var(--wp--preset--spacing--40);
 	gap: var(--wp--preset--spacing--20) var(--wp--preset--spacing--40);
@@ -188,6 +205,34 @@ a {
 
 .tala-comments {
 	margin-block-start: var(--wp--preset--spacing--50);
+}
+
+.tala-comment {
+	padding-block: var(--wp--preset--spacing--20);
+	border-bottom: 1px solid var(--wp--preset--color--rule);
+}
+
+.tala-comment > * {
+	margin-block: 0;
+}
+
+.tala-comment > * + * {
+	margin-block-start: 0.4rem;
+}
+
+.tala-comment-meta,
+.tala-comment-actions {
+	gap: 0.25rem var(--wp--preset--spacing--20);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.tala-comment-meta .wp-block-comment-author-name {
+	font-weight: 700;
+}
+
+.tala-comment-meta .wp-block-comment-date,
+.tala-comment-meta .wp-block-comment-date a {
+	color: var(--wp--preset--color--muted);
 }
 
 /* Post lists: one entry per ruled line */
@@ -206,24 +251,58 @@ a {
 }
 
 .tala-list .wp-block-post {
+	position: relative;
 	margin: 0;
 	padding-block: var(--wp--preset--spacing--30);
 	border-bottom: 1px solid var(--wp--preset--color--rule);
 }
 
-.tala-list .wp-block-post > * {
+/* Text on the left, the featured image as a small thumbnail on the right (when there is one). */
+.tala-list-item {
+	gap: var(--wp--preset--spacing--30);
+}
+
+.tala-list-text {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.tala-list-text > * {
 	margin-block: 0;
 }
 
-.tala-list .wp-block-post > * + * {
+.tala-list-text > * + * {
 	margin-block-start: 0.4rem;
+}
+
+.tala-list-thumb {
+	flex: 0 0 5.5rem;
+	margin: 0;
+}
+
+.tala-list-thumb img {
+	border-radius: 3px;
+}
+
+@media (min-width: 40em) {
+	.tala-list-thumb {
+		flex-basis: 8rem;
+	}
 }
 
 .tala-list .wp-block-post-title {
 	font-size: var(--wp--preset--font-size--large);
 }
 
-.tala-list .wp-block-post-title a:hover {
+/* One link per entry: the title link covers the whole entry, thumbnail included, so screen
+   readers and keyboards meet each article once. */
+.tala-list .wp-block-post-title a::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+}
+
+.tala-list .wp-block-post:hover .wp-block-post-title a {
 	text-decoration: underline;
 }
 
@@ -234,4 +313,70 @@ a {
 .tala-list .wp-block-query-pagination {
 	margin-block-start: var(--wp--preset--spacing--40);
 	font-size: var(--wp--preset--font-size--small);
+}
+
+/* Printing: just the article, with its dates and author, in black on white. */
+
+@media print {
+	:root {
+		--wp--preset--color--base: #fff;
+		--wp--preset--color--contrast: #000;
+		--wp--preset--color--muted: #333;
+		--wp--preset--color--accent: #000;
+		--wp--preset--color--rule: #999;
+	}
+
+	body {
+		font-size: 11pt;
+		line-height: 1.5;
+	}
+
+	header.wp-block-template-part,
+	footer.wp-block-template-part,
+	.wp-block-tala-seo-breadcrumbs,
+	.wp-block-group.tala-post-nav,
+	.tala-comments,
+	.wp-block-search,
+	.wp-block-query-pagination {
+		display: none;
+	}
+
+	.tala-main {
+		padding: 0;
+	}
+
+	.tala-paper::before {
+		display: none;
+	}
+
+	.tala-paper .wp-block-post-featured-image {
+		max-width: 12cm;
+	}
+
+	a {
+		color: inherit;
+	}
+
+	/* On paper a link can't be followed: print where it goes. */
+	.wp-block-post-content a[href^="http"]::after {
+		content: " (" attr(href) ")";
+		font-size: 0.85em;
+		overflow-wrap: anywhere;
+	}
+
+	h1,
+	h2,
+	h3,
+	h4 {
+		break-after: avoid;
+	}
+
+	figure,
+	img,
+	table,
+	pre,
+	blockquote,
+	.tala-author {
+		break-inside: avoid;
+	}
 }
