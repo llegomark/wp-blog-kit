@@ -109,3 +109,33 @@ function tala_blog_label_dates( $html, $block, $instance ) {
 	$label = $modified ? __( 'Updated', 'tala-blog' ) : __( 'Published', 'tala-blog' );
 	return (string) preg_replace( '/<time\b/', '<span class="tala-date-label">' . esc_html( $label ) . '</span><time', $html, 1 );
 }
+
+// Priority 20: after Enhanced Responsive Images (10), which doesn't see the CSS width either.
+add_filter( 'render_block_core/post-featured-image', 'tala_blog_list_thumb_sizes', 20, 2 );
+
+/**
+ * Gives article-list thumbnails their real width in `sizes`: 5.5rem, and 8rem from 40em up, as in
+ * assets/theme.css. WordPress says 300px (the "medium" image), so phones with 2× or 3× screens
+ * downloaded the 768 or 1024 px file for an 88 px thumbnail. Keeps a leading "auto".
+ *
+ * @param string               $html  Block HTML.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_list_thumb_sizes( $html, $block ) {
+	$class = $block['attrs']['className'] ?? '';
+	if ( ! is_string( $class ) || ! in_array( 'tala-list-thumb', explode( ' ', $class ), true ) ) {
+		return $html;
+	}
+	$tags = new WP_HTML_Tag_Processor( $html );
+	if ( ! $tags->next_tag( array( 'tag_name' => 'img' ) ) ) {
+		return $html;
+	}
+	$sizes = $tags->get_attribute( 'sizes' );
+	if ( ! is_string( $sizes ) ) {
+		return $html;
+	}
+	$auto = 'auto' === strtolower( trim( explode( ',', $sizes, 2 )[0] ) ) ? 'auto, ' : '';
+	$tags->set_attribute( 'sizes', $auto . '(min-width: 40em) 8rem, 5.5rem' );
+	return $tags->get_updated_html();
+}

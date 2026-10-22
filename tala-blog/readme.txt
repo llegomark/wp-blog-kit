@@ -33,6 +33,9 @@ The header lists the site's pages. For a hand-made menu, replace the page list w
 
 == Changelog ==
 
+= 1.1.1 =
+* Faster article lists on phones: thumbnails tell the browser their real width (5.5rem, 8rem on wider screens), so it downloads the 300 px image instead of the 768 or 1024 px one.
+
 = 1.1.0 =
 * New: thumbnails of the featured image in article lists, and numbered pages under them.
 * New: "Filed under" categories at the end of an article, next to the tags.
