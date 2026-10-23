@@ -508,8 +508,9 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * The links to the previous and next articles are a navigation landmark with a name of its own.
-	 * An article with neither (a site's only article) gets no empty landmark.
+	 * "Keep reading" under an article: a navigation landmark of its own name, before the author box,
+	 * with the older and newer articles as cards whose label sits inside the link. An article with
+	 * no other article to point to (a site's only one) gets no landmark, heading included.
 	 */
 	public function test_post_navigation_is_a_named_landmark(): void {
 		$author = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -533,17 +534,67 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 		$html = $this->render( $after, $newer );
 		$tags = new WP_HTML_Tag_Processor( $html );
 		$this->assertTrue( $tags->next_tag( array( 'tag_name' => 'nav' ) ), 'A navigation landmark' );
-		$this->assertSame( 'Previous and next articles', $tags->get_attribute( 'aria-label' ) );
-		$this->assertMatchesRegularExpression( '#<nav\b.*>Seating plans</a>.*</nav>#s', $html );
+		$this->assertSame( 'Keep reading', $tags->get_attribute( 'aria-label' ) );
+		$this->assertMatchesRegularExpression( '#<nav\b.*<h2[^>]*>Keep reading</h2>.*</nav>#s', $html );
+		$this->assertMatchesRegularExpression( '#<nav\b.*<a [^>]*rel="prev"[^>]*><span class="post-navigation-link__label">Older article</span> <span class="post-navigation-link__title">Seating plans</span></a>.*</nav>#s', $html, 'The label is part of the link, so the whole card is the target.' );
+		$this->assertStringNotContainsString( 'Newer article', $html, 'The newest article has no newer one.' );
+		$this->assertLessThan( strpos( $html, 'wp-block-post-author' ), strpos( $html, '<nav' ), 'Before the author box' );
 
 		wp_delete_post( $older, true );
 		$this->go_to( get_permalink( $newer ) );
 		$html = $this->render( $after, $newer );
 		$this->assertStringContainsString( 'wp-block-post-author', $html, 'The author box stays' );
 		$this->assertStringNotContainsString( '<nav', $html, 'Nothing to link to: no landmark' );
+		$this->assertStringNotContainsString( 'Keep reading', $html, 'Nor its heading' );
 
 		$words = '<!-- wp:group {"tagName":"nav"} --><nav class="wp-block-group"><p>Soon</p></nav><!-- /wp:group -->';
-		$this->assertStringContainsString( '<p>Soon</p>', do_blocks( $words ), 'A navigation group with text is left alone' );
+		$this->assertSame( '', do_blocks( $words ), 'A navigation landmark without links is left out, whatever it says' );
+		$linked = '<!-- wp:group {"tagName":"nav"} --><nav class="wp-block-group"><p><a href="/about/">About</a></p></nav><!-- /wp:group -->';
+		$this->assertStringContainsString( '<a href="/about/">About</a>', do_blocks( $linked ), 'One with a link stays' );
+	}
+
+	/**
+	 * "Keep reading" lists up to three recent articles from the article's own categories (any of
+	 * them), newest first, never the article itself or one from other categories; a pinned post
+	 * takes no special place. Without any, the list is left out and the cards stand alone.
+	 */
+	public function test_related_articles(): void {
+		$teaching = self::factory()->category->create( array( 'name' => 'Teaching' ) );
+		$forms    = self::factory()->category->create( array( 'name' => 'Forms' ) );
+		$other    = self::factory()->category->create( array( 'name' => 'Other' ) );
+		$post     = static fn( string $title, string $date, array $categories ): array => array(
+			'post_title'    => $title,
+			'post_date'     => $date,
+			'post_category' => $categories,
+		);
+		$current  = $this->publish_post( $post( 'Reading corners', '2026-03-01 08:00:00', array( $teaching, $forms ) ) );
+		$oldest   = $this->publish_post( $post( 'Seating plans', '2026-01-05 08:00:00', array( $teaching ) ) );
+		$this->publish_post( $post( 'Class rules', '2026-01-10 08:00:00', array( $teaching ) ) );
+		$this->publish_post( $post( 'Forms to keep', '2026-02-10 08:00:00', array( $forms ) ) );
+		$newest = $this->publish_post( $post( 'Homework habits', '2026-04-01 08:00:00', array( $teaching ) ) );
+		$budget = $this->publish_post( $post( 'Budget season', '2026-02-20 08:00:00', array( $other ) ) );
+		stick_post( $oldest );
+		$after = '<!-- wp:pattern {"slug":"tala-blog/post-footer"} /-->';
+
+		$this->go_to( get_permalink( $current ) );
+		$html = $this->render( $after, $current );
+		preg_match_all( '#<h3 class="wp-block-post-title"><a href="[^"]*"[^>]*>([^<]*)</a></h3>#', $html, $titles );
+		$this->assertSame( array( 'Homework habits', 'Forms to keep', 'Class rules' ), $titles[1], 'Newest three of its categories; the pinned oldest one takes no special place' );
+		$this->assertStringNotContainsString( '>Budget season<', substr( $html, 0, (int) strpos( $html, 'tala-post-nav__links' ) ), 'Other categories are not related (the older-article card below may still be one)' );
+		$this->assertStringContainsString( 'tala-list-thumb', $html, 'With thumbnails' );
+		$this->assertStringContainsString( 'Newer article</span> <span class="post-navigation-link__title">Homework habits', $html, 'The cards follow' );
+		$this->assertStringNotContainsString( 'wp-block-post-date__modified-date', $html );
+
+		$this->go_to( get_permalink( $newest ) );
+		$html = $this->render( $after, $newest );
+		$this->assertStringContainsString( '>Reading corners<', $html, 'Related to the newest one too' );
+
+		$alone = $this->publish_post( $post( 'Budget season two', '2026-05-01 08:00:00', array( $other ) ) );
+		wp_delete_post( $budget, true );
+		$this->go_to( get_permalink( $alone ) );
+		$html = $this->render( $after, $alone );
+		$this->assertStringNotContainsString( 'wp-block-query', $html, 'No article of its category: the list is left out' );
+		$this->assertStringContainsString( 'Older article', $html, 'The cards stay' );
 	}
 
 	/**

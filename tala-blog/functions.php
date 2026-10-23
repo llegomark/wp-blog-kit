@@ -101,28 +101,95 @@ function tala_blog_decorative_logo( $html, $block ) {
 	return $logo->get_updated_html();
 }
 
+/**
+ * Whether some HTML holds a link (an <a> with an href).
+ *
+ * @param string $html HTML.
+ * @return bool
+ */
+function tala_blog_has_link( $html ) {
+	$tags = new WP_HTML_Tag_Processor( $html );
+	while ( $tags->next_tag( array( 'tag_name' => 'a' ) ) ) {
+		if ( null !== $tags->get_attribute( 'href' ) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
 add_filter( 'render_block_core/group', 'tala_blog_empty_navigation', 10, 2 );
 
 /**
- * A Group block that is a navigation landmark, as the links to the previous and next articles are,
- * is left out when it holds no link and no text: a site's only article has neither a previous nor
- * a next one, and screen readers would still announce the empty landmark.
+ * A Group block that is a navigation landmark, as "Keep reading" under an article is, is left out
+ * when it holds no link: a site's only article has no other article to point to, and screen
+ * readers would still announce the landmark, heading and all. A navigation landmark is there for
+ * its links, as the Navigation block, which renders nothing without items, treats it.
  *
  * @param string               $html  Rendered Group.
  * @param array<string, mixed> $block Parsed block.
  * @return string
  */
 function tala_blog_empty_navigation( $html, $block ) {
-	if ( 'nav' !== ( $block['attrs']['tagName'] ?? '' ) || '' !== trim( wp_strip_all_tags( $html ) ) ) {
+	if ( 'nav' !== ( $block['attrs']['tagName'] ?? '' ) || tala_blog_has_link( $html ) ) {
 		return $html;
 	}
-	$tags = new WP_HTML_Tag_Processor( $html );
-	while ( $tags->next_tag( array( 'tag_name' => 'a' ) ) ) {
-		if ( null !== $tags->get_attribute( 'href' ) ) {
-			return $html;
-		}
-	}
 	return '';
+}
+
+/**
+ * Whether a parsed block has a class (its "Additional CSS class(es)").
+ *
+ * @param array<string, mixed> $block      Parsed block.
+ * @param string               $class_name Class.
+ * @return bool
+ */
+function tala_blog_block_has_class( $block, $class_name ) {
+	$classes = $block['attrs']['className'] ?? '';
+	return is_string( $classes ) && in_array( $class_name, explode( ' ', $classes ), true );
+}
+
+add_filter( 'query_loop_block_query_vars', 'tala_blog_related_query', 10, 2 );
+
+/**
+ * The "Keep reading" list under an article (patterns/post-footer.php): the Post Template with the
+ * class "tala-related" lists the latest articles from the article's own categories, the article
+ * itself left out, however many categories it has. Pinned posts take no special place, and the
+ * list needs no page count. Away from an article (the pattern placed on another page) it is empty.
+ *
+ * @param array<string, mixed> $query WP_Query arguments built from the Query Loop block.
+ * @param WP_Block             $block The Post Template block.
+ * @return array<string, mixed>
+ */
+function tala_blog_related_query( $query, $block ) {
+	if ( ! tala_blog_block_has_class( $block->parsed_block, 'tala-related' ) ) {
+		return $query;
+	}
+	$post_id    = is_singular() ? get_queried_object_id() : 0;
+	$categories = $post_id ? wp_get_post_categories( $post_id ) : array();
+	if ( ! is_array( $categories ) || ! $categories ) {
+		$query['post__in'] = array( 0 ); // Nothing to list.
+		return $query;
+	}
+	$query['category__in']        = array_map( 'intval', $categories );
+	$query['post__not_in']        = array_merge( array_map( 'intval', (array) ( $query['post__not_in'] ?? array() ) ), array( $post_id ) );
+	$query['ignore_sticky_posts'] = true;
+	$query['no_found_rows']       = true;
+	return $query;
+}
+
+add_filter( 'render_block_core/query', 'tala_blog_empty_related', 10, 2 );
+
+/**
+ * The "Keep reading" list is left out when it has no article to list (the Query Loop with the
+ * class "tala-related"): an article in a category of its own shows the older and newer articles
+ * alone, and a site's only article nothing.
+ *
+ * @param string               $html  Rendered Query Loop.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_empty_related( $html, $block ) {
+	return tala_blog_block_has_class( $block, 'tala-related' ) && ! tala_blog_has_link( $html ) ? '' : $html;
 }
 
 // Don't fetch pattern directory patterns into the editor.

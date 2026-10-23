@@ -1,8 +1,9 @@
 /**
  * The HTML says what each part of an article page is: the article has a header (title and dates)
- * and a footer (categories and tags); the links to the previous and next articles are a navigation
- * landmark of their own name; each comment is an article of its own. Landmark names and heading
- * order are axe's (a11y.spec.mjs).
+ * and a footer (categories and tags); "Keep reading" (related articles, then the older and newer
+ * ones) is a navigation landmark of its own name, right after the article and before the author
+ * box; each comment is an article of its own. Landmark names and heading order are axe's
+ * (a11y.spec.mjs).
  */
 import { test, expect } from '@playwright/test';
 import { demoPages } from './utils.mjs';
@@ -18,13 +19,16 @@ test( 'an article: a header with the title and dates, a footer with categories a
 	await expect( article.locator( ':scope > footer' ) ).toContainText( 'Filed under' );
 } );
 
-test( 'the previous and next articles are a navigation landmark of their own', async ( { page } ) => {
+test( '"Keep reading" is a navigation landmark right after the article, before the author box', async ( { page } ) => {
 	await page.goto( pages.article );
-	const links = page.getByRole( 'navigation', { name: 'Previous and next articles' } ).getByRole( 'link' );
-	await expect( links ).toHaveCount( 2 );
+	const nav = page.getByRole( 'navigation', { name: 'Keep reading' } );
+	await expect( nav.getByRole( 'heading', { level: 2, name: 'Keep reading' } ) ).toBeVisible();
+	await expect( nav.locator( '.tala-related h3 a' ).first() ).toBeVisible();
+	await expect( nav.getByRole( 'link', { name: /Older article/ } ) ).toBeVisible();
+	await expect( page.locator( 'main > article + nav[aria-label="Keep reading"] + .wp-block-post-author' ) ).toHaveCount( 1 );
 
 	await page.goto( pages.page );
-	await expect( page.getByRole( 'navigation', { name: 'Previous and next articles' } ) ).toHaveCount( 0 );
+	await expect( page.getByRole( 'navigation', { name: 'Keep reading' } ) ).toHaveCount( 0 );
 } );
 
 test( 'each comment is an article', async ( { page } ) => {

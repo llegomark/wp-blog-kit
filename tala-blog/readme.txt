@@ -16,7 +16,7 @@ Tala Blog is a block theme for blogs that are mostly read on phones.
 * System fonts only: nothing to download, and the theme's CSS is inlined, so a page needs no stylesheet requests.
 * Colour and typography presets (Appearance → Editor → Styles → Browse styles): Sepia, Blue and Green, each with a dark mode of its own and text contrast of at least 6:1 like the default colours, and Serif or Serif headings, with the device's own serif font.
 * A header with the site logo (when the site has one) beside the site title, and the site's menu, or its pages until there is one. On phones it folds behind a menu button and opens full screen in the page's colours, light or dark.
-* Article pages: breadcrumbs, "Published" and "Updated" dates, featured image, "Filed under" categories and tags, an author box with biography, links to the previous and next articles, and comments with their dates. The HTML says what each part is: the title and dates are the article's header and the categories and tags its footer, the links to the previous and next articles are a navigation landmark of their own, and each comment is an article.
+* Article pages: breadcrumbs, "Published" and "Updated" dates, featured image, "Filed under" categories and tags, then "Keep reading": up to three recent articles from the same categories and the older and newer articles as cards, placed right after the article where readers decide what to read next; then an author box with biography and comments with their dates. The HTML says what each part is: the title and dates are the article's header and the categories and tags its footer, "Keep reading" is a navigation landmark of its own, and each comment is an article.
 * Article lists (home page, archives, search results): title, summary, date and a thumbnail of the featured image, with numbered pages.
 * Accessible: one H1 per page, uniquely named landmarks, one search form per page, a skip link, visible keyboard focus, text contrast of at least 6:1 and form fields of at least 3:1 in both colour schemes and with every colour preset, and long words that wrap instead of widening the page when zoomed.
 * Prints just the article, with its dates and author, in black on white.
@@ -52,6 +52,10 @@ In Appearance → Editor → Patterns → Header, select the logo placeholder be
 In Appearance → Editor → Styles → Browse styles. Under "Color variations", Sepia, Blue and Green replace the light colours and the dark-mode colours together; under "Typography", Serif sets all text in the device's serif font and Serif headings only the headings and the site title. "Default" goes back to the theme's own. Both use fonts already on the reader's device, so nothing is downloaded.
 
 == Changelog ==
+
+= 1.8.0 =
+* New: "Keep reading" right after the article: up to three recent articles from the same categories (title, date and thumbnail, like the article list), then the older and newer articles as two cards that are tap targets in full, with arrows. The author box follows it. The links were small text below the author box before, and were labelled "Previous" and "Next", which read backwards; they now say "Older article" and "Newer article", as the article lists do.
+* Changed: a Group block that is a navigation landmark is left out when it holds no link, whatever text it has (it kept text before): "Keep reading" disappears on a site's only article, heading and all. Single templates customized in the Site Editor keep their old markup until their customizations are cleared.
 
 = 1.7.0 =
 * New: colour presets Sepia, Blue and Green, each with its own dark mode, and typography presets Serif and Serif headings (Appearance → Editor → Styles → Browse styles). Every preset keeps text contrast at 6:1 or more in light and dark mode and uses system fonts only.

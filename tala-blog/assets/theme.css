@@ -431,15 +431,82 @@ footer.wp-block-template-part {
 }
 
 .tala-post-nav {
-	margin-block-start: var(--wp--preset--spacing--40);
-	gap: var(--wp--preset--spacing--20) var(--wp--preset--spacing--40);
+	margin-block-start: var(--wp--preset--spacing--50);
+}
+
+/* "Keep reading" under the article: a heading, up to three articles from the same categories as a
+   list (the article list's look, smaller titles), then the older and newer articles as two cards. */
+
+.tala-post-nav__title {
+	margin-block: 0 var(--wp--preset--spacing--20);
+}
+
+.tala-related .wp-block-post-title {
+	font-size: var(--wp--preset--font-size--medium);
+}
+
+.tala-post-nav__links {
+	margin-block-start: var(--wp--preset--spacing--30);
+	gap: var(--wp--preset--spacing--20);
+}
+
+/* Each card is the whole tap target: the link covers it, as in the article list. */
+.tala-post-nav__links > .wp-block-post-navigation-link {
+	display: flex;
+	flex: 1 1 100%;
+	gap: 0.5em;
+	align-items: baseline;
+	box-sizing: border-box; /* the padding and border count towards the half width */
+	min-width: 0;
+	margin: 0;
+	padding: var(--wp--preset--spacing--20) var(--wp--preset--spacing--30);
+	border: 1px solid var(--wp--preset--color--rule);
+	border-radius: 5px;
+	position: relative;
+	overflow-wrap: anywhere;
+}
+
+@media (min-width: 40em) {
+
+	.tala-post-nav__links > .wp-block-post-navigation-link {
+		flex-basis: calc(50% - var(--wp--preset--spacing--20));
+	}
+}
+
+.tala-post-nav__links a {
+	flex: 1 1 auto;
+	min-width: 0;
+	text-decoration: none;
+}
+
+.tala-post-nav__links a::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+}
+
+.tala-post-nav__links .post-navigation-link__label {
+	display: block;
+	color: var(--wp--preset--color--muted);
 	font-size: var(--wp--preset--font-size--small);
 }
 
-/* A title with a very long word wraps inside the link instead of widening the page. */
-.tala-post-nav > * {
-	min-width: 0;
-	overflow-wrap: anywhere;
+.tala-post-nav__links .post-navigation-link__title {
+	font-weight: 600;
+}
+
+.tala-post-nav__links .wp-block-post-navigation-link__arrow-previous,
+.tala-post-nav__links .wp-block-post-navigation-link__arrow-next {
+	color: var(--wp--preset--color--muted);
+}
+
+.tala-post-nav__links > .wp-block-post-navigation-link:hover {
+	border-color: var(--wp--preset--color--accent);
+}
+
+.tala-post-nav__links > .wp-block-post-navigation-link:hover .post-navigation-link__title {
+	color: var(--wp--preset--color--accent);
+	text-decoration: underline;
 }
 
 .tala-comments {
