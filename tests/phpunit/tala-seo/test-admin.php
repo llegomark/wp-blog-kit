@@ -279,4 +279,69 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 		$this->assertArrayHasKey( 'tala_tiktok', $methods );
 		$this->assertArrayHasKey( 'tala_fediverse_url', $methods );
 	}
+
+	/**
+	 * The author photo can only be an image the person saving the profile may see: not one attached
+	 * to someone else's draft.
+	 */
+	public function test_author_photo_must_be_readable(): void {
+		$editor     = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$subscriber = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		$draft      = self::factory()->post->create(
+			array(
+				'post_author' => $editor,
+				'post_status' => 'draft',
+			)
+		);
+		$hidden     = (int) self::factory()->attachment->create_upload_object( dirname( __DIR__, 3 ) . '/dev/media/cover-2.jpg', $draft );
+
+		wp_set_current_user( $subscriber );
+		$_POST = array(
+			'tala_seo_photo'       => (string) $hidden,
+			'tala_seo_photo_nonce' => wp_create_nonce( 'tala_seo_photo' ),
+		);
+		tala_seo_save_photo( $subscriber );
+		$this->assertSame( '', get_user_meta( $subscriber, 'tala_seo_photo', true ), 'An image of an unpublished post' );
+
+		$_POST['tala_seo_photo'] = (string) self::$image_id;
+		tala_seo_save_photo( $subscriber );
+		$this->assertSame( (string) self::$image_id, get_user_meta( $subscriber, 'tala_seo_photo', true ), 'A public image' );
+
+		wp_delete_attachment( $hidden, true );
+	}
+
+	/**
+	 * Multisite: an attachment ID belongs to one site's media library, so the photo chosen on one
+	 * site is never looked up in another site's (where the same ID can be any other image).
+	 *
+	 * @group ms-required
+	 */
+	public function test_author_photo_is_per_site(): void {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Runs on a network: composer test:multisite.' );
+		}
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		$site   = self::factory()->blog->create();
+		add_user_to_blog( $site, $author, 'author' );
+		switch_to_blog( $site );
+		// An image on the second site with the ID the shared image has on the main site.
+		$image = self::factory()->attachment->create_object(
+			array(
+				'file'           => 'photo.jpg',
+				'post_mime_type' => 'image/jpeg',
+				'import_id'      => self::$image_id,
+			)
+		);
+		$this->assertSame( self::$image_id, $image );
+		wp_set_current_user( $author );
+		$_POST = array(
+			'tala_seo_photo'       => (string) $image,
+			'tala_seo_photo_nonce' => wp_create_nonce( 'tala_seo_photo' ),
+		);
+		tala_seo_save_photo( $author );
+		$this->assertSame( $image, tala_seo_photo_id( $author ), 'Shown on the site it was chosen on' );
+		restore_current_blog();
+
+		$this->assertSame( 0, tala_seo_photo_id( $author ), 'Not on another site' );
+	}
 }

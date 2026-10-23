@@ -76,6 +76,6 @@ const notes = [
 	'### Check the download',
 	'',
 	...( sha256 ? [ `SHA-256: \`${ sha256 }\` (also in ${ zip }.sha256).`, '' ] : [] ),
-	`The zip carries a build attestation: \`gh attestation verify ${ zip } --repo ${ repository }\` shows it was built by this repository's release workflow from the tagged commit.`,
+	`The zip carries a build attestation: \`gh attestation verify ${ zip } --repo ${ repository } --signer-workflow ${ repository }/.github/workflows/release.yml --source-ref refs/heads/main\` shows it was built by this repository's release workflow from the tagged commit on main.`,
 ];
 process.stdout.write( notes.join( '\n' ) + '\n' );

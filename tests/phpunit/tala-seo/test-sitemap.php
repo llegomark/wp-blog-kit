@@ -77,6 +77,26 @@ class Test_Tala_SEO_Sitemap extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * Leaving those posts out joins no post meta into the sitemap's query, so a post's other custom
+	 * fields don't multiply its cost: one indexed lookup per post.
+	 */
+	public function test_post_sitemap_query_joins_no_meta(): void {
+		global $wpdb;
+		$this->publish_post( array( 'meta_input' => array( TALA_SEO_NOINDEX => '1' ) ) );
+		$queries = array();
+		$capture = static function ( $sql ) use ( &$queries ) {
+			$queries[] = $sql;
+			return $sql;
+		};
+		add_filter( 'posts_request', $capture );
+		$this->urls( 'posts', 'post' );
+		remove_filter( 'posts_request', $capture );
+		$sitemap = array_values( preg_grep( '/' . preg_quote( TALA_SEO_NOINDEX, '/' ) . '/', $queries ) );
+		$this->assertCount( 1, $sitemap, 'The sitemap query still leaves out hidden posts.' );
+		$this->assertStringNotContainsString( "JOIN {$wpdb->postmeta}", $sitemap[0] );
+	}
+
+	/**
 	 * Tag pages need the minimum number of posts (2 by default; 0 lists them all).
 	 */
 	public function test_thin_tags(): void {
@@ -94,6 +114,31 @@ class Test_Tala_SEO_Sitemap extends Tala_SEO_Test_Case {
 
 		$this->set_setting( 'tag_min_posts', 5 );
 		$this->assertNotContains( 'post_tag', $this->taxonomy_sitemaps(), 'No tag page qualifies: no tag sitemap at all.' );
+	}
+
+	/**
+	 * However many tags a site has, a sitemap request loads at most a page of them, as WordPress's own
+	 * sitemap does: tags with too few posts are left out by the query, not one by one.
+	 */
+	public function test_tag_sitemap_loads_a_page_of_tags_at_most(): void {
+		add_filter( 'wp_sitemaps_max_urls', static fn() => 5 );
+		$this->publish_post( array( 'tags_input' => array_map( static fn( $i ) => "tala-few-$i", range( 1, 20 ) ) ) );
+		foreach ( array( 1, 2 ) as $copy ) {
+			$this->publish_post( array( 'tags_input' => array( 'tala-many-1', 'tala-many-2', 'tala-many-3' ) ) );
+		}
+		$this->go_to( home_url( '/' ) );
+		$largest = 0;
+		$measure = static function ( $terms ) use ( &$largest ) {
+			$largest = max( $largest, is_array( $terms ) ? count( $terms ) : 0 );
+			return $terms;
+		};
+		add_filter( 'get_terms', $measure );
+		$sitemap = wp_sitemaps_get_server()->registry->get_provider( 'taxonomies' );
+		$this->assertArrayHasKey( 'post_tag', $sitemap->get_object_subtypes() );
+		$urls = wp_list_pluck( $sitemap->get_url_list( 1, 'post_tag' ), 'loc' );
+		remove_filter( 'get_terms', $measure );
+		$this->assertCount( 3, $urls, 'The tags with enough posts' );
+		$this->assertLessThanOrEqual( 5, $largest, 'Tags loaded at once' );
 	}
 
 	/**

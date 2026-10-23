@@ -36,9 +36,11 @@
 			"@plugin-check"
 		],
 		"test:install": "tests/bin/install-wp-tests.sh",
+		"test:multisite": "WP_MULTISITE=1 phpunit --group ms-required",
 		"test": [
 			"@test:install",
-			"phpunit"
+			"phpunit",
+			"@test:multisite"
 		]
 	},
 	"scripts-descriptions": {
@@ -48,6 +50,7 @@
 		"plugin-check": "Run WordPress Plugin Check on tala-seo against the local site.",
 		"check": "Run every check: coding standards, static analysis and Plugin Check.",
 		"test:install": "Download WordPress for the tests (.cache/wordpress) and create the empty test database.",
-		"test": "PHPUnit integration tests on WordPress's test framework (phpunit.xml.dist)."
+		"test:multisite": "The tests that need a network (@group ms-required), on a multisite test install.",
+		"test": "PHPUnit integration tests on WordPress's test framework (phpunit.xml.dist), then the multisite ones."
 	}
 }

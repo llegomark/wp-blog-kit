@@ -35,7 +35,7 @@ function tala_seo_local_avatar( $args, $id_or_email ) {
 		$user    = get_user_by( 'email', $id_or_email );
 		$user_id = $user ? $user->ID : 0;
 	}
-	$photo = $user_id ? (int) get_user_meta( $user_id, 'tala_seo_photo', true ) : 0;
+	$photo = $user_id ? tala_seo_photo_id( $user_id ) : 0;
 	if ( ! $photo ) {
 		return $args;
 	}

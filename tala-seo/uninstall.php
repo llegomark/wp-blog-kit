@@ -21,4 +21,5 @@ delete_post_meta_by_key( '_tala_seo_minor_edit' );
 delete_post_meta_by_key( '_tala_seo_old_path' );
 delete_post_meta_by_key( '_tala_seo_share_crop_tried' );
 delete_post_meta_by_key( '_tala_seo_videos' );
+delete_post_meta_by_key( '_tala_seo_video_failures' );
 delete_metadata( 'term', 0, '_tala_seo_old_path', '', true );

@@ -22,8 +22,14 @@ declare -A SHA256=(
   [themeunittestdata.wordpress.xml]=457aace6ec93cf77369bbcc6158996e52da8798bd5e39c83d58dfab9b50d64fa
   [64-block-test-data.xml]=59e0eefd78087740f7ee98253666a7697ad57e1f2e7a80f6b8d74ae397072aea
 )
+# The admin login lives outside the site folder, which `wp server` serves file by file.
+CREDENTIALS=${XDG_STATE_HOME:-$HOME/.local/state}/wp-blog-kit/$(basename "$SITE").credentials
 wp() { command wp --path="$SITE" "$@"; }
 
+mkdir -p "$(dirname "$CREDENTIALS")" && chmod 700 "$(dirname "$CREDENTIALS")"
+if [ -f "$SITE/.dev-credentials" ]; then # A site made before the login moved out of its folder.
+  mv -f "$SITE/.dev-credentials" "$CREDENTIALS" && chmod 600 "$CREDENTIALS"
+fi
 if [ "${1:-}" = --serve ]; then
   exec wp --path="$SITE" server --host=127.0.0.1 --port=8081
 fi
@@ -53,8 +59,8 @@ PASSWORD=$(openssl rand -base64 18 | tr -d '/+=')
 wp core install --url="$URL" --title="Theme Unit Test: a fairly long site title to see how it wraps" \
   --admin_user=admin --admin_password="$PASSWORD" --admin_email=dev@example.com --skip-email --quiet
 wp option update blogdescription "And an even longer tagline, as the Theme Unit Test asks, to see how the header and footer handle it on a narrow phone screen" --quiet
-install -m 600 /dev/null "$SITE/.dev-credentials"
-printf 'URL=%s/wp-admin/\nUSER=admin\nPASSWORD=%s\n' "$URL" "$PASSWORD" > "$SITE/.dev-credentials"
+install -m 600 /dev/null "$CREDENTIALS"
+printf 'URL=%s/wp-admin/\nUSER=admin\nPASSWORD=%s\n' "$URL" "$PASSWORD" > "$CREDENTIALS"
 
 ln -s "$KIT/tala-blog" "$SITE/wp-content/themes/tala-blog"
 wp theme activate tala-blog --quiet

@@ -73,3 +73,8 @@ test( 'robots.txt points to the sitemap and blocks no crawler', async ( { reques
 	expect( robots ).toContain( `Sitemap: ${ baseURL }/wp-sitemap.xml` );
 	expect( robots.match( /^Disallow:.*$/gm ) ).toEqual( [ 'Disallow: /wp-admin/' ] );
 } );
+
+test( 'the dev site does not serve its admin login', async ( { request } ) => {
+	const response = await request.get( '/.dev-credentials' );
+	expect( await response.text() ).not.toContain( 'PASSWORD=' );
+} );

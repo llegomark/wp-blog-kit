@@ -281,4 +281,37 @@ class Test_Tala_SEO_Head extends Tala_SEO_Test_Case {
 		);
 		$this->assertSame( 'A hand-written excerpt.', get_the_excerpt( $post ) );
 	}
+
+	/**
+	 * The description is plain text, and an excerpt is HTML: markup written into the description
+	 * (encoded twice, so it survives being cleaned on save and on read) shows as text, never as a tag.
+	 */
+	public function test_description_in_excerpt_is_text(): void {
+		$post    = $this->publish_post(
+			array(
+				'post_excerpt' => '',
+				'meta_input'   => array( TALA_SEO_DESCRIPTION => 'Read this. &amp;lt;img src=x onerror=alert(1)&amp;gt;' ),
+			)
+		);
+		$excerpt = get_the_excerpt( $post );
+		$this->assertStringNotContainsString( '<img', $excerpt );
+		$this->assertStringContainsString( '&lt;img', $excerpt, 'Shown as text' );
+	}
+
+	/**
+	 * A password-protected post keeps its excerpt to itself until the password is entered, as
+	 * WordPress does: without a meta description of its own, it has no description at all.
+	 */
+	public function test_protected_excerpt_is_not_the_description(): void {
+		add_filter( 'tala_seo_publish_requirements', '__return_empty_array' ); // A post published without one.
+		$post = $this->publish_post(
+			array(
+				'post_password' => 'secret',
+				'post_excerpt'  => 'A summary of the protected post.',
+				'meta_input'    => array( TALA_SEO_DESCRIPTION => '' ),
+			)
+		);
+		$this->go_to( get_permalink( $post ) );
+		$this->assertStringNotContainsString( 'A summary of the protected post.', $this->head() );
+	}
 }

@@ -119,6 +119,25 @@ class Test_Tala_SEO_Redirects extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * Looking up an old address costs little whatever the visitor asks for: long or deep made-up
+	 * paths don't grow the database query with the length of the URL.
+	 */
+	public function test_old_address_lookup_is_bounded(): void {
+		$bytes = 0;
+		$count = static function ( $sql ) use ( &$bytes ) {
+			if ( str_contains( $sql, TALA_SEO_OLD_PATH ) ) {
+				$bytes += strlen( $sql );
+			}
+			return $sql;
+		};
+		add_filter( 'query', $count );
+		$this->assertNull( $this->moved( '/tala' . str_repeat( '/', 2000 ) . 'z/' ) );
+		$this->assertNull( $this->moved( '/' . str_repeat( 'a/', 1000 ) ) );
+		remove_filter( 'query', $count );
+		$this->assertLessThan( 10000, $bytes, 'Bytes of SQL for both requests' );
+	}
+
+	/**
 	 * A page keeps at most 20 old addresses, dropping the oldest.
 	 */
 	public function test_old_addresses_are_limited(): void {

@@ -51,8 +51,18 @@ function tala_seo_home_description() {
  * @return bool
  */
 function tala_seo_is_thin_term( $term ) {
+	return (int) $term->count < tala_seo_min_posts( $term->taxonomy );
+}
+
+/**
+ * How many posts a term of this taxonomy needs for its page to be indexed (0: no minimum).
+ *
+ * @param string $taxonomy Taxonomy.
+ * @return int
+ */
+function tala_seo_min_posts( $taxonomy ) {
 	$min = tala_seo_settings()['tag_min_posts'];
-	return $min > 1 && in_array( $term->taxonomy, tala_seo_thin_taxonomies(), true ) && (int) $term->count < $min;
+	return $min > 1 && in_array( $taxonomy, tala_seo_thin_taxonomies(), true ) ? $min : 0;
 }
 
 /**
@@ -279,13 +289,36 @@ function tala_seo_logo() {
 }
 
 /**
+ * The user meta key that holds a user's author photo on this site. An attachment ID belongs to one
+ * site's media library, so on a network each site keeps its own choice.
+ *
+ * @return string
+ */
+function tala_seo_photo_key() {
+	global $wpdb;
+	return is_multisite() ? $wpdb->get_blog_prefix() . 'tala_seo_photo' : 'tala_seo_photo';
+}
+
+/**
+ * The author photo's attachment ID while visitors may see it, else 0. An image attached to a draft or
+ * private post stays hidden, as WordPress hides it, until that post is published.
+ *
+ * @param int $user_id User ID.
+ * @return int
+ */
+function tala_seo_photo_id( $user_id ) {
+	$id = (int) get_user_meta( (int) $user_id, tala_seo_photo_key(), true );
+	return $id && wp_attachment_is_image( $id ) && 'publish' === get_post_status( $id ) ? $id : 0;
+}
+
+/**
  * Author's real profile photo (never a Gravatar placeholder: Google asks for no default images).
  *
  * @param int $user_id User ID.
  * @return string Image URL or ''.
  */
 function tala_seo_author_photo( $user_id ) {
-	$id  = (int) get_user_meta( $user_id, 'tala_seo_photo', true );
+	$id  = tala_seo_photo_id( $user_id );
 	$url = $id ? wp_get_attachment_image_url( $id, 'medium' ) : '';
 	return $url ? $url : '';
 }

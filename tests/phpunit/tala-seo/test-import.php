@@ -34,13 +34,18 @@ class Test_Tala_SEO_Import extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * A draft carrying another plugin's values.
+	 * A post by an author, carrying another plugin's values.
 	 *
 	 * @param array<string, mixed> $meta Post meta.
 	 * @return int Post ID.
 	 */
 	private function legacy_post( array $meta ): int {
-		return self::factory()->post->create( array( 'meta_input' => $meta ) );
+		return self::factory()->post->create(
+			array(
+				'post_author' => self::factory()->user->create( array( 'role' => 'author' ) ),
+				'meta_input'  => $meta,
+			)
+		);
 	}
 
 	/**
@@ -116,6 +121,37 @@ class Test_Tala_SEO_Import extends Tala_SEO_Test_Case {
 		$this->assertSame( 'Own title', get_post_meta( $own, TALA_SEO_TITLE, true ), 'Never overwritten' );
 
 		$this->assertSame( 'Copied 0 value(s).', $this->import(), 'A second run copies nothing.' );
+	}
+
+	/**
+	 * The plain "redirect" key is a custom field anyone editing a post can add, unseen in Tala SEO's
+	 * panel: a contributor's goes live only if its author could set a redirect on the published post,
+	 * which a contributor can't. Every redirect copied or skipped is listed with its target.
+	 */
+	public function test_redirect_from_a_custom_field_needs_a_trusted_author(): void {
+		update_option( 'autodescription-site-settings', array() );
+		$contributor = self::factory()->user->create( array( 'role' => 'contributor' ) );
+		$author      = self::factory()->user->create( array( 'role' => 'author' ) );
+		$theirs      = self::factory()->post->create(
+			array(
+				'post_author' => $contributor,
+				'meta_input'  => array( 'redirect' => 'https://example.org/contributor/' ),
+			)
+		);
+		$own         = self::factory()->post->create(
+			array(
+				'post_author' => $author,
+				'meta_input'  => array( 'redirect' => 'https://example.org/author/' ),
+			)
+		);
+
+		$this->import();
+		$this->assertSame( '', get_post_meta( $theirs, TALA_SEO_REDIRECT, true ), 'Not from a contributor' );
+		$this->assertSame( 'https://example.org/author/', get_post_meta( $own, TALA_SEO_REDIRECT, true ) );
+		$printed = implode( "\n", array_column( WP_CLI::$messages, 1 ) );
+		$this->assertStringContainsString( "Post $theirs", $printed );
+		$this->assertStringContainsString( 'https://example.org/contributor/', $printed, 'The skipped target is named.' );
+		$this->assertStringContainsString( 'https://example.org/author/', $printed, 'The copied target is named.' );
 	}
 
 	/**

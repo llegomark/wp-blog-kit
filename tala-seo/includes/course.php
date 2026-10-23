@@ -161,7 +161,7 @@ function tala_seo_post_courses( $post, ?array $blocks = null ): array {
 		return array();
 	}
 	$courses = array();
-	$found   = tala_seo_find_blocks( $blocks ?? parse_blocks( $post->post_content ), static fn( $block ) => 'tala-seo/course' === $block['blockName'] );
+	$found   = tala_seo_find_blocks( $blocks ?? tala_seo_visible_blocks( parse_blocks( $post->post_content ) ), static fn( $block ) => 'tala-seo/course' === $block['blockName'] );
 	foreach ( $found as $block ) {
 		$course = tala_seo_course_data( (array) ( $block['attrs'] ?? array() ), $post );
 		if ( ! $course || '' === $course['description'] ) {

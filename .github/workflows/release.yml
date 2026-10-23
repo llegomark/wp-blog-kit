@@ -5,8 +5,9 @@
 # named after it, tala-seo-1.11.0 or tala-blog-1.6.0, tagged on that commit. The release holds:
 #   - the zip, to download and install (Plugins or Appearance → Themes → Upload);
 #   - its SHA-256, to check the download;
-#   - a build attestation (GitHub's signed record that this workflow built the zip from that commit):
-#     `gh attestation verify <zip> --repo <owner>/<repo>`;
+#   - a build attestation (GitHub's signed record that this workflow built the zip from that commit on
+#     main): `gh attestation verify <zip> --repo <owner>/<repo> --signer-workflow
+#     <owner>/<repo>/.github/workflows/release.yml --source-ref refs/heads/main`;
 #   - the version's changelog entry and upgrade notice from readme.txt as its notes (bin/release-notes.mjs).
 # A version that already has a release is left alone, so pushes that don't change a version publish
 # nothing. Started by hand (Actions → Release → Run workflow), it publishes main's versions that have no
@@ -48,6 +49,17 @@ jobs:
       GH_REPO: ${{ github.repository }}
       SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
+      # The zip is built from SHA, while the attestation records this run's own commit and branch: on
+      # a workflow_run, main's latest commit. Publish only when they are the same commit on main, so
+      # the attestation names the commit the zip was built from (a re-run of older checks, or a push
+      # that started none, would otherwise publish one commit under another's record).
+      - name: Make sure it is main's latest commit
+        run: |
+          if [ "$GITHUB_REF" != refs/heads/main ] || [ "$SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::$SHA is not the latest commit of main ($GITHUB_REF is at $GITHUB_SHA); nothing is published."
+            exit 1
+          fi
+
       - name: Check out the commit the checks passed on
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

@@ -20,6 +20,17 @@ defined( 'ABSPATH' ) || exit;
 const TALA_SEO_OLD_PATHS_KEPT = 20;
 
 /**
+ * How many leading levels of a 404's path are matched against old addresses. Pages and terms sit a
+ * few levels deep, and anything below an old address still matches through its first levels.
+ */
+const TALA_SEO_OLD_PATH_DEPTH = 10;
+
+/**
+ * The longest 404 path (bytes) that is looked up as an old address.
+ */
+const TALA_SEO_OLD_PATH_MAX_LENGTH = 2000;
+
+/**
  * The path of a URL on this site, without the home path or surrounding slashes ("parent/child").
  *
  * @param string $url URL.
@@ -166,11 +177,13 @@ function tala_seo_redirect_moved(): void {
 		return;
 	}
 	$request = trim( (string) $wp->request, '/' );
-	if ( '' === $request ) {
+	// Old addresses are short and never hold an empty level ("a//b"), so such a request can't be
+	// one; skipping it also keeps the lookup's cost from growing with whatever URL a visitor sends.
+	if ( '' === $request || strlen( $request ) > TALA_SEO_OLD_PATH_MAX_LENGTH || str_contains( $request, '//' ) ) {
 		return;
 	}
 	// "a/b/c" is either an old address itself or lies below one: try a/b/c, then a/b, then a.
-	$parts      = explode( '/', $request );
+	$parts      = array_slice( explode( '/', $request ), 0, TALA_SEO_OLD_PATH_DEPTH );
 	$candidates = array();
 	for ( $i = count( $parts ); $i > 0; $i-- ) {
 		$candidates[] = implode( '/', array_slice( $parts, 0, $i ) );

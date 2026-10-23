@@ -101,7 +101,15 @@ function tala_seo_rest_guard( $prepared, $request ) {
  * @return stdClass|WP_Error
  */
 function tala_seo_rest_check( $prepared, $request ) {
-	if ( is_wp_error( $prepared ) || str_contains( $request->get_route(), '/autosaves' ) ) {
+	if ( is_wp_error( $prepared ) ) {
+		return $prepared;
+	}
+	if ( str_contains( $request->get_route(), '/autosaves' ) ) {
+		// An autosave never takes a post live: WordPress writes an author's own draft directly, so a
+		// status sent with it would publish without the check below.
+		if ( in_array( $prepared->post_status ?? '', array( 'publish', 'future' ), true ) ) {
+			unset( $prepared->post_status );
+		}
 		return $prepared;
 	}
 	$id       = (int) ( $prepared->ID ?? 0 );

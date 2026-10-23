@@ -38,7 +38,7 @@ function tala_seo_content_nodes( $post ) {
 		return array();
 	}
 	$url    = (string) get_permalink( $post );
-	$blocks = parse_blocks( $post->post_content );
+	$blocks = tala_seo_visible_blocks( parse_blocks( $post->post_content ) );
 	return array_merge(
 		tala_seo_video_nodes( $post, $blocks, $url ),
 		array_filter( array( tala_seo_faq_node( $blocks, $url ) ) ),
@@ -46,6 +46,44 @@ function tala_seo_content_nodes( $post ) {
 		array_filter( array( tala_seo_post_event_node( $post, $blocks ) ) ),
 		tala_seo_post_course_nodes( $post, $blocks )
 	);
+}
+
+/**
+ * Parsed blocks without the ones hidden on the front end (block visibility set to hide everywhere),
+ * so the markup describes only what the page shows. A block hidden only on some screen sizes stays:
+ * it is still in the page.
+ *
+ * @param array<array<string, mixed>> $blocks Parsed blocks.
+ * @return array<int, array<string, mixed>>
+ */
+function tala_seo_visible_blocks( array $blocks ): array {
+	$visible = array();
+	foreach ( $blocks as $block ) {
+		if ( false === ( $block['attrs']['metadata']['blockVisibility'] ?? null ) ) {
+			continue;
+		}
+		if ( ! empty( $block['innerBlocks'] ) ) {
+			// Keep the inner HTML in step with the inner blocks: each null marks where one goes.
+			$inner   = array();
+			$content = array();
+			$next    = 0;
+			foreach ( $block['innerContent'] ?? array() as $chunk ) {
+				if ( is_string( $chunk ) ) {
+					$content[] = $chunk;
+					continue;
+				}
+				$child = tala_seo_visible_blocks( array( $block['innerBlocks'][ $next++ ] ) );
+				if ( $child ) {
+					$inner[]   = $child[0];
+					$content[] = null;
+				}
+			}
+			$block['innerBlocks']  = $inner;
+			$block['innerContent'] = $content;
+		}
+		$visible[] = $block;
+	}
+	return $visible;
 }
 
 /**
@@ -303,12 +341,18 @@ function tala_seo_video_nodes( $post, array $blocks, string $url ): array {
 	return $nodes;
 }
 
+/**
+ * How many videos one save asks YouTube about at most; the rest wait for the next saves.
+ */
+const TALA_SEO_VIDEO_FETCHES = 10;
+
 add_action( 'wp_after_insert_post', 'tala_seo_remember_videos', 10, 2 );
 
 /**
  * When a post is saved, fetches the title and thumbnail of each YouTube video it doesn't know yet
- * from YouTube's oEmbed, and forgets the videos the post no longer has. A failed fetch is tried
- * again on the next save.
+ * from YouTube's oEmbed, and forgets the videos the post no longer has. One save asks about a few
+ * videos at most, and a video YouTube couldn't describe is asked about again an hour later, so a
+ * post full of unknown videos never makes saving slow or floods YouTube.
  *
  * @param int     $post_id Post ID.
  * @param WP_Post $post    Post.
@@ -317,22 +361,46 @@ function tala_seo_remember_videos( $post_id, $post ): void {
 	if ( ! in_array( $post->post_type, tala_seo_post_types(), true ) ) {
 		return;
 	}
-	$known  = get_post_meta( $post_id, TALA_SEO_VIDEOS, true );
-	$known  = is_array( $known ) ? $known : array();
-	$videos = array();
-	foreach ( array_keys( tala_seo_youtube_videos( parse_blocks( $post->post_content ) ) ) as $id ) {
-		$video = $known[ $id ] ?? tala_seo_fetch_video( (string) $id );
+	$known    = get_post_meta( $post_id, TALA_SEO_VIDEOS, true );
+	$known    = is_array( $known ) ? $known : array();
+	$failed   = get_post_meta( $post_id, TALA_SEO_VIDEO_FAILURES, true );
+	$failed   = is_array( $failed ) ? $failed : array();
+	$videos   = array();
+	$failures = array();
+	$fetches  = 0;
+	foreach ( array_keys( tala_seo_youtube_videos( tala_seo_visible_blocks( parse_blocks( $post->post_content ) ) ) ) as $id ) {
+		if ( isset( $known[ $id ] ) ) {
+			$videos[ $id ] = $known[ $id ];
+			continue;
+		}
+		$last = (int) ( $failed[ $id ] ?? 0 );
+		if ( time() - $last < HOUR_IN_SECONDS || $fetches >= TALA_SEO_VIDEO_FETCHES ) {
+			if ( $last ) {
+				$failures[ $id ] = $last;
+			}
+			continue;
+		}
+		++$fetches;
+		$video = tala_seo_fetch_video( (string) $id );
 		if ( $video ) {
 			$videos[ $id ] = $video;
+		} else {
+			$failures[ $id ] = time();
 		}
 	}
-	if ( $videos === $known ) {
-		return;
+	if ( $videos !== $known ) {
+		if ( $videos ) {
+			update_post_meta( $post_id, TALA_SEO_VIDEOS, wp_slash( $videos ) );
+		} else {
+			delete_post_meta( $post_id, TALA_SEO_VIDEOS );
+		}
 	}
-	if ( $videos ) {
-		update_post_meta( $post_id, TALA_SEO_VIDEOS, wp_slash( $videos ) );
-	} else {
-		delete_post_meta( $post_id, TALA_SEO_VIDEOS );
+	if ( $failures !== $failed ) {
+		if ( $failures ) {
+			update_post_meta( $post_id, TALA_SEO_VIDEO_FAILURES, $failures );
+		} else {
+			delete_post_meta( $post_id, TALA_SEO_VIDEO_FAILURES );
+		}
 	}
 }
 

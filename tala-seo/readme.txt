@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.11.1
+Stable tag: 1.12.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -94,6 +94,15 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 
 == Changelog ==
 
+= 1.12.0 =
+* Security: the meta description a post list shows in place of an excerpt is escaped, so markup written into it shows as text.
+* Security: an author photo can only be an image the person saving the profile may see, and shows only while that image is public. On multisite, each site keeps its own photo.
+* Security: a password-protected post's excerpt is no longer used as its description, and the YouTube video dates of a post are readable over the REST API only by people who may edit it.
+* Security: blocks hidden with block visibility are left out of the structured data, as they are out of the page.
+* Security: an autosave can no longer publish a post that the publish check would stop.
+* Security: `wp tala-seo import` copies a redirect kept in a plain custom field only when the post's author may edit published posts, and lists every redirect it copies or leaves out.
+* Performance: looking up old addresses on 404 pages, the post and tag sitemaps, and fetching YouTube video details on save no longer grow with the size of the request or the number of posts, tags or videos.
+
 = 1.11.1 =
 * Readme: installing from the GitHub releases.
 
@@ -178,6 +187,9 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 * First release.
 
 == Upgrade Notice ==
+
+= 1.12.0 =
+Security fixes; update soon. On multisite, authors choose their photo again on each site. An author photo attached to an unpublished post shows once that post is published.
 
 = 1.11.0 =
 Breadcrumb structured data now appears only where the Breadcrumbs block shows the trail. Using a theme other than Tala Blog? Add the Breadcrumbs block to your templates in Appearance → Editor.

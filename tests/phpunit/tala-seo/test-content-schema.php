@@ -257,6 +257,39 @@ class Test_Tala_SEO_Content_Schema extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * A block hidden on the front end (block visibility) isn't on the page, so the markup leaves it
+	 * out and saving asks YouTube nothing about it; a block hidden only on some screens is still on
+	 * the page, and still described.
+	 */
+	public function test_hidden_blocks_are_not_described(): void {
+		$hidden   = '"metadata":{"blockVisibility":false}';
+		$viewport = '"metadata":{"blockVisibility":{"viewport":{"mobile":false}}}';
+		$faq      = $this->group(
+			'tala-seo-faq',
+			$this->details( 'Shown question?', $this->paragraph( 'Shown answer.' ) )
+			. "<!-- wp:details {{$hidden}} -->\n<details class=\"wp-block-details\"><summary>Hidden question?</summary>" . $this->paragraph( 'Hidden answer.' ) . "</details>\n<!-- /wp:details -->"
+			. "<!-- wp:details {{$viewport}} -->\n<details class=\"wp-block-details\"><summary>Desktop question?</summary>" . $this->paragraph( 'Desktop answer.' ) . "</details>\n<!-- /wp:details -->"
+		);
+		$video    = str_replace( '"responsive":true}', "\"responsive\":true,$hidden}", $this->embed( 'https://youtu.be/aqz-KE-bpKQ' ) );
+		$event    = "<!-- wp:tala-seo/event {\"name\":\"Hidden event\",\"startDate\":\"2026-11-14\",\"streetAddress\":\"1 Hidden St\",\"addressLocality\":\"Quezon City\",$hidden} /-->";
+		$course   = "<!-- wp:tala-seo/course {\"name\":\"Hidden course\",\"description\":\"Not on the page.\",$hidden} /-->";
+		$post     = $this->publish_post(
+			array(
+				'post_content' => $faq . $video . $event . $course,
+				'meta_input'   => array( TALA_SEO_VIDEO_DATES => array( 'aqz-KE-bpKQ' => '2014-11-10' ) ),
+			)
+		);
+		$this->assertSame( array(), $this->fetched, 'Nothing asked about a hidden video.' );
+
+		$this->go_to( get_permalink( $post ) );
+		$questions = array_column( $this->nodes( 'FAQPage' )[0]['mainEntity'], 'name' );
+		$this->assertSame( array( 'Shown question?', 'Desktop question?' ), $questions );
+		$this->assertSame( array(), $this->nodes( 'VideoObject' ) );
+		$this->assertSame( array(), $this->nodes( 'Event' ) );
+		$this->assertSame( array(), $this->nodes( 'Course' ) );
+	}
+
+	/**
 	 * Addresses of YouTube videos, and addresses that aren't.
 	 *
 	 * @return array<string, array{string, string}>
@@ -343,7 +376,11 @@ class Test_Tala_SEO_Content_Schema extends Tala_SEO_Test_Case {
 
 		$this->oembed_status = 200;
 		wp_update_post( array( 'ID' => $post ) );
-		$this->assertArrayHasKey( 'aqz-KE-bpKQ', get_post_meta( $post, TALA_SEO_VIDEOS, true ), 'Tried again on the next save.' );
+		$this->assertCount( 1, $this->fetched, 'Not asked again right away.' );
+		update_post_meta( $post, TALA_SEO_VIDEO_FAILURES, array( 'aqz-KE-bpKQ' => time() - HOUR_IN_SECONDS - 1 ) );
+		wp_update_post( array( 'ID' => $post ) );
+		$this->assertArrayHasKey( 'aqz-KE-bpKQ', get_post_meta( $post, TALA_SEO_VIDEOS, true ), 'Tried again on a save an hour later.' );
+		$this->assertSame( '', get_post_meta( $post, TALA_SEO_VIDEO_FAILURES, true ), 'Nothing left to try again.' );
 
 		wp_update_post(
 			array(
@@ -352,6 +389,22 @@ class Test_Tala_SEO_Content_Schema extends Tala_SEO_Test_Case {
 			)
 		);
 		$this->assertSame( '', get_post_meta( $post, TALA_SEO_VIDEOS, true ) );
+	}
+
+	/**
+	 * However many videos a post holds, one save asks YouTube about a few at most, and videos it
+	 * couldn't describe wait an hour: saving a post never turns into a long string of requests.
+	 */
+	public function test_video_fetches_per_save_are_limited(): void {
+		$this->oembed_status = 404;
+		$embeds              = array_map( fn( $i ) => $this->embed( sprintf( 'https://youtu.be/v%010d', $i ) ), range( 1, TALA_SEO_VIDEO_FETCHES + 5 ) );
+		$post                = $this->publish_post( array( 'post_content' => implode( '', $embeds ) ) );
+		$this->assertCount( TALA_SEO_VIDEO_FETCHES, $this->fetched );
+
+		wp_update_post( array( 'ID' => $post ) );
+		$this->assertCount( TALA_SEO_VIDEO_FETCHES + 5, $this->fetched, 'The rest on the next save' );
+		wp_update_post( array( 'ID' => $post ) );
+		$this->assertCount( TALA_SEO_VIDEO_FETCHES + 5, $this->fetched, 'None asked again within the hour' );
 	}
 
 	/**
@@ -378,6 +431,31 @@ class Test_Tala_SEO_Content_Schema extends Tala_SEO_Test_Case {
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertSame( array( 'aqz-KE-bpKQ' => '2014-11-10' ), get_post_meta( $post, TALA_SEO_VIDEO_DATES, true ), 'An emptied date is dropped.' );
 		$this->assertSame( array(), tala_seo_sanitize_video_dates( array( 'aqz-KE-bpKQ' => '2014-02-30' ) ), 'Not a real date.' );
+	}
+
+	/**
+	 * The video dates name the videos in a post's content, which a password may hide: only people who
+	 * may edit the post read them over REST (as the editor does); visitors see none.
+	 */
+	public function test_video_dates_are_for_editors(): void {
+		$editor = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$post   = $this->publish_post(
+			array(
+				'post_password' => 'secret',
+				'post_content'  => $this->embed( 'https://youtu.be/aqz-KE-bpKQ' ),
+				'meta_input'    => array( TALA_SEO_VIDEO_DATES => array( 'aqz-KE-bpKQ' => '2014-11-10' ) ),
+			)
+		);
+		$read   = static function ( string $context ) use ( $post ): array {
+			$request = new WP_REST_Request( 'GET', '/wp/v2/posts/' . $post );
+			$request->set_param( 'context', $context );
+			return (array) rest_do_request( $request )->get_data();
+		};
+
+		wp_set_current_user( 0 );
+		$this->assertArrayNotHasKey( TALA_SEO_VIDEO_DATES, (array) ( $read( 'view' )['meta'] ?? array() ) );
+		wp_set_current_user( $editor );
+		$this->assertSame( array( 'aqz-KE-bpKQ' => '2014-11-10' ), $read( 'edit' )['meta'][ TALA_SEO_VIDEO_DATES ] );
 	}
 
 	/**

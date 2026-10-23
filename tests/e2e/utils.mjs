@@ -5,10 +5,14 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
+import { basename } from 'node:path';
 import AxeBuilder from '@axe-core/playwright';
 
 /** The local site (dev/site.sh). */
 export const SITE = process.env.WP_DEV_SITE || `${ homedir() }/Sites/blogkit`;
+
+/** Its admin login, which dev/site.sh keeps outside the served site folder. */
+const CREDENTIALS = `${ process.env.XDG_STATE_HOME || `${ homedir() }/.local/state` }/wp-blog-kit/${ basename( SITE ) }.credentials`;
 
 /** A phone (Pixel 7) and a desktop window. */
 export const PHONE = {
@@ -59,13 +63,13 @@ export function demoPages() {
 }
 
 /**
- * Logs in as the site's administrator (credentials from dev/site.sh's .dev-credentials).
+ * Logs in as the site's administrator (the login dev/site.sh wrote).
  *
  * @param {import('@playwright/test').Page} page Page.
  */
 export async function logIn( page ) {
 	const credentials = Object.fromEntries(
-		readFileSync( `${ SITE }/.dev-credentials`, 'utf8' )
+		readFileSync( CREDENTIALS, 'utf8' )
 			.trim()
 			.split( '\n' )
 			.map( ( line ) => line.split( /=(.*)/s ).slice( 0, 2 ) ),

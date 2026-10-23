@@ -112,7 +112,10 @@ class Tala_SEO_CLI {
 			}
 			$this->copy( 'post', $id, TALA_SEO_CANONICAL, tala_seo_sanitize_url( tala_seo_legacy_value( $id, 'canonical' ) ) );
 			$this->copy( 'post', $id, TALA_SEO_NOINDEX, tala_seo_legacy_value( $id, 'noindex' ) );
-			$this->copy( 'post', $id, TALA_SEO_REDIRECT, $this->legacy_redirect( $id ) );
+			$redirect = $this->legacy_redirect( $id );
+			if ( $this->copy( 'post', $id, TALA_SEO_REDIRECT, $redirect ) ) {
+				WP_CLI::log( sprintf( 'Post %d redirects to %s', $id, $redirect ) );
+			}
 			if ( is_object_in_taxonomy( (string) get_post_type( $id ), 'category' ) && ! get_post_meta( $id, TALA_SEO_PRIMARY_CATEGORY, true ) ) {
 				$primary = tala_seo_chosen_primary_category( $id );
 				$this->copy( 'post', $id, TALA_SEO_PRIMARY_CATEGORY, $primary ? (string) $primary->term_id : '' );
@@ -170,17 +173,20 @@ class Tala_SEO_CLI {
 	 * @param int    $id    Object ID.
 	 * @param string $key   Meta key.
 	 * @param string $value Value from the other plugin ('' = nothing to copy).
+	 * @return bool Whether it was copied (or would be, in a dry run).
+	 * @phpstan-impure It counts what it copies and writes the value.
 	 */
-	private function copy( string $type, int $id, string $key, string $value ): void {
+	private function copy( string $type, int $id, string $key, string $value ): bool {
 		// The raw value: get_metadata() would return a registered default (0) for unset fields.
 		if ( '' === $value || ! empty( get_metadata_raw( $type, $id, $key, true ) ) ) {
-			return;
+			return false;
 		}
 		$what                  = $type . ':' . $key;
 		$this->copied[ $what ] = ( $this->copied[ $what ] ?? 0 ) + 1;
 		if ( ! $this->dry ) {
 			update_metadata( $type, $id, $key, $value );
 		}
+		return true;
 	}
 
 	/**
@@ -195,10 +201,17 @@ class Tala_SEO_CLI {
 	private function legacy_redirect( int $post_id ): string {
 		// The SEO Framework keeps it under the plain "redirect" key, which other plugins may use too:
 		// only trusted when The SEO Framework ran on this site (it keeps its settings when deleted).
+		// Anyone editing the post can also add that key as a custom field, unseen by reviewers, so it
+		// goes live only if the post's author could set a redirect on the published post.
 		if ( false !== get_option( 'autodescription-site-settings' ) ) {
 			$tsf = tala_seo_sanitize_redirect( get_post_meta( $post_id, 'redirect', true ) );
 			if ( '' !== $tsf ) {
-				return $tsf;
+				$type   = get_post_type_object( (string) get_post_type( $post_id ) );
+				$author = (int) get_post_field( 'post_author', $post_id );
+				if ( $type && user_can( $author, $type->cap->edit_published_posts ) ) {
+					return $tsf;
+				}
+				WP_CLI::warning( sprintf( 'Post %d: left out the redirect to %s (its author can\'t edit published posts, so nobody may have reviewed it).', $post_id, $tsf ) );
 			}
 		}
 		$type = (string) get_post_meta( $post_id, '_seopress_redirections_type', true );

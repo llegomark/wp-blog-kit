@@ -18,7 +18,15 @@ DB=wp_blogkit
 DB_USER=${WP_DEV_DB_USER:-$USER}
 DB_HOST=${WP_DEV_DB_HOST:-localhost}
 URL=http://127.0.0.1:8080
+# The admin login lives outside the site folder: `wp server` hands out every file in that folder to
+# anyone who can reach the port, whatever its permissions. (tests/e2e/utils.mjs reads it here too.)
+CREDENTIALS=${XDG_STATE_HOME:-$HOME/.local/state}/wp-blog-kit/$(basename "$SITE").credentials
 wp() { command wp --path="$SITE" "$@"; }
+
+mkdir -p "$(dirname "$CREDENTIALS")" && chmod 700 "$(dirname "$CREDENTIALS")"
+if [ -f "$SITE/.dev-credentials" ]; then # A site made before the login moved out of its folder.
+  mv -f "$SITE/.dev-credentials" "$CREDENTIALS" && chmod 600 "$CREDENTIALS"
+fi
 
 if [ "${1:-}" = --reset ] && [ -f "$SITE/wp-config.php" ]; then
   wp db drop --yes || true
@@ -49,8 +57,8 @@ wp db create
 PASSWORD=$(openssl rand -base64 18 | tr -d '/+=')
 wp core install --url="$URL" --title="Guro Notes (dev)" --admin_user=admin --admin_password="$PASSWORD" \
   --admin_email=dev@example.com --skip-email --quiet
-install -m 600 /dev/null "$SITE/.dev-credentials"
-printf 'URL=%s/wp-admin/\nUSER=admin\nPASSWORD=%s\n' "$URL" "$PASSWORD" > "$SITE/.dev-credentials"
+install -m 600 /dev/null "$CREDENTIALS"
+printf 'URL=%s/wp-admin/\nUSER=admin\nPASSWORD=%s\n' "$URL" "$PASSWORD" > "$CREDENTIALS"
 
 ln -s "$KIT/tala-blog" "$SITE/wp-content/themes/tala-blog"
 ln -s "$KIT/tala-seo" "$SITE/wp-content/plugins/tala-seo"
@@ -62,4 +70,4 @@ wp rewrite structure '/%postname%/' --quiet    # in its own process, so every ta
 
 echo
 echo "Local site ready: $URL  (start it with dev/serve.sh)"
-echo "Admin login is in $SITE/.dev-credentials"
+echo "Admin login is in $CREDENTIALS"

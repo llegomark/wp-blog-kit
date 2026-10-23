@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Tala SEO
  * Description:       Lean SEO for blogs: titles, meta descriptions, canonicals, Open Graph, JSON-LD structured data (articles, YouTube videos, events, courses, FAQ and how-to), visible breadcrumbs, sitemap and robots.txt tuning, and a publish check that blocks posts without a meta description or featured image.
- * Version:           1.11.1
+ * Version:           1.12.0
  * Requires at least: 7.0
  * Requires PHP:      8.5
  * Author:            Edventure
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const TALA_SEO_VERSION = '1.11.1';
+const TALA_SEO_VERSION = '1.12.0';
 const TALA_SEO_FILE    = __FILE__;
 
 // Post meta keys. The leading underscore hides them from the Custom Fields box.
@@ -37,9 +37,11 @@ const TALA_SEO_SHARE_CROP_TRIED = '_tala_seo_share_crop_tried';
 const TALA_SEO_OLD_PATH = '_tala_seo_old_path';
 
 // Post meta for embedded YouTube videos (see content-schema.php): the date each was published on
-// YouTube, as the author enters it, and the title and thumbnail fetched from YouTube on save.
-const TALA_SEO_VIDEO_DATES = '_tala_seo_video_dates';
-const TALA_SEO_VIDEOS      = '_tala_seo_videos';
+// YouTube, as the author enters it, the title and thumbnail fetched from YouTube on save, and when
+// YouTube last couldn't describe a video.
+const TALA_SEO_VIDEO_DATES    = '_tala_seo_video_dates';
+const TALA_SEO_VIDEOS         = '_tala_seo_videos';
+const TALA_SEO_VIDEO_FAILURES = '_tala_seo_video_failures';
 
 require __DIR__ . '/includes/helpers.php';
 require __DIR__ . '/includes/terms.php';
@@ -171,6 +173,9 @@ function tala_seo_register_meta(): void {
 				'show_in_rest'      => array(
 					'schema' => array(
 						'type'                 => 'object',
+						// For editors only: the IDs name the videos in the content, which a password may
+						// hide. Visitors see the videos as VideoObject markup, once the content is shown.
+						'context'              => array( 'edit' ),
 						// Video ID => date ('2026-03-14'), or '' while the author hasn't entered it.
 						'patternProperties'    => array(
 							TALA_SEO_YOUTUBE_ID_PATTERN => array(

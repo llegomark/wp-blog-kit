@@ -105,6 +105,16 @@ function tala_seo_term_value( $term, $field ) {
 }
 
 /**
+ * The term meta keys that can mark a term "hide from search engines", Tala SEO's own and the ones
+ * tala_seo_legacy_term_value() reads (Yoast SEO keeps its marks in an option instead).
+ *
+ * @return string[]
+ */
+function tala_seo_term_noindex_keys() {
+	return array( TALA_SEO_NOINDEX, 'rank_math_robots', 'autodescription-term-settings', '_seopress_robots_index' );
+}
+
+/**
  * A term's SEO value from Yoast SEO, Rank Math, The SEO Framework or SEOPress, or ''.
  *
  * @param WP_Term $term  Term.

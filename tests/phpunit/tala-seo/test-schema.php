@@ -124,6 +124,34 @@ class Test_Tala_SEO_Schema extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * The author photo is shown (avatar, ProfilePage) only while visitors may see the image: never one
+	 * attached to a draft, even when the profile already points at it.
+	 */
+	public function test_author_photo_only_when_public(): void {
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		$draft  = self::factory()->post->create(
+			array(
+				'post_author' => $author,
+				'post_status' => 'draft',
+			)
+		);
+		$image  = (int) self::factory()->attachment->create_upload_object( dirname( __DIR__, 3 ) . '/dev/media/cover-2.jpg', $draft );
+		update_user_meta( $author, 'tala_seo_photo', $image );
+		$this->publish_post( array( 'post_author' => $author ) );
+
+		$this->go_to( get_author_posts_url( $author ) );
+		$this->assertArrayNotHasKey( 'image', $this->schema()['ProfilePage']['mainEntity'] );
+		$this->assertStringNotContainsString( 'cover-2', (string) get_avatar_url( $author ) );
+
+		wp_publish_post( $draft );
+		$this->go_to( get_author_posts_url( $author ) );
+		$this->assertStringContainsString( 'cover-2', $this->schema()['ProfilePage']['mainEntity']['image'] );
+		$this->assertStringContainsString( 'cover-2', (string) get_avatar_url( $author ) );
+
+		wp_delete_attachment( $image, true );
+	}
+
+	/**
 	 * The BreadcrumbList matches the visible trail: Home › Category › Post, the last without a URL.
 	 */
 	public function test_breadcrumbs(): void {

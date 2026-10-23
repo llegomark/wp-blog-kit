@@ -145,6 +145,32 @@ class Test_Tala_SEO_Publish_Guard extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * An autosave never takes a post live. WordPress writes an author's autosave of their own draft
+	 * straight into the post, status included, so a status sent with it would skip the check.
+	 */
+	public function test_autosaves_cannot_publish(): void {
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		$draft  = self::factory()->post->create(
+			array(
+				'post_author' => $author,
+				'post_status' => 'draft',
+			)
+		);
+		wp_set_current_user( $author );
+		$response = $this->rest(
+			'POST',
+			"/wp/v2/posts/$draft/autosaves",
+			array(
+				'status'  => 'publish',
+				'content' => 'Saved by the editor.',
+			)
+		);
+		$this->assertContains( $response->get_status(), array( 200, 201 ), 'The autosave itself still works.' );
+		$this->assertSame( 'draft', get_post_status( $draft ) );
+		$this->assertSame( 'Saved by the editor.', get_post_field( 'post_content', $draft ) );
+	}
+
+	/**
 	 * A minor edit keeps the post's updated date; the switch applies to one save only.
 	 */
 	public function test_minor_edit_keeps_the_updated_date(): void {

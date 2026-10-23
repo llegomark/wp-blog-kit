@@ -80,7 +80,8 @@ function tala_seo_current_description() {
 	if ( is_singular() ) {
 		$id   = get_queried_object_id();
 		$text = tala_seo_post_description( $id );
-		if ( '' === $text && has_excerpt( $id ) ) {
+		// A password-protected post shows its excerpt only once the password is entered.
+		if ( '' === $text && has_excerpt( $id ) && ! post_password_required( $id ) ) {
 			$text = tala_seo_clean_text( (string) get_post( $id )?->post_excerpt );
 		}
 		return $text;
@@ -336,5 +337,6 @@ function tala_seo_excerpt_fallback( $excerpt, $post = null ) {
 		return $excerpt;
 	}
 	$description = tala_seo_post_description( $post->ID );
-	return '' !== $description ? $description : $excerpt;
+	// The description is plain text (entities decoded); an excerpt is HTML.
+	return '' !== $description ? esc_html( $description ) : $excerpt;
 }

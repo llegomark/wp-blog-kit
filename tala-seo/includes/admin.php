@@ -476,8 +476,8 @@ add_action( 'edit_user_profile', 'tala_seo_photo_field' );
  * @param WP_User $user User being edited.
  */
 function tala_seo_photo_field( $user ): void {
-	$id  = (int) get_user_meta( $user->ID, 'tala_seo_photo', true );
-	$src = $id ? (string) wp_get_attachment_image_url( $id, 'thumbnail' ) : '';
+	$id  = (int) get_user_meta( $user->ID, tala_seo_photo_key(), true );
+	$src = $id && current_user_can( 'read_post', $id ) ? (string) wp_get_attachment_image_url( $id, 'thumbnail' ) : '';
 	?>
 	<h2><?php esc_html_e( 'Author photo', 'tala-seo' ); ?></h2>
 	<table class="form-table" role="presentation">
@@ -511,9 +511,10 @@ function tala_seo_save_photo( $user_id ): void {
 		return;
 	}
 	$id = absint( $_POST['tala_seo_photo'] ?? 0 );
-	if ( $id && wp_attachment_is_image( $id ) ) {
-		update_user_meta( $user_id, 'tala_seo_photo', $id );
+	// Only an image the person saving may see: an ID typed into the form can't reach someone else's.
+	if ( $id && wp_attachment_is_image( $id ) && current_user_can( 'read_post', $id ) ) {
+		update_user_meta( $user_id, tala_seo_photo_key(), $id );
 	} else {
-		delete_user_meta( $user_id, 'tala_seo_photo' );
+		delete_user_meta( $user_id, tala_seo_photo_key() );
 	}
 }
