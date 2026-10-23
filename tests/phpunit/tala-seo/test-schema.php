@@ -141,6 +141,7 @@ class Test_Tala_SEO_Schema extends Tala_SEO_Test_Case {
 			)
 		);
 		$this->go_to( get_permalink( $post ) );
+		$this->show_breadcrumbs();
 		$items = $this->schema()['BreadcrumbList']['itemListElement'];
 		$this->assertSame( array( 'Home', 'Guides', 'Classroom', 'Planning a lesson' ), wp_list_pluck( $items, 'name' ) );
 		$this->assertSame( array( 1, 2, 3, 4 ), wp_list_pluck( $items, 'position' ) );
@@ -148,7 +149,45 @@ class Test_Tala_SEO_Schema extends Tala_SEO_Test_Case {
 		$this->assertArrayNotHasKey( 'item', $items[3], 'The current page needs no URL.' );
 
 		$this->go_to( home_url( '/' ) );
+		$this->show_breadcrumbs();
 		$this->assertArrayNotHasKey( 'BreadcrumbList', $this->schema(), 'Not on the home page' );
+	}
+
+	/**
+	 * Breadcrumb markup describes the trail readers see: none on a page (or with a theme) that doesn't
+	 * show the Breadcrumbs block.
+	 */
+	public function test_breadcrumbs_only_where_shown(): void {
+		$post = $this->publish_post( array( 'post_category' => array( self::factory()->category->create() ) ) );
+		$this->go_to( get_permalink( $post ) );
+		$this->assertArrayNotHasKey( 'BreadcrumbList', $this->schema() );
+		$this->assertSame( '', get_echo( 'tala_seo_print_late_breadcrumbs' ) );
+
+		$this->go_to( get_permalink( $post ) );
+		$this->show_breadcrumbs();
+		$this->assertArrayHasKey( 'BreadcrumbList', $this->schema() );
+	}
+
+	/**
+	 * A block theme renders the page, breadcrumbs included, before <head>: the BreadcrumbList is in
+	 * the graph there, once. A classic theme renders its content after <head>: the BreadcrumbList of
+	 * a trail shown there comes at the end of the page, once.
+	 */
+	public function test_breadcrumbs_in_head_or_at_the_end(): void {
+		$post   = $this->publish_post( array( 'post_category' => array( self::factory()->category->create() ) ) );
+		$script = '/<script type="application\/ld\+json">\{"@context":"https:\/\/schema.org","@graph":\[\{"@type":"BreadcrumbList"/';
+
+		$this->go_to( get_permalink( $post ) );
+		$this->show_breadcrumbs();
+		$this->assertStringContainsString( '"BreadcrumbList"', get_echo( 'tala_seo_print_schema' ) );
+		$this->assertSame( '', get_echo( 'tala_seo_print_late_breadcrumbs' ), 'Not twice' );
+
+		$this->go_to( get_permalink( $post ) );
+		$this->assertStringNotContainsString( 'BreadcrumbList', get_echo( 'tala_seo_print_schema' ) );
+		$this->show_breadcrumbs();
+		$this->assertNotFalse( has_action( 'wp_footer', 'tala_seo_print_late_breadcrumbs' ), 'Printed at the end of the page' );
+		$this->assertMatchesRegularExpression( $script, get_echo( 'tala_seo_print_late_breadcrumbs' ) );
+		$this->assertSame( '', get_echo( 'tala_seo_print_late_breadcrumbs' ), 'Once' );
 	}
 
 	/**
@@ -163,6 +202,7 @@ class Test_Tala_SEO_Schema extends Tala_SEO_Test_Case {
 
 		$crumbs = function () use ( $post ): array {
 			$this->go_to( get_permalink( $post ) );
+			$this->show_breadcrumbs();
 			return wp_list_pluck( $this->schema()['BreadcrumbList']['itemListElement'], 'name' );
 		};
 		$this->assertContains( 'Alpha', $crumbs() );

@@ -108,7 +108,7 @@ function tala_seo_readiness() {
 	$tagline  = '' !== trim( (string) get_bloginfo( 'description' ) );
 	$checks[] = array(
 		'ok'   => $tagline,
-		'text' => $tagline ? __( 'Tagline is set (it is the home page heading).', 'tala-seo' ) : __( 'Add a tagline: it becomes the home page heading and description.', 'tala-seo' ),
+		'text' => $tagline ? __( 'Tagline is set (themes show it, and it describes the home page in search results unless you set a home page description below).', 'tala-seo' ) : __( 'Add a tagline: themes show it, and it describes the home page in search results unless you set a home page description below.', 'tala-seo' ),
 		'link' => admin_url( 'options-general.php' ),
 	);
 

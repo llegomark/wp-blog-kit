@@ -48,6 +48,9 @@ the publish check, the editor's validation of the templates, and the plugin's bl
   other search engines and AI assistants, built only from content the page shows (the FAQ and
   How-to groups, the Course block's card). Don't add other retired types without asking.
 - Don't block AI crawlers (robots.txt or anything else).
+- Each works on its own: the theme without the plugin (no plugin blocks in templates, only through
+  patterns that are empty without it) and the plugin with any theme (nothing that relies on Tala
+  Blog's markup or wording). `tests/e2e/standalone.spec.mjs` checks both.
 - No build step, no web fonts, no jQuery. Keep the theme's CSS inlined (`assets/theme.css`). Node and npm
   are for the linters only; nothing they install ships in the theme or plugin.
 - Fix lint findings in the code. Only switch a rule off in `stylelint.config.mjs` or `eslint.config.mjs`,

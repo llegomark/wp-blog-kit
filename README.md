@@ -10,7 +10,7 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 | `.wordpress-org/` | The plugin's screenshots, as WordPress.org keeps them in a plugin's SVN `assets/` folder (not in the zip). `node dev/screenshots.mjs` takes them again on the local site. |
 | `build.sh` | Packages both as zips in `dist/`. |
 
-Both need WordPress 7.0 or newer and PHP 8.5 or newer. They follow the current WordPress and PHP releases and carry no code for older versions.
+Each works on its own: the theme without the plugin, and the plugin with any theme that follows WordPress's standards (the browser tests run Tala SEO with Twenty Twenty-Five and Tala Blog without Tala SEO). Together, the theme places the plugin's Breadcrumbs block in its templates. Both need WordPress 7.0 or newer and PHP 8.5 or newer. They follow the current WordPress and PHP releases and carry no code for older versions.
 
 ## What Tala SEO does
 
@@ -29,7 +29,7 @@ Both need WordPress 7.0 or newer and PHP 8.5 or newer. They follow the current W
   - home page: WebSite and Organization (or Person), with the home description
   - posts: BlogPosting, with the image in 16:9, 4:3 and 1:1 crops and dates with timezone
   - author pages: ProfilePage
-  - breadcrumbs: BreadcrumbList matching the visible trail
+  - breadcrumbs: BreadcrumbList matching the visible trail, only on pages that show the Breadcrumbs block (with a classic theme, at the end of the page)
   - videos: VideoObject for each YouTube video in an Embed block. The title and thumbnail come from YouTube when the post is saved; the date the video was published, which Google requires and YouTube's oEmbed doesn't give, is entered in the SEO panel.
   - events: the **Event** block shows when, where, tickets and organizer as a card and describes the same as an Event (start with the UTC offset, or the date alone for all-day events; a place with an address; one event per post, as Google asks).
   - courses: the **Course** block shows a course's description, provider (the site by default), level, format, time, instructor and cost as a card and describes it as a Course for Google's course list (English searches): a post with one course is its detail page, a category or other list whose posts are all courses (three or more) gets the ItemList that makes it their summary page, and a post with several courses lists them by their cards' anchors. The level, format, time, instructor and cost were Google's Course info result, retired in June 2025; they stay as schema.org for other search engines and AI assistants.

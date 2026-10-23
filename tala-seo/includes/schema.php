@@ -5,7 +5,10 @@
  * - Posts: BlogPosting with headline, description, image in 16:9/4:3/1:1, ISO 8601 dates with
  *   timezone, and the author as a Person with name and url.
  * - Author archives: ProfilePage whose mainEntity is the Person.
- * - Breadcrumbs: BreadcrumbList matching the visible breadcrumb trail (two items or more).
+ * - Breadcrumbs: BreadcrumbList matching the visible breadcrumb trail (two items or more), only on
+ *   pages that show the Breadcrumbs block. A block theme renders the page before <head>, so the trail
+ *   is in the graph there; a trail shown later (a classic theme's content) gets its own script at the
+ *   end of the page.
  * - Posts and pages: VideoObject, Event, Course, FAQPage and HowTo for what the content shows
  *   (content-schema.php, event.php, course.php).
  * - Lists of posts that are all courses: the ItemList of Google's course list (course.php).
@@ -23,6 +26,35 @@ add_action( 'wp_head', 'tala_seo_print_schema', 3 );
  */
 function tala_seo_print_schema(): void {
 	$nodes = tala_seo_schema_nodes();
+	if ( in_array( 'BreadcrumbList', array_column( $nodes, '@type' ), true ) ) {
+		tala_seo_breadcrumbs_state( 'printed' );
+	}
+	tala_seo_print_json_ld( $nodes );
+}
+
+add_action( 'wp_footer', 'tala_seo_print_late_breadcrumbs' );
+
+/**
+ * The BreadcrumbList of a trail the page showed after <head> was printed: with a classic theme the
+ * Breadcrumbs block renders with the content. (A block theme's trail is already in the graph.)
+ */
+function tala_seo_print_late_breadcrumbs(): void {
+	if ( tala_seo_breadcrumbs_state()['printed'] || is_404() || is_search() || is_preview() ) {
+		return;
+	}
+	$breadcrumbs = tala_seo_breadcrumb_node();
+	if ( $breadcrumbs ) {
+		tala_seo_breadcrumbs_state( 'printed' );
+		tala_seo_print_json_ld( array( $breadcrumbs ) );
+	}
+}
+
+/**
+ * Prints structured data nodes as a JSON-LD script.
+ *
+ * @param array<int, array<string, mixed>> $nodes Nodes.
+ */
+function tala_seo_print_json_ld( array $nodes ): void {
 	if ( ! $nodes ) {
 		return;
 	}
@@ -209,11 +241,15 @@ function tala_seo_profile_page_node( $user_id ) {
 }
 
 /**
- * BreadcrumbList matching the visible trail; Google needs at least two items.
+ * BreadcrumbList matching the visible trail; Google needs at least two items. None on a page that
+ * doesn't show the Breadcrumbs block (so far).
  *
  * @return array<string, mixed>|null
  */
 function tala_seo_breadcrumb_node() {
+	if ( ! tala_seo_breadcrumbs_state()['shown'] ) {
+		return null;
+	}
 	$trail = tala_seo_breadcrumb_trail();
 	if ( count( $trail ) < 2 ) {
 		return null;

@@ -151,6 +151,15 @@ abstract class Tala_SEO_Test_Case extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Renders the Breadcrumbs block for the current page, as a theme's template does.
+	 *
+	 * @return string The trail's HTML.
+	 */
+	protected function show_breadcrumbs(): string {
+		return do_blocks( '<!-- wp:tala-seo/breadcrumbs /-->' );
+	}
+
+	/**
 	 * Every structured data node of one @type on the current page (a post can have several videos
 	 * or how-to guides).
 	 *

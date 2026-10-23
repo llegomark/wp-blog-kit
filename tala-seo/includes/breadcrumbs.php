@@ -31,6 +31,40 @@ function tala_seo_breadcrumb_trail() {
 }
 
 /**
+ * What the page being served has done with its breadcrumbs: whether the Breadcrumbs block showed the
+ * trail, and whether the trail's structured data is printed. The structured data describes the
+ * trail readers see, so a page (or a theme) without the block gets none.
+ *
+ * @param string $event 'shown' or 'printed' to record it; '' only to read.
+ * @return array{shown: bool, printed: bool}
+ */
+function tala_seo_breadcrumbs_state( string $event = '' ): array {
+	global $wp_query;
+	/**
+	 * States by main query.
+	 *
+	 * @var WeakMap<WP_Query, array{shown: bool, printed: bool}> $states
+	 */
+	static $states = new WeakMap();
+	if ( ! $wp_query instanceof WP_Query ) {
+		return array(
+			'shown'   => false,
+			'printed' => false,
+		);
+	}
+	$states[ $wp_query ] ??= array(
+		'shown'   => false,
+		'printed' => false,
+	);
+	if ( 'shown' === $event || 'printed' === $event ) {
+		$state               = $states[ $wp_query ];
+		$state[ $event ]     = true;
+		$states[ $wp_query ] = $state;
+	}
+	return $states[ $wp_query ];
+}
+
+/**
  * Works out the breadcrumb trail for the current page.
  *
  * @return array<int,array{name:string,url:string}>
@@ -172,7 +206,8 @@ function tala_seo_permalink_category( $category, $cats, $post ) {
 add_action( 'init', 'tala_seo_register_breadcrumbs_block' );
 
 /**
- * Registers the Breadcrumbs block (server-rendered; the theme places it in templates).
+ * Registers the Breadcrumbs block (server-rendered). A theme shows it by placing it in its templates,
+ * as Tala Blog does; with any other theme, add it in Appearance → Editor.
  */
 function tala_seo_register_breadcrumbs_block(): void {
 	register_block_type(
@@ -208,6 +243,9 @@ function tala_seo_render_breadcrumbs() {
 	}
 	if ( count( $trail ) < 2 ) {
 		return '';
+	}
+	if ( ! ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
+		tala_seo_breadcrumbs_state( 'shown' );
 	}
 
 	$items = '';

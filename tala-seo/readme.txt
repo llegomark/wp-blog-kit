@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.10.2
+Stable tag: 1.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,7 +22,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **Categories, tags and authors** get their own SEO title, meta description and "hide from search engines" switch.
 * **Head tags:** `<title>` as "Title | Site name" (the name only once when a page is named like the site), meta description, self-referencing canonical on every indexable page (paginated archives included), noindex for search results, 404s, date archives, empty categories and tag pages with too few posts, Open Graph and Twitter card tags with a 1200 × 630 share image (the 1.91:1 shape of link previews on Facebook, LinkedIn, X and messaging apps), and a `fediverse:creator` tag that credits the author when an article is shared on Mastodon.
 * **Feeds and sitemaps** send `X-Robots-Tag: noindex, follow`, so they never show up in search results themselves (search engines still read them).
-* **Structured data (JSON-LD):** WebSite and Organization (with description) on the home page, BlogPosting on posts (image in 16:9, 4:3 and 1:1), ProfilePage on author pages, BreadcrumbList matching the visible Breadcrumbs block.
+* **Structured data (JSON-LD):** WebSite and Organization (with description) on the home page, BlogPosting on posts (image in 16:9, 4:3 and 1:1), ProfilePage on author pages, BreadcrumbList matching the visible Breadcrumbs block, on pages that show it.
 * **Videos:** each YouTube video in an Embed block is described as a VideoObject (title, thumbnail, player address, the caption as its description). The title and thumbnail are fetched from YouTube once, when the post is saved. Google also needs the date the video was published, which YouTube doesn't share this way: enter it in the SEO panel, where each video gets a date field.
 * **Event block:** when, where, tickets and organizer, shown as a card and described as an Event the way Google's event results ask: start and end with the UTC offset (or the date alone for an all-day event), the venue's address, status (cancelled, postponed, rescheduled), price and ticket page, and the featured image. One per post, as Google supports pages about a single event.
 * **Course block:** a course's description, provider (the site unless you name another), level, format (online, in person or both), time, instructor and cost with an enrollment link, shown as a card and described as a Course for Google's course list, a carousel in English searches. A post with one course is its detail page; a category (or other list of posts) whose posts are all courses, three or more, becomes their summary page; a post with several courses lists them itself. Google uses the name, description and provider; the other details were its Course info result, retired in 2025, and stay for other search engines and AI assistants.
@@ -60,6 +60,10 @@ Run `wp tala-seo import --dry-run` to see what would be copied, then `wp tala-se
 
 At least 1200 × 675 px. Tala SEO crops each one to 1200 × 630 for link previews (Facebook, LinkedIn, X, WhatsApp and the like show that 1.91:1 shape) and to 16:9, 4:3 and 1:1 for Google's article results. Keep the subject away from the edges so every crop shows it. The default share image in Settings → SEO is shown as it is, so make that one 1200 × 630.
 
+= Does Tala SEO need the Tala Blog theme? =
+
+No. It works with any theme that follows WordPress's standards: titles, descriptions, canonicals, share images, structured data, the sitemap and the blocks don't depend on the theme. Tala Blog only places the Breadcrumbs block in its templates for you. With another block theme, add the block to your templates in Appearance → Editor (for example above the post title); with a classic theme, put it in a block widget area or in the content. Breadcrumb structured data is output only on pages that show the block, as Google asks that structured data describe what readers see.
+
 = Does Google still show FAQ and HowTo results? =
 
 No. Google stopped showing HowTo results in 2023 and FAQ results in May 2026. The FAQ and How-to blocks still describe their content as FAQPage and HowTo: valid schema.org that other search engines and AI assistants can read. The questions and steps on the page matter most, for readers and for every search engine. Structured data for content that isn't on the page is against Google's guidelines, so the markup comes only from what the blocks show (and nothing from a password-protected post until its content is shown).
@@ -89,6 +93,10 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.11.0 =
+* Changed: breadcrumb structured data (BreadcrumbList) is output only on pages that show the Breadcrumbs block, so with a theme that doesn't show breadcrumbs there is no markup for a trail readers can't see. With a block theme it is in the page's structured data as before; a trail shown later in the page (a classic theme's content or widgets) gets its own script at the end of the page.
+* Changed: the setup checklist describes the tagline for any theme.
 
 = 1.10.2 =
 * Fixed: in the Breadcrumbs block, a title with a very long word wraps instead of widening the page on phones.
@@ -167,6 +175,9 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 * First release.
 
 == Upgrade Notice ==
+
+= 1.11.0 =
+Breadcrumb structured data now appears only where the Breadcrumbs block shows the trail. Using a theme other than Tala Blog? Add the Breadcrumbs block to your templates in Appearance → Editor.
 
 = 1.10.1 =
 Readme and author details only. Nothing changes on your site.
