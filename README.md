@@ -20,7 +20,7 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
   - meta description
   - self-referencing canonical (each page of an archive is its own canonical)
   - noindex for search results, 404s, date archives, empty categories and tag pages with fewer posts than the minimum in Settings → SEO (2 by default)
-  - Open Graph and Twitter card tags, and `fediverse:creator` for authors with a Fediverse handle
+  - Open Graph and Twitter card tags with a 1200 × 630 (1.91:1) share image, the shape link previews use on Facebook, LinkedIn, X and messaging apps, and `fediverse:creator` for authors with a Fediverse handle
 - **`X-Robots-Tag: noindex, follow`** on feeds and sitemaps, so they don't appear in search results themselves.
 - **JSON-LD** (following Google Search Central, October 2026):
   - home page: WebSite and Organization (or Person), with the home description
@@ -46,7 +46,7 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 ./build.sh                                   # makes dist/*.zip
 wp plugin install dist/tala-seo-1.0.0.zip --activate
 wp theme install dist/tala-blog-1.0.0.zip --activate
-wp media regenerate --only-missing --yes     # only on sites with existing images: creates the 1200 px crops
+wp media regenerate --only-missing --yes     # only on sites with existing images: creates the share and Google crops
 ```
 
 Then in wp-admin:

@@ -187,6 +187,63 @@ function tala_seo_image( $attachment_id, $size = 'full' ) {
 }
 
 /**
+ * The image shown when a page is shared (og:image): the 1200 × 630 (1.91:1) crop that Facebook,
+ * LinkedIn, X and messaging apps display. Images uploaded before that crop existed use the 16:9
+ * crop, then the original, until tala_seo_make_share_crop() has made it. Only sizes that exist as
+ * files are used, so the width and height sent with the image are the file's own.
+ *
+ * @param int $attachment_id Attachment ID (0 for none).
+ * @return array{url: string, width: int, height: int, alt: string}|null
+ */
+function tala_seo_share_image( $attachment_id ) {
+	if ( ! $attachment_id ) {
+		return null;
+	}
+	if ( image_get_intermediate_size( $attachment_id, 'tala-seo-share' ) ) {
+		return tala_seo_image( $attachment_id, 'tala-seo-share' );
+	}
+	tala_seo_queue_share_crop( $attachment_id );
+	$size = image_get_intermediate_size( $attachment_id, 'tala-seo-16x9' ) ? 'tala-seo-16x9' : 'full';
+	return tala_seo_image( $attachment_id, $size );
+}
+
+/**
+ * Schedules the share crop of an image uploaded before it existed: once per image, in the
+ * background (WP-Cron), never while a visitor waits. Images smaller than 1200 × 630 can't have it.
+ *
+ * @param int $attachment_id Attachment ID.
+ */
+function tala_seo_queue_share_crop( $attachment_id ): void {
+	$original = wp_get_attachment_image_src( $attachment_id, 'full' );
+	if ( ! $original || $original[1] < 1200 || $original[2] < 630
+		|| get_post_meta( $attachment_id, TALA_SEO_SHARE_CROP_TRIED, true ) ) {
+		return;
+	}
+	$args = array( (int) $attachment_id );
+	if ( ! wp_next_scheduled( 'tala_seo_make_share_crop', $args ) ) {
+		wp_schedule_single_event( time(), 'tala_seo_make_share_crop', $args );
+	}
+}
+
+add_action( 'tala_seo_make_share_crop', 'tala_seo_make_share_crop' );
+
+/**
+ * Makes an image's missing crops, the share crop among them, the way WordPress does on upload.
+ * Tried once per image: one whose crop can't be made keeps using the 16:9 crop or the original.
+ *
+ * @param int $attachment_id Attachment ID.
+ */
+function tala_seo_make_share_crop( $attachment_id ): void {
+	$attachment_id = (int) $attachment_id;
+	update_post_meta( $attachment_id, TALA_SEO_SHARE_CROP_TRIED, 1 );
+	if ( ! wp_attachment_is_image( $attachment_id ) ) {
+		return;
+	}
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+	wp_update_image_subsizes( $attachment_id );
+}
+
+/**
  * Article image URLs in the 16:9, 4:3 and 1:1 crops Google recommends; falls back to the
  * original image when it is too small for a crop.
  *

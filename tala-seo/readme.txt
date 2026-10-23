@@ -3,7 +3,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.5.0
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -19,7 +19,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **SEO column** in the Posts, Pages, Categories and Tags lists: what each item has and still needs at a glance. Every status pairs a symbol with a word, so it never depends on colour.
 * **Primary category:** choose which category leads the breadcrumbs (and the address, when the permalink contains %category%) for posts filed under several.
 * **Categories, tags and authors** get their own SEO title, meta description and "hide from search engines" switch.
-* **Head tags:** `<title>` as "Title | Site name" (the name only once when a page is named like the site), meta description, self-referencing canonical on every indexable page (paginated archives included), noindex for search results, 404s, date archives, empty categories and tag pages with too few posts, Open Graph and Twitter card tags, and a `fediverse:creator` tag that credits the author when an article is shared on Mastodon.
+* **Head tags:** `<title>` as "Title | Site name" (the name only once when a page is named like the site), meta description, self-referencing canonical on every indexable page (paginated archives included), noindex for search results, 404s, date archives, empty categories and tag pages with too few posts, Open Graph and Twitter card tags with a 1200 × 630 share image (the 1.91:1 shape of link previews on Facebook, LinkedIn, X and messaging apps), and a `fediverse:creator` tag that credits the author when an article is shared on Mastodon.
 * **Feeds and sitemaps** send `X-Robots-Tag: noindex, follow`, so they never show up in search results themselves (search engines still read them).
 * **Structured data (JSON-LD):** WebSite and Organization (with description) on the home page, BlogPosting on posts (image in 16:9, 4:3 and 1:1), ProfilePage on author pages, BreadcrumbList matching the visible Breadcrumbs block.
 * **Sitemap:** WordPress's own `/wp-sitemap.xml` with accurate `lastmod`, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, or hidden author pages. It exists only while search engines may index the site.
@@ -35,7 +35,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 
 1. Upload the plugin zip in Plugins → Add New → Upload Plugin, or run `wp plugin install tala-seo.zip --activate`.
 2. Open Settings → SEO and work through the setup checklist.
-3. On a site that already has images, run `wp media regenerate --only-missing` once to create the article image crops.
+3. On a site that already has images, run `wp media regenerate --only-missing` once to create the image crops (again after updating to 1.6.0, for the share crop). Without it, Tala SEO makes an older image's share crop in the background the first time a page with that image is served.
 
 == Frequently Asked Questions ==
 
@@ -51,11 +51,20 @@ Create a draft, set the featured image with `wp media import <file> --post_id=<i
 
 Run `wp tala-seo import --dry-run` to see what would be copied, then `wp tala-seo import`. Until then, titles, descriptions and noindex from Yoast SEO, Rank Math, The SEO Framework or SEOPress still apply to the pages themselves, but the sitemap and the author settings only know Tala SEO's own values.
 
+= What size should featured images be? =
+
+At least 1200 × 675 px. Tala SEO crops each one to 1200 × 630 for link previews (Facebook, LinkedIn, X, WhatsApp and the like show that 1.91:1 shape) and to 16:9, 4:3 and 1:1 for Google's article results. Keep the subject away from the edges so every crop shows it. The default share image in Settings → SEO is shown as it is, so make that one 1200 × 630.
+
 = Why no FAQ or HowTo markup? =
 
 Google retired those rich results. The plugin only outputs structured data Google still uses.
 
 == Changelog ==
+
+= 1.6.0 =
+* New: shared links use a 1200 × 630 (1.91:1) crop of the featured image, the shape Facebook, LinkedIn, X and messaging apps show, instead of the 16:9 crop they had to trim. Google's structured data keeps its 16:9, 4:3 and 1:1 crops.
+* New: images uploaded before this version get the share crop in the background (WP-Cron), once per image; until then the 16:9 crop is shared. `wp media regenerate --only-missing` makes them all at once.
+* Changed: Settings → SEO now asks for a 1200 × 630 default share image.
 
 = 1.5.0 =
 * New: Meta (Facebook) domain verification in Settings → SEO → Site verification (formerly Search engine verification), for sites that run Facebook or Instagram ads, use the Meta Pixel or edit their link previews. Paste the code or the whole meta tag from Meta Business Suite.

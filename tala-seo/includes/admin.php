@@ -261,7 +261,7 @@ function tala_seo_field_default_image(): void {
 	<input type="hidden" id="tala-seo-default-image" name="tala_seo[default_image]" value="<?php echo esc_attr( $id ? (string) $id : '' ); ?>">
 	<button type="button" class="button" data-tala-media="tala-seo-default-image" data-preview="tala-seo-default-image-preview" data-title="<?php esc_attr_e( 'Default share image', 'tala-seo' ); ?>" data-button="<?php esc_attr_e( 'Use this image', 'tala-seo' ); ?>"><?php esc_html_e( 'Choose image', 'tala-seo' ); ?></button>
 	<button type="button" class="button-link" data-tala-media-clear="tala-seo-default-image" data-preview="tala-seo-default-image-preview"><?php esc_html_e( 'Remove', 'tala-seo' ); ?></button>
-	<p class="description"><?php esc_html_e( 'Shown when the home page or a page without a featured image is shared. Use a 1200 × 675 px picture, not the logo.', 'tala-seo' ); ?></p>
+	<p class="description"><?php esc_html_e( 'Shown when the home page or a page without a featured image is shared. Use a 1200 × 630 px picture (the shape of link previews), not the logo.', 'tala-seo' ); ?></p>
 	<?php
 }
 

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Tala SEO
  * Description:       Lean SEO for blogs: titles, meta descriptions, canonicals, Open Graph, JSON-LD structured data, visible breadcrumbs, sitemap and robots.txt tuning, and a publish check that blocks posts without a meta description or featured image.
- * Version:           1.5.0
+ * Version:           1.6.0
  * Requires at least: 6.6
  * Requires PHP:      8.1
  * Author:            Mark Anthony Llego
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const TALA_SEO_VERSION = '1.5.0';
+const TALA_SEO_VERSION = '1.6.0';
 const TALA_SEO_FILE    = __FILE__;
 
 // Post meta keys. The leading underscore hides them from the Custom Fields box.
@@ -29,6 +29,9 @@ const TALA_SEO_NOINDEX     = '_tala_seo_noindex';
 // Post meta: the category that leads the breadcrumbs, and an address the post sends visitors to.
 const TALA_SEO_PRIMARY_CATEGORY = '_tala_seo_primary_category';
 const TALA_SEO_REDIRECT         = '_tala_seo_redirect';
+
+// Attachment meta: set once Tala SEO has tried to make an older image's share crop (helpers.php).
+const TALA_SEO_SHARE_CROP_TRIED = '_tala_seo_share_crop_tried';
 
 // Post and term meta: addresses a page or term archive had before it moved (see redirects.php).
 const TALA_SEO_OLD_PATH = '_tala_seo_old_path';
@@ -171,6 +174,10 @@ function tala_seo_register_meta(): void {
 	add_image_size( 'tala-seo-16x9', 1200, 675, true );
 	add_image_size( 'tala-seo-4x3', 900, 675, true );
 	add_image_size( 'tala-seo-1x1', 675, 675, true );
+
+	// The link-preview crop (og:image): 1.91:1, the shape Facebook, LinkedIn, X and messaging apps
+	// show. Featured images of at least 1200 × 675 get it along with Google's three.
+	add_image_size( 'tala-seo-share', 1200, 630, true );
 }
 
 register_activation_hook( __FILE__, 'tala_seo_activate' );
@@ -181,4 +188,13 @@ register_activation_hook( __FILE__, 'tala_seo_activate' );
  */
 function tala_seo_activate(): void {
 	update_option( 'wp_attachment_pages_enabled', 0 );
+}
+
+register_deactivation_hook( __FILE__, 'tala_seo_deactivate' );
+
+/**
+ * Drops pending background jobs (share crops); the plugin's data stays until it is deleted.
+ */
+function tala_seo_deactivate(): void {
+	wp_unschedule_hook( 'tala_seo_make_share_crop' );
 }

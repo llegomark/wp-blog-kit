@@ -252,7 +252,7 @@ function tala_seo_print_head(): void {
 		$og['og:description'] = $description;
 	}
 	$image_id = tala_seo_og_image_id();
-	$image    = $image_id ? tala_seo_image( $image_id, 'tala-seo-16x9' ) : null;
+	$image    = tala_seo_share_image( $image_id );
 	if ( $image ) {
 		$og['og:image']        = $image['url'];
 		$og['og:image:width']  = (string) $image['width'];
