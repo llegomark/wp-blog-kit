@@ -107,13 +107,7 @@ function tala_seo_event_data( array $attributes, $post ) {
 	$status   = array_key_exists( $text( 'status' ), tala_seo_event_statuses() ) ? $text( 'status' ) : 'EventScheduled';
 	$previous = 'EventRescheduled' === $status ? tala_seo_event_moment( $text( 'previousStartDate' ) ) : null;
 
-	$price    = $text( 'price' );
-	$currency = strtoupper( $text( 'priceCurrency' ) );
-	if ( ! is_numeric( $price ) || (float) $price < 0 || ! preg_match( '/^[A-Z]{3}$/', $currency ) ) {
-		// Google needs a price with its currency (ISO 4217); one without the other means nothing.
-		$price    = '';
-		$currency = '';
-	}
+	$price        = tala_seo_block_price( $attributes['price'] ?? '', $attributes['priceCurrency'] ?? '' );
 	$availability = array_key_exists( $text( 'availability' ), tala_seo_ticket_availabilities() ) ? $text( 'availability' ) : '';
 
 	return array(
@@ -132,8 +126,8 @@ function tala_seo_event_data( array $attributes, $post ) {
 			'postalCode'      => $text( 'postalCode' ),
 			'addressCountry'  => $text( 'addressCountry' ),
 		),
-		'price'        => $price,
-		'currency'     => $currency,
+		'price'        => $price['price'],
+		'currency'     => $price['currency'],
 		'availability' => $availability,
 		'tickets'      => tala_seo_sanitize_url( $attributes['ticketUrl'] ?? '' ),
 		'organizer'    => $text( 'organizer' ),
@@ -187,10 +181,7 @@ function tala_seo_render_event( $attributes ) {
 
 	$tickets = array();
 	if ( '' !== $event['price'] ) {
-		$amount    = (float) $event['price'];
-		$tickets[] = 0.0 === $amount
-			? esc_html__( 'Free', 'tala-seo' )
-			: esc_html( $event['currency'] . ' ' . number_format_i18n( $amount, floor( $amount ) === $amount ? 0 : 2 ) );
+		$tickets[] = tala_seo_price_html( $event['price'], $event['currency'] );
 	}
 	if ( '' !== $event['availability'] ) {
 		$tickets[] = esc_html( tala_seo_ticket_availabilities()[ $event['availability'] ] );
@@ -208,11 +199,7 @@ function tala_seo_render_event( $attributes ) {
 			: esc_html( $event['organizer'] );
 	}
 
-	$html .= '<dl class="wp-block-tala-seo-event__details">';
-	foreach ( $rows as $label => $value ) {
-		$html .= '<dt>' . esc_html( $label ) . '</dt><dd>' . $value . '</dd>';
-	}
-	$html .= '</dl>';
+	$html .= tala_seo_details_html( 'wp-block-tala-seo-event__details', $rows );
 
 	if ( '' !== $event['description'] ) {
 		$html .= '<div class="wp-block-tala-seo-event__description">' . wpautop( esc_html( $event['description'] ) ) . '</div>';

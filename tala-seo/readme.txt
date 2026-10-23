@@ -3,7 +3,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.9.0
+Stable tag: 1.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,6 +24,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **Structured data (JSON-LD):** WebSite and Organization (with description) on the home page, BlogPosting on posts (image in 16:9, 4:3 and 1:1), ProfilePage on author pages, BreadcrumbList matching the visible Breadcrumbs block.
 * **Videos:** each YouTube video in an Embed block is described as a VideoObject (title, thumbnail, player address, the caption as its description). The title and thumbnail are fetched from YouTube once, when the post is saved. Google also needs the date the video was published, which YouTube doesn't share this way: enter it in the SEO panel, where each video gets a date field.
 * **Event block:** when, where, tickets and organizer, shown as a card and described as an Event the way Google's event results ask: start and end with the UTC offset (or the date alone for an all-day event), the venue's address, status (cancelled, postponed, rescheduled), price and ticket page, and the featured image. One per post, as Google supports pages about a single event.
+* **Course block:** a course's description, provider (the site unless you name another), level, format (online, in person or both), time, instructor and cost with an enrollment link, shown as a card and described as a Course for Google's course list, a carousel in English searches. A post with one course is its detail page; a category (or other list of posts) whose posts are all courses, three or more, becomes their summary page; a post with several courses lists them itself. Google uses the name, description and provider; the other details were its Course info result, retired in 2025, and stay for other search engines and AI assistants.
 * **FAQ and How-to:** two Group blocks in the inserter, made of core blocks: an FAQ with a Details block (opens on click) for each question, and a how-to guide with a heading, an introduction and a numbered list of steps. They are described as FAQPage and HowTo. Google no longer shows these as rich results; the markup is valid schema.org that other search engines and AI assistants can read, and it only repeats what the page shows. Without the plugin they are ordinary blocks.
 * **Sitemap:** WordPress's own `/wp-sitemap.xml` with accurate `lastmod`, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, or hidden author pages. It exists only while search engines may index the site.
 * **robots.txt:** points to the sitemap; blocks nothing else, and AI crawlers are welcome.
@@ -62,6 +63,14 @@ At least 1200 × 675 px. Tala SEO crops each one to 1200 × 630 for link preview
 
 No. Google stopped showing HowTo results in 2023 and FAQ results in May 2026. The FAQ and How-to blocks still describe their content as FAQPage and HowTo: valid schema.org that other search engines and AI assistants can read. The questions and steps on the page matter most, for readers and for every search engine. Structured data for content that isn't on the page is against Google's guidelines, so the markup comes only from what the blocks show (and nothing from a password-protected post until its content is shown).
 
+= How do my courses get into Google's course list? =
+
+Give each course its own post with one Course block, with a description, and file the course posts in a category of their own, for example "Courses". With three or more courses there, the category page tells Google they belong together. The list only counts when every post on that page is a course. Google shows the course list in English searches.
+
+= What counts as a course? =
+
+Google's definition: lessons or modules on a subject, with a clear learning outcome, led by an instructor. A one-off event (use the Event block) or a single short video isn't a course. Keep prices and promotions out of the course name.
+
 = Why doesn't the Event block show online events? =
 
 Google's event results only cover events at a physical place that the public can book. An online-only event can still be described in the post; it just doesn't get Event markup without a street address or town.
@@ -71,6 +80,10 @@ Google's event results only cover events at a physical place that the public can
 From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title and thumbnail, but not the date. Open the SEO panel, find the video under "Videos" and enter the date shown under it on YouTube. Until then the video has no VideoObject markup, since Google requires the date.
 
 == Changelog ==
+
+= 1.10.0 =
+* New: the Course block, a card with a course's description, provider, level, format, time, instructor and cost, described as a Course for Google's course list. A post with several courses gets an ItemList of them, each at its card's anchor; a list of posts that are all courses (three or more) gets the ItemList of a summary page.
+* Changed: the Event and Course block previews in the editor use the post title as it is being edited.
 
 = 1.9.0 =
 * New: YouTube videos in Embed blocks are described as VideoObject. Title and thumbnail come from YouTube's oEmbed when the post is saved (never while a page is served); the publish date, which Google requires, is entered per video in the SEO panel, and the pre-publish checklist mentions videos without one.

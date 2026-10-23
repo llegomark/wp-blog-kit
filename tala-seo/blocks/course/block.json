@@ -1,0 +1,38 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tala-seo/course",
+	"version": "1.0.0",
+	"title": "Course",
+	"category": "widgets",
+	"icon": "welcome-learn-more",
+	"description": "A course's description, provider, level, format, time, instructor and cost, shown as a card and described for Google's course list.",
+	"keywords": [ "course", "class", "lesson", "training", "module" ],
+	"textdomain": "tala-seo",
+	"attributes": {
+		"name": { "type": "string", "default": "" },
+		"level": { "type": "integer", "default": 2 },
+		"description": { "type": "string", "default": "" },
+		"provider": { "type": "string", "default": "" },
+		"providerUrl": { "type": "string", "default": "" },
+		"educationalLevel": { "type": "string", "default": "" },
+		"courseMode": {
+			"type": "string",
+			"enum": [ "", "Online", "Onsite", "Blended" ],
+			"default": ""
+		},
+		"workload": { "type": "string", "default": "" },
+		"instructor": { "type": "string", "default": "" },
+		"price": { "type": "string", "default": "" },
+		"priceCurrency": { "type": "string", "default": "" },
+		"enrollUrl": { "type": "string", "default": "" }
+	},
+	"supports": {
+		"html": false,
+		"color": { "text": true, "link": true, "background": false },
+		"spacing": { "margin": true },
+		"typography": { "fontSize": true }
+	},
+	"editorScript": "file:./index.js",
+	"style": "file:./style.css"
+}

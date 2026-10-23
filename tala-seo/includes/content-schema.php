@@ -8,7 +8,7 @@
  * - FAQPage from "FAQ" groups: each Details block is a question (its summary) with its answer.
  * - HowTo from "How-to" groups: the heading names it, paragraphs before the steps describe it,
  *   and each item of the numbered list is a step.
- * - Event from the Event block (event.php).
+ * - Event from the Event block (event.php), Course from the Course block (course.php).
  *
  * Google stopped showing HowTo results in 2023 and FAQ results in May 2026. The markup is still
  * valid schema.org that other search engines and AI assistants may read, and it repeats only what
@@ -27,7 +27,7 @@ const TALA_SEO_HOWTO_CLASS = 'tala-seo-howto';
 const TALA_SEO_YOUTUBE_ID_PATTERN = '^[A-Za-z0-9_-]{11}$';
 
 /**
- * Structured data nodes for a post's videos, FAQ, how-to guides and event.
+ * Structured data nodes for a post's videos, FAQ, how-to guides, event and courses.
  *
  * @param WP_Post $post Post.
  * @return array<int, array<string, mixed>>
@@ -43,7 +43,8 @@ function tala_seo_content_nodes( $post ) {
 		tala_seo_video_nodes( $post, $blocks, $url ),
 		array_filter( array( tala_seo_faq_node( $blocks, $url ) ) ),
 		tala_seo_howto_nodes( $blocks, $url ),
-		array_filter( array( tala_seo_post_event_node( $post, $blocks ) ) )
+		array_filter( array( tala_seo_post_event_node( $post, $blocks ) ) ),
+		tala_seo_post_course_nodes( $post, $blocks )
 	);
 }
 
@@ -363,6 +364,59 @@ function tala_seo_fetch_video( string $id ) {
 		'name'      => $name,
 		'thumbnail' => '' !== $thumbnail ? $thumbnail : 'https://i.ytimg.com/vi/' . $id . '/hqdefault.jpg',
 	);
+}
+
+/**
+ * A price for structured data: a number of 0 or more with its currency code (ISO 4217), or '' for
+ * both when either is missing or wrong, as one without the other means nothing.
+ *
+ * @param mixed $price    Price.
+ * @param mixed $currency Currency code (any case).
+ * @return array{price: string, currency: string}
+ */
+function tala_seo_block_price( $price, $currency ): array {
+	$price    = trim( sanitize_text_field( (string) $price ) );
+	$currency = strtoupper( trim( sanitize_text_field( (string) $currency ) ) );
+	if ( ! is_numeric( $price ) || (float) $price < 0 || ! preg_match( '/^[A-Z]{3}$/', $currency ) ) {
+		return array(
+			'price'    => '',
+			'currency' => '',
+		);
+	}
+	return array(
+		'price'    => $price,
+		'currency' => $currency,
+	);
+}
+
+/**
+ * A price as a card shows it, escaped: "Free" or "PHP 1,500".
+ *
+ * @param string $price    Price (tala_seo_block_price()).
+ * @param string $currency Currency code.
+ * @return string
+ */
+function tala_seo_price_html( string $price, string $currency ): string {
+	$amount = (float) $price;
+	if ( 0.0 === $amount ) {
+		return esc_html__( 'Free', 'tala-seo' );
+	}
+	return esc_html( $currency . ' ' . number_format_i18n( $amount, floor( $amount ) === $amount ? 0 : 2 ) );
+}
+
+/**
+ * A card's details as a description list: labels beside their values.
+ *
+ * @param string                $class_name Class of the list.
+ * @param array<string, string> $rows       Label => value (escaped HTML).
+ * @return string
+ */
+function tala_seo_details_html( string $class_name, array $rows ): string {
+	$html = '<dl class="' . esc_attr( $class_name ) . '">';
+	foreach ( $rows as $label => $value ) {
+		$html .= '<dt>' . esc_html( $label ) . '</dt><dd>' . $value . '</dd>';
+	}
+	return $html . '</dl>';
 }
 
 add_filter( 'get_block_type_variations', 'tala_seo_group_variations', 10, 2 );

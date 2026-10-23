@@ -188,7 +188,8 @@
 			const preview = props.attributes.startDate
 				? el( ServerSideRender, {
 					block: 'tala-seo/event',
-					attributes: props.attributes,
+					// The server knows only the saved title; show the one being edited.
+					attributes: Object.assign( {}, props.attributes, { name: props.attributes.name || postTitle } ),
 					// The preview's own wrapper would repeat the colours and margins of this one.
 					skipBlockSupportAttributes: true,
 				} )

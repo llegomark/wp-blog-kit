@@ -1,7 +1,7 @@
 /**
- * Tala SEO's FAQ, How-to and Event blocks and the YouTube video dates: they are in the editor's
- * inserter and sidebar, the editor accepts what it saved, and the published page shows them
- * accessibly with matching structured data.
+ * Tala SEO's FAQ, How-to, Event and Course blocks and the YouTube video dates: they are in the
+ * editor's inserter and sidebar, the editor accepts what it saved, and the published page shows
+ * them accessibly with matching structured data.
  */
 import { test, expect } from '@playwright/test';
 import { wp, logIn, axeViolations, PHONE } from './utils.mjs';
@@ -31,6 +31,7 @@ const CONTENT = [
 	'<!-- /wp:list --></div>',
 	'<!-- /wp:group -->',
 	'<!-- wp:tala-seo/event {"startDate":"2026-11-14","startTime":"09:00","endTime":"17:00","place":"Quezon City Hall","streetAddress":"Elliptical Road","addressLocality":"Quezon City","addressCountry":"PH","price":"500","priceCurrency":"PHP","availability":"InStock","ticketUrl":"https://tickets.example.com/","organizer":"Guro Notes"} /-->',
+	'<!-- wp:tala-seo/course {"name":"Teaching early reading","description":"Plan phonics lessons that get every grade 1 learner reading.","courseMode":"Online","workload":"6","instructor":"Ana Reyes","price":"0","priceCurrency":"PHP","enrollUrl":"https://learn.example.com/"} /-->',
 ].join( '\n' );
 
 /**
@@ -70,7 +71,7 @@ test.describe( 'a page with the blocks', () => {
 	test.describe( 'phone', () => {
 		test.use( PHONE );
 
-		test( 'shows the FAQ, the steps and the event card accessibly, described in the JSON-LD', async ( { page } ) => {
+		test( 'shows the FAQ, the steps, the event and the course accessibly, described in the JSON-LD', async ( { page } ) => {
 			await page.goto( `/?page_id=${ id }` );
 
 			const question = page.locator( '.tala-seo-faq summary' );
@@ -84,10 +85,15 @@ test.describe( 'a page with the blocks', () => {
 			const fits = await card.evaluate( ( el ) => el.scrollWidth <= el.clientWidth );
 			expect( fits, 'The card fits the phone screen' ).toBe( true );
 
+			const course = page.locator( '#course-teaching-early-reading' );
+			await expect( course.getByRole( 'heading', { level: 2, name: 'Teaching early reading' } ) ).toBeVisible();
+			await expect( course.getByRole( 'link', { name: 'Enroll' } ) ).toHaveAttribute( 'href', 'https://learn.example.com/' );
+			expect( await course.evaluate( ( el ) => el.scrollWidth <= el.clientWidth ), 'The course card fits too' ).toBe( true );
+
 			const types = await page.locator( 'script[type="application/ld+json"]' ).evaluate( ( el ) =>
 				JSON.parse( el.textContent )[ '@graph' ].map( ( node ) => node[ '@type' ] ),
 			);
-			expect( types ).toEqual( expect.arrayContaining( [ 'FAQPage', 'HowTo', 'Event' ] ) );
+			expect( types ).toEqual( expect.arrayContaining( [ 'FAQPage', 'HowTo', 'Event', 'Course' ] ) );
 
 			expect( await axeViolations( page ) ).toEqual( [] );
 		} );
@@ -115,6 +121,7 @@ test.describe( 'a page with the blocks', () => {
 
 		const canvas = page.frameLocator( 'iframe[name="editor-canvas"]' );
 		await expect( canvas.locator( '.wp-block-tala-seo-event dt' ).first() ).toHaveText( 'When' );
+		await expect( canvas.locator( '.wp-block-tala-seo-course dt' ).first() ).toHaveText( 'Offered by' );
 		await expect( canvas.locator( '.wp-block-group.tala-seo-faq' ) ).toHaveCount( 1 );
 		expect( logged.filter( ( text ) => /^Block (successfully updated|validation)/.test( text ) ) ).toEqual( [] );
 	} );
@@ -166,6 +173,23 @@ test.describe( 'a new post', () => {
 		await expect( sidebar.getByText( 'For search engines, add:' ) ).toBeHidden();
 		await expect( canvas.locator( '.wp-block-tala-seo-event time' ) ).toHaveAttribute( 'datetime', '2026-11-14' );
 		await expect( canvas.locator( '.wp-block-tala-seo-event dd' ).nth( 1 ) ).toHaveText( 'Quezon City' );
+	} );
+
+	test( 'the Course block asks for a description and previews the card with the title being edited', async ( { page } ) => {
+		await page.evaluate( () => {
+			const { dispatch } = window.wp.data;
+			dispatch( 'core/editor' ).editPost( { title: 'Teaching early reading' } );
+			dispatch( 'core/block-editor' ).insertBlocks( window.wp.blocks.createBlock( 'tala-seo/course' ) );
+		} );
+		const canvas = page.frameLocator( 'iframe[name="editor-canvas"]' );
+		const card = canvas.locator( '.wp-block-tala-seo-course' );
+		await expect( card.getByRole( 'heading', { name: 'Teaching early reading' } ), 'Named after the unsaved title' ).toBeVisible();
+
+		const sidebar = page.getByRole( 'region', { name: 'Editor settings' } );
+		await expect( sidebar.getByText( 'A description', { exact: true } ) ).toBeVisible();
+		await sidebar.getByLabel( 'Description' ).fill( 'Plan phonics lessons.' );
+		await expect( sidebar.getByText( 'For search engines, add:' ) ).toBeHidden();
+		await expect( card.getByText( 'Plan phonics lessons.' ) ).toBeVisible();
 	} );
 
 	test( 'each YouTube video gets a publish date field in the SEO panel', async ( { page } ) => {

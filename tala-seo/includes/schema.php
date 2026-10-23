@@ -6,8 +6,9 @@
  *   timezone, and the author as a Person with name and url.
  * - Author archives: ProfilePage whose mainEntity is the Person.
  * - Breadcrumbs: BreadcrumbList matching the visible breadcrumb trail (two items or more).
- * - Posts and pages: VideoObject, Event, FAQPage and HowTo for what the content shows
- *   (content-schema.php, event.php).
+ * - Posts and pages: VideoObject, Event, Course, FAQPage and HowTo for what the content shows
+ *   (content-schema.php, event.php, course.php).
+ * - Lists of posts that are all courses: the ItemList of Google's course list (course.php).
  * Not used on purpose: SearchAction (Google retired the sitelinks search box).
  *
  * @package TalaSEO
@@ -63,6 +64,8 @@ function tala_seo_schema_nodes() {
 	}
 	if ( is_singular( tala_seo_post_types() ) && $queried instanceof WP_Post ) {
 		array_push( $nodes, ...tala_seo_content_nodes( $queried ) );
+	} elseif ( ( is_home() || is_archive() ) && ! is_date() ) {
+		$nodes[] = tala_seo_course_list_node();
 	}
 
 	$breadcrumbs = tala_seo_breadcrumb_node();
