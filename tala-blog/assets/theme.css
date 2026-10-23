@@ -5,16 +5,18 @@
 	scrollbar-gutter: stable; /* room for the scrollbar on short pages too, so pages don't jump sideways */
 }
 
-/* Dark mode follows the reader's system setting; its colours live in theme.json (settings.custom.dark). */
+/* Dark mode follows the reader's system setting; its colours live in theme.json and in each colour
+   preset (settings.custom.color.dark: under "color", so picking a palette in the Site Editor brings
+   its dark colours along). */
 @media (prefers-color-scheme: dark) {
 
 	:root {
-		--wp--preset--color--base: var(--wp--custom--dark--base);
-		--wp--preset--color--contrast: var(--wp--custom--dark--contrast);
-		--wp--preset--color--muted: var(--wp--custom--dark--muted);
-		--wp--preset--color--accent: var(--wp--custom--dark--accent);
-		--wp--preset--color--rule: var(--wp--custom--dark--rule);
-		--wp--preset--color--wash: var(--wp--custom--dark--wash);
+		--wp--preset--color--base: var(--wp--custom--color--dark--base);
+		--wp--preset--color--contrast: var(--wp--custom--color--dark--contrast);
+		--wp--preset--color--muted: var(--wp--custom--color--dark--muted);
+		--wp--preset--color--accent: var(--wp--custom--color--dark--accent);
+		--wp--preset--color--rule: var(--wp--custom--color--dark--rule);
+		--wp--preset--color--wash: var(--wp--custom--color--dark--wash);
 	}
 }
 
@@ -200,9 +202,11 @@ footer.wp-block-template-part {
 	padding-block: var(--wp--preset--spacing--20) 0;
 }
 
-/* The article */
+/* The article: on an article page its title and dates are the article's header; a page's title
+   stands on its own. */
 
-.tala-paper > .wp-block-post-title {
+.tala-paper > .wp-block-post-title,
+.tala-paper > .tala-article-header {
 	margin-block-start: var(--wp--preset--spacing--20);
 }
 

@@ -93,6 +93,46 @@ export async function openMenu( page ) {
 }
 
 /**
+ * Gives the site the settings and styles of one of the theme's style variations, as the Site
+ * Editor saves them when the administrator picks it. Returns the site's styles from before, for
+ * restoreStyles().
+ *
+ * @param {string} title The variation's title.
+ * @return {string} The styles before, base64-encoded.
+ */
+export function chooseStyleVariation( title ) {
+	return wp(
+		'--user=1',
+		'eval',
+		`$post = WP_Theme_JSON_Resolver::get_user_data_from_wp_global_styles( wp_get_theme(), true );
+		$variation = current( wp_list_filter( WP_Theme_JSON_Resolver::get_style_variations(), array( 'title' => ${ JSON.stringify( title ) } ) ) );
+		if ( ! $variation ) {
+			exit( 1 );
+		}
+		$user = (array) json_decode( $post['post_content'], true );
+		foreach ( array( 'settings', 'styles' ) as $part ) {
+			$user[ $part ] = array_replace_recursive( (array) ( $user[ $part ] ?? array() ), (array) ( $variation[ $part ] ?? array() ) );
+		}
+		wp_update_post( wp_slash( array( 'ID' => $post['ID'], 'post_content' => wp_json_encode( $user ) ) ) );
+		echo base64_encode( $post['post_content'] );`,
+	);
+}
+
+/**
+ * Puts back the site's styles that chooseStyleVariation() returned.
+ *
+ * @param {string} saved The styles, base64-encoded.
+ */
+export function restoreStyles( saved ) {
+	wp(
+		'--user=1',
+		'eval',
+		`$post = WP_Theme_JSON_Resolver::get_user_data_from_wp_global_styles( wp_get_theme(), true );
+		wp_update_post( wp_slash( array( 'ID' => $post['ID'], 'post_content' => base64_decode( '${ saved }' ) ) ) );`,
+	);
+}
+
+/**
  * The accessibility violations axe finds on the page, as "rule: element" lines.
  *
  * @param {import('@playwright/test').Page} page Page.

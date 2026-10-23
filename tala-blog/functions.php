@@ -101,6 +101,30 @@ function tala_blog_decorative_logo( $html, $block ) {
 	return $logo->get_updated_html();
 }
 
+add_filter( 'render_block_core/group', 'tala_blog_empty_navigation', 10, 2 );
+
+/**
+ * A Group block that is a navigation landmark, as the links to the previous and next articles are,
+ * is left out when it holds no link and no text: a site's only article has neither a previous nor
+ * a next one, and screen readers would still announce the empty landmark.
+ *
+ * @param string               $html  Rendered Group.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_empty_navigation( $html, $block ) {
+	if ( 'nav' !== ( $block['attrs']['tagName'] ?? '' ) || '' !== trim( wp_strip_all_tags( $html ) ) ) {
+		return $html;
+	}
+	$tags = new WP_HTML_Tag_Processor( $html );
+	while ( $tags->next_tag( array( 'tag_name' => 'a' ) ) ) {
+		if ( null !== $tags->get_attribute( 'href' ) ) {
+			return $html;
+		}
+	}
+	return '';
+}
+
 // Don't fetch pattern directory patterns into the editor.
 add_filter( 'should_load_remote_block_patterns', '__return_false' );
 
@@ -111,7 +135,8 @@ add_filter( 'styles_inline_size_limit', static fn(): int => 60000 );
 add_action( 'wp_enqueue_scripts', 'tala_blog_styles', 20 );
 
 /**
- * Inlines the theme CSS after the global styles: about 3 KB, cheaper than another request.
+ * Inlines the theme CSS after the global styles: about 17 KB, under 5 KB once the page is
+ * compressed, cheaper than another request.
  */
 function tala_blog_styles(): void {
 	$css = file_get_contents( get_theme_file_path( 'assets/theme.css' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
@@ -141,8 +166,9 @@ function tala_blog_remove_emoji(): void {
 add_action( 'wp_head', 'tala_blog_theme_color', 2 );
 
 /**
- * Browser UI colour for light and dark mode: the page background of each, both from theme.json
- * (the "base" palette colour and settings.custom.dark.base), the same values the CSS uses.
+ * Browser UI colour for light and dark mode: the page background of each, from theme.json or the
+ * chosen colour preset (the "base" palette colour and settings.custom.color.dark.base), the same
+ * values the CSS uses.
  */
 function tala_blog_theme_color(): void {
 	$base  = array_find(
@@ -150,7 +176,7 @@ function tala_blog_theme_color(): void {
 		static fn( $color ): bool => 'base' === ( $color['slug'] ?? '' )
 	);
 	$light = (string) ( $base['color'] ?? '' );
-	$dark  = wp_get_global_settings( array( 'custom', 'dark', 'base' ) );
+	$dark  = wp_get_global_settings( array( 'custom', 'color', 'dark', 'base' ) );
 	foreach ( array(
 		'light' => $light,
 		'dark'  => is_string( $dark ) ? $dark : '',
@@ -159,6 +185,43 @@ function tala_blog_theme_color(): void {
 			printf( '<meta name="theme-color" content="%s" media="(prefers-color-scheme: %s)">' . "\n", esc_attr( $color ), esc_attr( $scheme ) );
 		}
 	}
+}
+
+add_filter( 'wp_theme_json_data_user', 'tala_blog_preset_dark_colors' );
+
+/**
+ * The dark-mode colours of the chosen colour preset. A preset (styles/colors) brings them along in
+ * settings.custom.color.dark, but when the person who picks it can't save unfiltered HTML (a site
+ * administrator on a multisite network, say), WordPress saves only the palette, and the site would
+ * show the preset in light mode and the theme's own colours in dark mode. While the site's palette
+ * is still a preset's, the dark colours come from that preset.
+ *
+ * @param WP_Theme_JSON_Data $theme_json The site's own styles (Appearance → Editor → Styles).
+ * @return WP_Theme_JSON_Data
+ */
+function tala_blog_preset_dark_colors( $theme_json ) {
+	$site    = $theme_json->get_data();
+	$palette = $site['settings']['color']['palette']['theme'] ?? null;
+	if ( isset( $site['settings']['custom']['color']['dark'] ) || ! is_array( $palette ) ) {
+		return $theme_json;
+	}
+	$colors = static function ( array $entries ): array {
+		$by_slug = array_map( 'strtolower', wp_list_pluck( $entries, 'color', 'slug' ) );
+		ksort( $by_slug );
+		return $by_slug;
+	};
+	foreach ( WP_Theme_JSON_Resolver::get_style_variations() as $variation ) {
+		$dark = $variation['settings']['custom']['color']['dark'] ?? null;
+		if ( is_array( $dark ) && $colors( (array) ( $variation['settings']['color']['palette']['theme'] ?? array() ) ) === $colors( $palette ) ) {
+			return $theme_json->update_with(
+				array(
+					'version'  => WP_Theme_JSON::LATEST_SCHEMA,
+					'settings' => array( 'custom' => array( 'color' => array( 'dark' => $dark ) ) ),
+				)
+			);
+		}
+	}
+	return $theme_json;
 }
 
 add_filter( 'render_block_core/post-date', 'tala_blog_label_dates', 10, 3 );

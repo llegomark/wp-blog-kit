@@ -18,13 +18,15 @@
 			]
 		},
 		"custom": {
-			"dark": {
-				"base": "#121212",
-				"contrast": "#e3e3e3",
-				"muted": "#a3a3a3",
-				"accent": "#ffffff",
-				"rule": "#3d3d3d",
-				"wash": "#1c1c1c"
+			"color": {
+				"dark": {
+					"base": "#121212",
+					"contrast": "#e3e3e3",
+					"muted": "#a3a3a3",
+					"accent": "#ffffff",
+					"rule": "#3d3d3d",
+					"wash": "#1c1c1c"
+				}
 			}
 		},
 		"layout": {

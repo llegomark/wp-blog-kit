@@ -30,7 +30,8 @@ A change in behaviour comes with a test in `tests/phpunit/` or `tests/e2e/` that
 (check that it does). The tests cover the pages, the JSON-LD (BlogPosting, BreadcrumbList,
 ProfilePage, WebSite and Organization on the home page only, VideoObject, Event, Course and its
 ItemList, FAQPage, HowTo),
-the publish check, the editor's validation of the templates, and the plugin's blocks in the editor. Then, on the local site (http://127.0.0.1:8080):
+the publish check, the editor's validation of the templates, the theme's landmarks and colour and
+typography presets, and the plugin's blocks in the editor. Then, on the local site (http://127.0.0.1:8080):
 - `wp-content/debug.log` stays clean
 - for visible changes: Lighthouse on a mobile article page (Accessibility, Best Practices, SEO)
 - for theme changes: WordPress's Theme Unit Test on `dev/unit-test-site.sh` (the theme alone, without

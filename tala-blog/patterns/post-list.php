@@ -12,10 +12,10 @@
 defined( 'ABSPATH' ) || exit;
 
 ?>
-<!-- wp:query {"query":{"inherit":true},"className":"tala-list"} -->
+<!-- wp:query {"query":{"inherit":true},"metadata":{"name":<?php echo tala_blog_block_text( _x( 'Article list', 'name of a block in the List View', 'tala-blog' ) ); ?>},"className":"tala-list"} -->
 <div class="wp-block-query tala-list"><!-- wp:post-template -->
-<!-- wp:group {"className":"tala-list-item","layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"top"}} -->
-<div class="wp-block-group tala-list-item"><!-- wp:group {"className":"tala-list-text","layout":{"type":"default"}} -->
+<!-- wp:group {"metadata":{"name":<?php echo tala_blog_block_text( _x( 'Entry', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-list-item","layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"top"}} -->
+<div class="wp-block-group tala-list-item"><!-- wp:group {"metadata":{"name":<?php echo tala_blog_block_text( _x( 'Title, summary and date', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-list-text","layout":{"type":"default"}} -->
 <div class="wp-block-group tala-list-text"><!-- wp:post-title {"level":2,"isLink":true} /-->
 
 <!-- wp:post-excerpt {"excerptLength":40} /-->

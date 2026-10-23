@@ -2,15 +2,15 @@
 Theme Name: Tala Blog
 Author: Edventure
 Author URI: https://edventure.com.ph
-Description: A minimal, fast blog theme for long reads on phones: near-black text on a near-white page, with the same quiet look inverted in dark mode (it follows the reader's device). A header with the site logo and a menu that opens full screen on phones, system fonts only, labelled published and updated dates, and an author box with biography under every article. Pairs with the Tala SEO plugin for breadcrumbs and structured data.
-Version: 1.6.2
+Description: A minimal, fast blog theme for long reads on phones: near-black text on a near-white page, with the same quiet look inverted in dark mode (it follows the reader's device). A header with the site logo and a menu that opens full screen on phones, system fonts only, labelled published and updated dates, and an author box with biography under every article. Colour presets (Sepia, Blue, Green) and serif typography presets, all with system fonts. Pairs with the Tala SEO plugin for breadcrumbs and structured data.
+Version: 1.7.0
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
 License: GNU General Public License v2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: tala-blog
-Tags: blog, one-column, block-styles, custom-logo, custom-menu, editor-style, featured-images, full-site-editing, rtl-language-support, sticky-post, template-editing, threaded-comments, translation-ready, wide-blocks
+Tags: blog, one-column, block-styles, custom-logo, custom-menu, editor-style, featured-images, full-site-editing, rtl-language-support, sticky-post, style-variations, template-editing, threaded-comments, translation-ready, wide-blocks
 Update URI: false
 */
 

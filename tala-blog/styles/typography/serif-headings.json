@@ -1,0 +1,39 @@
+{
+	"$schema": "https://schemas.wp.org/wp/7.0/theme.json",
+	"version": 3,
+	"title": "Serif headings",
+	"slug": "serif-headings",
+	"settings": {
+		"typography": {
+			"fontFamilies": [
+				{
+					"slug": "system-sans",
+					"name": "System sans-serif (no download)",
+					"fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans\", \"Helvetica Neue\", Arial, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\""
+				},
+				{
+					"slug": "system-serif",
+					"name": "System serif (no download)",
+					"fontFamily": "\"Iowan Old Style\", Charter, \"Bitstream Charter\", \"Noto Serif\", Georgia, serif"
+				},
+				{
+					"slug": "system-mono",
+					"name": "System monospace (no download)",
+					"fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace"
+				}
+			]
+		}
+	},
+	"styles": {
+		"elements": {
+			"heading": {
+				"typography": { "fontFamily": "var(--wp--preset--font-family--system-serif)" }
+			}
+		},
+		"blocks": {
+			"core/site-title": {
+				"typography": { "fontFamily": "var(--wp--preset--font-family--system-serif)" }
+			}
+		}
+	}
+}

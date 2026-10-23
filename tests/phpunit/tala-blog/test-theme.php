@@ -325,7 +325,7 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 	public function test_breadcrumbs_only_with_the_plugin(): void {
 		$registry = WP_Block_Patterns_Registry::get_instance();
 		foreach ( array( 'index', 'single', 'page', 'archive', 'author' ) as $slug ) {
-			$content = get_block_template( 'tala-blog//' . $slug )->content;
+			$content = $this->with_patterns( get_block_template( 'tala-blog//' . $slug )->content );
 			$this->assertStringNotContainsString( 'wp:tala-seo/', $content, $slug );
 			$this->assertStringContainsString( '"slug":"tala-blog/breadcrumbs"', $content, $slug );
 		}
@@ -391,5 +391,265 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 		$list     = '<ul class="wp-block-page-list"><li>Home</li></ul>';
 		$this->assertSame( '<li>Home</li>', tala_blog_page_list_in_navigation( $list, array(), $instance ) );
 		$this->assertSame( 'Note: a > b ' . $list, tala_blog_page_list_in_navigation( 'Note: a > b ' . $list, array(), $instance ) );
+	}
+
+	/**
+	 * Markup with the markup of the theme patterns it uses, at any depth, put after it. The
+	 * breadcrumbs pattern stays a reference: its markup is the plugin's block.
+	 *
+	 * @param string $markup Block markup.
+	 * @return string
+	 */
+	private function with_patterns( string $markup ): string {
+		$registry = WP_Block_Patterns_Registry::get_instance();
+		preg_match_all( '#"slug":"(tala-blog/[a-z0-9-]+)"#', $markup, $slugs );
+		foreach ( array_unique( $slugs[1] ) as $slug ) {
+			if ( 'tala-blog/breadcrumbs' !== $slug ) {
+				$markup .= "\n" . $this->with_patterns( (string) ( $registry->get_registered( $slug )['content'] ?? '' ) );
+			}
+		}
+		return $markup;
+	}
+
+	/**
+	 * What the Site Editor keeps of a style variation when it lists it as a colour or typography
+	 * preset: only what sits under one of the keys, at any depth, as filterObjectByProperties() in
+	 * WordPress's global styles code does. A variation that keeps all of its settings and styles this
+	 * way is a preset; any other is listed as a whole style.
+	 *
+	 * @param array<mixed> $data Settings or styles.
+	 * @param string[]     $keys Keys to keep.
+	 * @return array<mixed>
+	 */
+	private static function only( array $data, array $keys ): array {
+		$kept = array();
+		foreach ( $data as $key => $value ) {
+			if ( in_array( $key, $keys, true ) ) {
+				$kept[ $key ] = $value;
+			} elseif ( is_array( $value ) && self::only( $value, $keys ) ) {
+				$kept[ $key ] = self::only( $value, $keys );
+			}
+		}
+		return $kept;
+	}
+
+	/**
+	 * WCAG contrast ratio of two colours written #rrggbb.
+	 *
+	 * @param string $a Colour.
+	 * @param string $b Colour.
+	 * @return float
+	 */
+	private static function contrast( string $a, string $b ): float {
+		$luminance = static function ( string $hex ): float {
+			$channels = array_map(
+				static function ( string $pair ): float {
+					$value = hexdec( $pair ) / 255;
+					return $value <= 0.04045 ? $value / 12.92 : ( ( $value + 0.055 ) / 1.055 ) ** 2.4;
+				},
+				str_split( substr( $hex, 1 ), 2 )
+			);
+			return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
+		};
+		$light     = max( $luminance( $a ), $luminance( $b ) );
+		$dark      = min( $luminance( $a ), $luminance( $b ) );
+		return ( $light + 0.05 ) / ( $dark + 0.05 );
+	}
+
+	/**
+	 * A JSON file of the theme, decoded.
+	 *
+	 * @param string $file Path in the theme.
+	 * @return array<string, mixed>
+	 */
+	private static function theme_json( string $file ): array {
+		return (array) wp_json_file_decode( get_theme_file_path( $file ), array( 'associative' => true ) );
+	}
+
+	/**
+	 * Saves the site's styles as the Site Editor does when someone picks a colour preset: the
+	 * preset's settings, as WordPress serves style variations to the editor, become the site's own.
+	 *
+	 * @param array<string, mixed> $variation Decoded variation file.
+	 * @param bool                 $filtered  Whether the person saving can't save unfiltered HTML,
+	 *                                        so WordPress keeps only the safe settings (presets).
+	 */
+	private function choose_variation( array $variation, bool $filtered = false ): void {
+		// An administrator, as in the Site Editor: the styles are saved for the theme only by someone
+		// who may assign it to them.
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$post     = WP_Theme_JSON_Resolver::get_user_data_from_wp_global_styles( wp_get_theme(), true );
+		$settings = ( new WP_Theme_JSON( $variation ) )->get_raw_data()['settings'] ?? array();
+		if ( $filtered ) {
+			$safe     = WP_Theme_JSON::remove_insecure_properties(
+				array(
+					'version'  => WP_Theme_JSON::LATEST_SCHEMA,
+					'settings' => $settings,
+				)
+			);
+			$settings = $safe['settings'] ?? array();
+		}
+		wp_update_post(
+			wp_slash(
+				array(
+					'ID'           => $post['ID'],
+					'post_content' => (string) wp_json_encode(
+						array(
+							'version'                     => WP_Theme_JSON::LATEST_SCHEMA,
+							'isGlobalStylesUserThemeJSON' => true,
+							'settings'                    => $settings,
+						)
+					),
+				)
+			)
+		);
+		WP_Theme_JSON_Resolver::clean_cached_data();
+		wp_clean_theme_json_cache();
+	}
+
+	/**
+	 * The links to the previous and next articles are a navigation landmark with a name of its own.
+	 * An article with neither (a site's only article) gets no empty landmark.
+	 */
+	public function test_post_navigation_is_a_named_landmark(): void {
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		$older  = $this->publish_post(
+			array(
+				'post_title'  => 'Seating plans',
+				'post_date'   => '2026-01-05 08:00:00',
+				'post_author' => $author,
+			)
+		);
+		$newer  = $this->publish_post(
+			array(
+				'post_title'  => 'Reading corners',
+				'post_date'   => '2026-02-05 08:00:00',
+				'post_author' => $author,
+			)
+		);
+		$after  = '<!-- wp:pattern {"slug":"tala-blog/post-footer"} /-->';
+
+		$this->go_to( get_permalink( $newer ) );
+		$html = $this->render( $after, $newer );
+		$tags = new WP_HTML_Tag_Processor( $html );
+		$this->assertTrue( $tags->next_tag( array( 'tag_name' => 'nav' ) ), 'A navigation landmark' );
+		$this->assertSame( 'Previous and next articles', $tags->get_attribute( 'aria-label' ) );
+		$this->assertMatchesRegularExpression( '#<nav\b.*>Seating plans</a>.*</nav>#s', $html );
+
+		wp_delete_post( $older, true );
+		$this->go_to( get_permalink( $newer ) );
+		$html = $this->render( $after, $newer );
+		$this->assertStringContainsString( 'wp-block-post-author', $html, 'The author box stays' );
+		$this->assertStringNotContainsString( '<nav', $html, 'Nothing to link to: no landmark' );
+
+		$words = '<!-- wp:group {"tagName":"nav"} --><nav class="wp-block-group"><p>Soon</p></nav><!-- /wp:group -->';
+		$this->assertStringContainsString( '<p>Soon</p>', do_blocks( $words ), 'A navigation group with text is left alone' );
+	}
+
+	/**
+	 * The theme's style variations: three colour presets and two typography presets.
+	 */
+	public function test_style_variations_are_offered(): void {
+		$this->assertEqualsCanonicalizing(
+			array( 'Blue', 'Green', 'Sepia', 'Serif', 'Serif headings' ),
+			wp_list_pluck( WP_Theme_JSON_Resolver::get_style_variations(), 'title' )
+		);
+	}
+
+	/**
+	 * The theme's colours and each colour preset: the six colours, in light and in dark mode, with
+	 * text at 6:1 or more on the page and on the washed background, as the readme says; and the
+	 * presets hold only colours, so the Site Editor lists them as palettes (their dark colours
+	 * included), not as whole styles.
+	 */
+	public function test_colour_presets(): void {
+		$theme = self::theme_json( 'theme.json' );
+		$names = wp_list_pluck( $theme['settings']['color']['palette'], 'name', 'slug' );
+		$files = (array) glob( get_theme_file_path( 'styles/colors/*.json' ) );
+		$this->assertCount( 3, $files );
+
+		$palettes = array( 'theme.json' => $theme );
+		foreach ( $files as $file ) {
+			$name   = basename( (string) $file );
+			$preset = self::theme_json( 'styles/colors/' . $name );
+			$parts  = array_intersect_key( $preset, array_flip( array( 'settings', 'styles' ) ) );
+			$this->assertSame( $parts, self::only( $parts, array( 'color' ) ), "$name: colours only" );
+			$this->assertSame( $names, wp_list_pluck( $preset['settings']['color']['palette'], 'name', 'slug' ), "$name: the theme's colour names" );
+			$palettes[ $name ] = $preset;
+		}
+
+		$pairs = array( array( 'contrast', 'base' ), array( 'muted', 'base' ), array( 'accent', 'base' ), array( 'contrast', 'wash' ), array( 'muted', 'wash' ), array( 'accent', 'wash' ) );
+		foreach ( $palettes as $name => $data ) {
+			$schemes = array(
+				'light' => wp_list_pluck( $data['settings']['color']['palette'], 'color', 'slug' ),
+				'dark'  => (array) ( $data['settings']['custom']['color']['dark'] ?? array() ),
+			);
+			foreach ( $schemes as $scheme => $colors ) {
+				$this->assertEqualsCanonicalizing( array_keys( $names ), array_keys( $colors ), "$name, $scheme: six colours" );
+				foreach ( $colors as $color ) {
+					$this->assertMatchesRegularExpression( '/^#[0-9a-f]{6}$/i', $color, "$name, $scheme" );
+				}
+				foreach ( $pairs as list( $text, $background ) ) {
+					$this->assertGreaterThanOrEqual( 6, self::contrast( $colors[ $text ], $colors[ $background ] ), "$name, $scheme: $text on $background" );
+				}
+			}
+		}
+	}
+
+	/**
+	 * Typography presets use only the theme's system fonts (nothing to download) and set only
+	 * typography, so the Site Editor lists them as typography presets. Each lists the theme's font
+	 * families as they are, and names its fonts as CSS variables: the Site Editor's preview of a
+	 * preset reads the fonts from the preset itself, in that form.
+	 */
+	public function test_typography_presets(): void {
+		$theme    = self::theme_json( 'theme.json' )['settings']['typography']['fontFamilies'];
+		$families = wp_list_pluck( $theme, 'slug' );
+		$files    = (array) glob( get_theme_file_path( 'styles/typography/*.json' ) );
+		$this->assertCount( 2, $files );
+		foreach ( $files as $file ) {
+			$name   = basename( (string) $file );
+			$preset = self::theme_json( 'styles/typography/' . $name );
+			$parts  = array_intersect_key( $preset, array_flip( array( 'settings', 'styles' ) ) );
+			$this->assertSame( $parts, self::only( $parts, array( 'typography' ) ), "$name: typography only" );
+			$this->assertSame( array( 'typography' => array( 'fontFamilies' => $theme ) ), $preset['settings'] ?? null, "$name: the theme's font families, no others" );
+			$this->assertStringNotContainsString( 'var:preset', (string) wp_json_encode( $preset ), "$name: fonts as CSS variables" );
+			preg_match_all( '/var\(--wp--preset--font-family--([a-z0-9-]+)\)/', (string) wp_json_encode( $preset, JSON_UNESCAPED_SLASHES ), $used );
+			$this->assertNotEmpty( $used[1], $name );
+			$this->assertSame( array(), array_diff( $used[1], $families ), "$name: the theme's font families" );
+		}
+	}
+
+	/**
+	 * The browser's theme colour and the dark-mode colours follow a chosen colour preset, also when
+	 * the person who chose it can't save unfiltered HTML: WordPress then keeps only the palette, and
+	 * the dark colours come from the preset's file. A palette changed after choosing a preset is the
+	 * site's own, with the theme's dark colours.
+	 */
+	public function test_dark_colours_follow_a_colour_preset(): void {
+		$sepia     = self::theme_json( 'styles/colors/sepia.json' );
+		$dark_base = $sepia['settings']['custom']['color']['dark']['base'];
+		$light     = '<meta name="theme-color" content="' . wp_list_pluck( $sepia['settings']['color']['palette'], 'color', 'slug' )['base'] . '" media="(prefers-color-scheme: light)">';
+		$dark      = '<meta name="theme-color" content="' . $dark_base . '" media="(prefers-color-scheme: dark)">';
+		try {
+			foreach ( array(
+				'unfiltered' => false,
+				'filtered'   => true,
+			) as $case => $filtered ) {
+				$this->choose_variation( $sepia, $filtered );
+				$meta = get_echo( 'tala_blog_theme_color' );
+				$this->assertStringContainsString( $light, $meta, $case );
+				$this->assertStringContainsString( $dark, $meta, $case );
+				$this->assertStringContainsString( '--wp--custom--color--dark--base: ' . $dark_base, wp_get_global_stylesheet( array( 'variables' ) ), $case );
+			}
+
+			$changed = $sepia;
+			$changed['settings']['color']['palette'][0]['color'] = '#ffffff';
+			$this->choose_variation( $changed, true );
+			$this->assertStringContainsString( 'content="#121212" media="(prefers-color-scheme: dark)"', get_echo( 'tala_blog_theme_color' ) );
+		} finally {
+			WP_Theme_JSON_Resolver::clean_cached_data();
+			wp_clean_theme_json_cache();
+		}
 	}
 }
