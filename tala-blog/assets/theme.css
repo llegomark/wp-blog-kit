@@ -113,6 +113,19 @@ footer.wp-block-template-part {
 	padding: var(--wp--preset--spacing--30);
 }
 
+/* It fades in without WordPress's slide-up: sliding, its top bar showed a second, moving copy of the
+   header's title and button. */
+.wp-block-navigation__responsive-container.disable-default-overlay.is-menu-open {
+	animation-name: tala-overlay-fade-in;
+}
+
+@keyframes tala-overlay-fade-in {
+
+	from {
+		opacity: 0;
+	}
+}
+
 .tala-overlay-bar {
 	padding-block-end: var(--wp--preset--spacing--30);
 	border-bottom: 1px solid var(--wp--preset--color--rule);

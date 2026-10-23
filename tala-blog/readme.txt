@@ -13,7 +13,7 @@ Tala Blog is a block theme for blogs that are mostly read on phones.
 
 * A quiet reading page: near-black text on a near-white page, a 640 px column, fine dotted link underlines and hairline dividers. Dark mode is the same look inverted, chosen automatically from the reader's device setting.
 * System fonts only: nothing to download, and the theme's CSS is inlined, so a page needs no stylesheet requests.
-* A header menu: the site's menu, or its pages until there is one. On phones it folds behind a menu button and opens full screen in the page's colours, light or dark.
+* A header with the site logo (when the site has one) beside the site title, and the site's menu, or its pages until there is one. On phones it folds behind a menu button and opens full screen in the page's colours, light or dark.
 * Article pages: breadcrumbs, "Published" and "Updated" dates, featured image, "Filed under" categories and tags, an author box with biography, links to the previous and next articles, and comments with their dates.
 * Article lists (home page, archives, search results): title, summary, date and a thumbnail of the featured image, with numbered pages.
 * Accessible: one H1 per page, uniquely named landmarks, one search form per page, a skip link, visible keyboard focus, text contrast of at least 6:1 and form fields of at least 3:1 in both colour schemes, and long words that wrap instead of widening the page when zoomed.
@@ -32,7 +32,15 @@ As many as Settings → Reading → "Blog pages show at most" says (10 by defaul
 
 In Appearance → Editor → Navigation. Until you make a menu, the header lists the site's pages (child pages left out), and WordPress saves that list as a menu called "Navigation" that you can edit. On phones the same menu opens from the menu button; its full-screen view is the "Menu overlay" template part in Appearance → Editor → Patterns.
 
+= How do I add a logo? =
+
+In Appearance → Editor → Patterns → Header, select the logo placeholder beside the site title and choose an image. It appears 28 px wide in the header and in the phone menu. A square or round image works best. The logo isn't a link and screen readers skip it, because the site title beside it already names the site and links to the home page.
+
 == Changelog ==
+
+= 1.5.0 =
+* New: the site logo, when the site has one, beside the site title in the header and in the phone menu. Both use one pattern ("Logo and site title"), so the menu's top bar still lines up exactly with the header.
+* Fixed: the phone menu no longer seems to shake as it opens. It fades in without WordPress's slide-up, which showed a second, moving copy of the site title and menu button for a moment.
 
 = 1.4.2 =
 * Fixed: pages no longer jump sideways when going from a long page to a short one (a 404, a search with few results, a short page). Short pages keep the same room for the scrollbar as long ones.

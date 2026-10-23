@@ -4,7 +4,7 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 
 | Folder | What it is |
 |---|---|
-| `tala-blog/` | Block theme. Minimalist: near-black text on a near-white page, the same inverted in automatic dark mode, a header menu that opens full screen on phones, system fonts (no downloads), labelled Published/Updated dates, author box with bio under every article, breadcrumbs, "Filed under" categories and tags, article lists with thumbnails and numbered pages, dated comments, print styles. Translation-ready and accessible (WCAG 2.2 AA checks pass in both colour schemes). |
+| `tala-blog/` | Block theme. Minimalist: near-black text on a near-white page, the same inverted in automatic dark mode, a header with the site logo and a menu that opens full screen on phones, system fonts (no downloads), labelled Published/Updated dates, author box with bio under every article, breadcrumbs, "Filed under" categories and tags, article lists with thumbnails and numbered pages, dated comments, print styles. Translation-ready and accessible (WCAG 2.2 AA checks pass in both colour schemes). |
 | `tala-seo/` | SEO plugin. Titles, meta descriptions, canonicals, robots rules, Open Graph, JSON-LD, sitemap and robots.txt tuning, redirects for moved pages and categories, and a publish check. |
 | `dev/` | Demo content and a WordPress Playground blueprint for local testing (not deployed). |
 | `build.sh` | Packages both as zips in `dist/`. |

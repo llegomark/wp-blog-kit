@@ -76,6 +76,29 @@ function tala_blog_page_list_in_navigation( $html, $block, $instance ) {
 	return substr( $html, (int) strpos( $html, '>' ) + 1, -strlen( '</ul>' ) );
 }
 
+add_filter( 'render_block_core/site-logo', 'tala_blog_decorative_logo', 10, 2 );
+
+/**
+ * The logo beside the site title (patterns/site-brand.php) gets an empty alt text: the title next to
+ * it already names the site, so screen readers would otherwise read the name twice. A Site Logo block
+ * used anywhere else keeps its alt text.
+ *
+ * @param string               $html  Rendered Site Logo.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_decorative_logo( $html, $block ) {
+	$classes = (string) ( $block['attrs']['className'] ?? '' );
+	if ( ! in_array( 'tala-logo', explode( ' ', $classes ), true ) ) {
+		return $html;
+	}
+	$logo = new WP_HTML_Tag_Processor( $html );
+	if ( $logo->next_tag( array( 'tag_name' => 'img' ) ) ) {
+		$logo->set_attribute( 'alt', '' );
+	}
+	return $logo->get_updated_html();
+}
+
 // Don't fetch pattern directory patterns into the editor.
 add_filter( 'should_load_remote_block_patterns', '__return_false' );
 
