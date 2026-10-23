@@ -214,4 +214,33 @@ class Test_Tala_SEO_Sitemap extends Tala_SEO_Test_Case {
 		$this->assertSame( '1', get_post_meta( $post, TALA_SEO_MINOR_EDIT, true ) );
 		$this->assertNotContains( get_permalink( $post ), $this->urls( 'posts', 'post' ) );
 	}
+
+
+	/**
+	 * Posts hidden by a setting from Yoast SEO, Rank Math, The SEO Framework or SEOPress get noindex
+	 * on the page itself, so they leave the sitemap too, until `wp tala-seo import` copies the setting.
+	 */
+	public function test_posts_hidden_by_another_seo_plugin_are_left_out(): void {
+		$hidden = array(
+			'yoast'    => $this->publish_post( array( 'meta_input' => array( '_yoast_wpseo_meta-robots-noindex' => '1' ) ) ),
+			'rank'     => $this->publish_post( array( 'meta_input' => array( 'rank_math_robots' => array( 'noindex', 'nofollow' ) ) ) ),
+			'tsf'      => $this->publish_post( array( 'meta_input' => array( '_genesis_noindex' => '1' ) ) ),
+			'seopress' => $this->publish_post( array( 'meta_input' => array( '_seopress_robots_index' => 'yes' ) ) ),
+		);
+		$kept   = array(
+			'plain'  => $this->publish_post(),
+			'yoast'  => $this->publish_post( array( 'meta_input' => array( '_yoast_wpseo_meta-robots-noindex' => '2' ) ) ), // "Index".
+			'rank'   => $this->publish_post( array( 'meta_input' => array( 'rank_math_robots' => array( 'index', 'nofollow' ) ) ) ),
+			'tsf'    => $this->publish_post( array( 'meta_input' => array( '_genesis_noindex' => '-1' ) ) ), // "Always index".
+			'custom' => $this->publish_post( array( 'meta_input' => array( 'noindex' => '1' ) ) ), // Not an SEO plugin's field.
+		);
+		$urls   = $this->urls( 'posts', 'post' );
+		foreach ( $hidden as $plugin => $post ) {
+			$this->assertTrue( tala_seo_post_noindex( $post ), "$plugin: the page is noindex" );
+			$this->assertNotContains( get_permalink( $post ), $urls, "$plugin: out of the sitemap" );
+		}
+		foreach ( $kept as $what => $post ) {
+			$this->assertContains( get_permalink( $post ), $urls, $what );
+		}
+	}
 }

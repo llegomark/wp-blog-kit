@@ -44,6 +44,12 @@ function tala_seo_title_parts( $parts ) {
 	$custom = tala_seo_current_custom_title();
 	if ( '' !== $custom ) {
 		$parts['title'] = $custom;
+		// WordPress titles the front page "Site | Tagline"; a static front page's SEO title takes
+		// the place of the page's title, with the site name at the end as on every other page.
+		if ( isset( $parts['tagline'] ) ) {
+			unset( $parts['tagline'] );
+			$parts['site'] = get_bloginfo( 'name', 'display' );
+		}
 	}
 	if ( isset( $parts['title'], $parts['site'] )
 		&& 0 === strcasecmp( tala_seo_clean_text( $parts['title'] ), tala_seo_clean_text( $parts['site'] ) ) ) {
@@ -53,14 +59,30 @@ function tala_seo_title_parts( $parts ) {
 }
 
 /**
+ * The post or page the current request shows, whose SEO fields describe it: a post, a page (the
+ * static front page included) or the page that lists the posts (Settings → Reading, where the
+ * request is the post list but the page's title, description and "hide" switch still apply). 0 on
+ * every other page.
+ *
+ * @return int Post ID or 0.
+ */
+function tala_seo_current_post_id() {
+	if ( is_singular() || ( is_home() && get_queried_object() instanceof WP_Post ) ) {
+		return get_queried_object_id();
+	}
+	return 0;
+}
+
+/**
  * The SEO title set for the current post, term or author, or '' (then its own name is used).
  *
  * @return string
  */
 function tala_seo_current_custom_title() {
 	$queried = get_queried_object();
-	if ( is_singular( tala_seo_post_types() ) && ! is_front_page() ) {
-		return tala_seo_post_title( get_queried_object_id() );
+	$post_id = tala_seo_current_post_id();
+	if ( $post_id && in_array( (string) get_post_type( $post_id ), tala_seo_post_types(), true ) ) {
+		return tala_seo_post_title( $post_id );
 	}
 	if ( ( is_category() || is_tag() || is_tax() ) && $queried instanceof WP_Term ) {
 		return tala_seo_term_value( $queried, 'title' );
@@ -77,12 +99,16 @@ function tala_seo_current_custom_title() {
  * @return string
  */
 function tala_seo_current_description() {
-	if ( is_singular() ) {
-		$id   = get_queried_object_id();
+	$id = tala_seo_current_post_id();
+	if ( $id ) {
 		$text = tala_seo_post_description( $id );
 		// A password-protected post shows its excerpt only once the password is entered.
 		if ( '' === $text && has_excerpt( $id ) && ! post_password_required( $id ) ) {
 			$text = tala_seo_clean_text( (string) get_post( $id )?->post_excerpt );
+		}
+		// A static front page or posts page without a description of its own is still the home page.
+		if ( '' === $text && ( is_front_page() || is_home() ) ) {
+			$text = tala_seo_home_description();
 		}
 		return $text;
 	}
@@ -158,8 +184,9 @@ add_filter( 'wp_robots', 'tala_seo_robots' );
  * @return array<string, bool|string>
  */
 function tala_seo_robots( $robots ) {
-	$hide = is_search() || is_404() || is_date() || tala_seo_is_hidden_archive();
-	if ( is_singular() && tala_seo_post_noindex( get_queried_object_id() ) ) {
+	$hide    = is_search() || is_404() || is_date() || tala_seo_is_hidden_archive();
+	$post_id = tala_seo_current_post_id();
+	if ( $post_id && tala_seo_post_noindex( $post_id ) ) {
 		$hide = true;
 	}
 	if ( $hide ) {
@@ -300,10 +327,14 @@ function tala_seo_print_head(): void {
  * @return string
  */
 function tala_seo_og_title() {
-	if ( is_singular() && ! is_front_page() ) {
-		$id     = get_queried_object_id();
-		$custom = tala_seo_post_title( $id );
-		return '' !== $custom ? $custom : tala_seo_clean_text( get_the_title( $id ) );
+	$custom = tala_seo_current_custom_title();
+	if ( '' !== $custom ) {
+		return $custom;
+	}
+	$id = tala_seo_current_post_id();
+	// The front page is named after the site ("Site | Tagline"), not after its page.
+	if ( $id && ! is_front_page() ) {
+		return tala_seo_clean_text( get_the_title( $id ) );
 	}
 	return tala_seo_clean_text( wp_get_document_title() );
 }
@@ -315,8 +346,9 @@ function tala_seo_og_title() {
  * @return int Attachment ID or 0.
  */
 function tala_seo_og_image_id() {
-	if ( is_singular() ) {
-		$id = (int) get_post_thumbnail_id( get_queried_object_id() );
+	$post_id = tala_seo_current_post_id();
+	if ( $post_id ) {
+		$id = (int) get_post_thumbnail_id( $post_id );
 		if ( $id ) {
 			return $id;
 		}

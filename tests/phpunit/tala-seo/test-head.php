@@ -325,4 +325,61 @@ class Test_Tala_SEO_Head extends Tala_SEO_Test_Case {
 		$this->assertSame( get_permalink( $post ), $this->meta( 'og:url' ) );
 		$this->assertSame( get_permalink( $post ), $this->canonical() );
 	}
+
+
+	/**
+	 * A static front page and the page that lists the posts (Settings → Reading) use their own SEO
+	 * title, description and "hide" switch, as the SEO panel on those pages promises; without a
+	 * description of their own they fall back to the home page description.
+	 */
+	public function test_front_page_and_posts_page_use_their_own_fields(): void {
+		add_filter( 'tala_seo_publish_requirements', '__return_empty_array' ); // Pages without a description.
+		$front = $this->publish_post(
+			array(
+				'post_type'    => 'page',
+				'post_title'   => 'Welcome',
+				'post_excerpt' => '', // The test factory writes one otherwise.
+				'meta_input'   => array( TALA_SEO_DESCRIPTION => '' ),
+			)
+		);
+		$blog  = $this->publish_post(
+			array(
+				'post_type'    => 'page',
+				'post_title'   => 'Blog',
+				'post_excerpt' => '',
+				'meta_input'   => array( TALA_SEO_DESCRIPTION => '' ),
+			)
+		);
+		update_option( 'show_on_front', 'page' );
+		update_option( 'page_on_front', $front );
+		update_option( 'page_for_posts', $blog );
+
+		$this->go_to( home_url( '/' ) );
+		$this->assertSame( 'Guro Notes | Practical guides for teachers', wp_get_document_title(), 'Without an SEO title, WordPress\'s own front page title.' );
+		$this->assertSame( 'Practical guides for teachers', $this->meta( 'description' ), 'Without a description of its own, the home page description.' );
+
+		update_post_meta( $front, TALA_SEO_TITLE, 'Guides for teachers, free' );
+		update_post_meta( $front, TALA_SEO_DESCRIPTION, 'Lesson plans and school forms, explained.' );
+		$this->go_to( home_url( '/' ) );
+		$this->assertSame( 'Guides for teachers, free | Guro Notes', wp_get_document_title() );
+		$this->assertSame( 'Guides for teachers, free', $this->meta( 'og:title' ) );
+		$this->assertSame( 'Lesson plans and school forms, explained.', $this->meta( 'description' ) );
+		$this->assertSame( home_url( '/' ), $this->canonical() );
+
+		$this->go_to( get_permalink( $blog ) );
+		$this->assertSame( 'Blog | Guro Notes', wp_get_document_title() );
+		$this->assertSame( 'Blog', $this->meta( 'og:title' ) );
+		$this->assertSame( 'Practical guides for teachers', $this->meta( 'description' ) );
+		$this->assertSame( 'max-image-preview:large', $this->robots() );
+
+		update_post_meta( $blog, TALA_SEO_TITLE, 'All the guides' );
+		update_post_meta( $blog, TALA_SEO_DESCRIPTION, 'Every guide, newest first.' );
+		update_post_meta( $blog, TALA_SEO_NOINDEX, '1' );
+		$this->go_to( get_permalink( $blog ) );
+		$this->assertSame( 'All the guides | Guro Notes', wp_get_document_title() );
+		$this->assertSame( 'All the guides', $this->meta( 'og:title' ) );
+		$this->assertSame( 'Every guide, newest first.', $this->meta( 'description' ) );
+		$this->assertSame( 'follow, max-image-preview:large, noindex', $this->robots(), 'The posts page can be hidden like any page.' );
+		$this->assertSame( get_permalink( $blog ), $this->canonical() );
+	}
 }

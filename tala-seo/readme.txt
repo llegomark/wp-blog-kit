@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.13.0
+Stable tag: 1.14.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -54,7 +54,7 @@ Create a draft, set the featured image with `wp media import <file> --post_id=<i
 
 = I'm switching from another SEO plugin. What carries over? =
 
-Run `wp tala-seo import --dry-run` to see what would be copied, then `wp tala-seo import`. Until then, titles, descriptions and noindex from Yoast SEO, Rank Math, The SEO Framework or SEOPress still apply to the pages themselves, but the sitemap and the author settings only know Tala SEO's own values.
+Run `wp tala-seo import --dry-run` to see what would be copied, then `wp tala-seo import`. Until then, titles, descriptions and noindex from Yoast SEO, Rank Math, The SEO Framework or SEOPress still apply to the pages themselves and keep hidden posts, categories and tags out of the sitemap, but the author settings only know Tala SEO's own values.
 
 = What size should featured images be? =
 
@@ -93,6 +93,11 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.14.0 =
+* A static front page and the page that lists the posts (Settings → Reading) now use their own SEO title, meta description and "hide from search engines" switch, as the SEO panel on those pages shows. Without a description of their own they use the home page description.
+* The sitemap leaves out posts hidden by a setting from Yoast SEO, Rank Math, The SEO Framework or SEOPress, which already got noindex on the page itself.
+* Fixed: a damaged "official profiles" setting can't raise a PHP warning, and the image pickers in Settings → SEO and user profiles reuse one media window instead of adding one per click.
 
 = 1.13.0 =
 * Security: the category, tag, author and photo forms each carry a check tied to the term or user they edit, and a category's form saves to that category only.

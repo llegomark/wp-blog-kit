@@ -24,7 +24,7 @@ function tala_seo_settings() {
 	return array(
 		'publisher_type'   => 'person' === ( $saved['publisher_type'] ?? '' ) ? 'person' : 'organization',
 		'publisher_name'   => (string) ( $saved['publisher_name'] ?? '' ),
-		'same_as'          => array_values( array_map( strval( ... ), (array) ( $saved['same_as'] ?? array() ) ) ),
+		'same_as'          => array_values( array_filter( array_map( 'tala_seo_sanitize_url', (array) ( $saved['same_as'] ?? array() ) ) ) ),
 		'home_description' => (string) ( $saved['home_description'] ?? '' ),
 		'default_image'    => (int) ( $saved['default_image'] ?? 0 ),
 		'tag_min_posts'    => min( 100, max( 0, (int) ( $saved['tag_min_posts'] ?? 2 ) ) ),
@@ -137,16 +137,31 @@ function tala_seo_legacy_value( $post_id, $field ) {
 		'canonical'   => array( '_yoast_wpseo_canonical', 'rank_math_canonical_url', '_genesis_canonical_uri', '_seopress_robots_canonical' ),
 	);
 	if ( 'noindex' === $field ) {
-		if ( '1' === get_post_meta( $post_id, '_yoast_wpseo_meta-robots-noindex', true )
-			|| '1' === (string) get_post_meta( $post_id, '_genesis_noindex', true )
-			|| 'yes' === get_post_meta( $post_id, '_seopress_robots_index', true ) ) {
-			return '1';
+		foreach ( tala_seo_legacy_noindex_marks() as $key => $mark ) {
+			if ( (string) get_post_meta( $post_id, $key, true ) === $mark ) {
+				return '1';
+			}
 		}
 		$rank = get_post_meta( $post_id, 'rank_math_robots', true );
 		return ( is_array( $rank ) && in_array( 'noindex', $rank, true ) ) ? '1' : '';
 	}
 	return tala_seo_first_plain_value(
 		array_map( static fn( string $key ): mixed => get_post_meta( $post_id, $key, true ), $keys[ $field ] ?? array() )
+	);
+}
+
+/**
+ * The post meta that Yoast SEO, The SEO Framework and SEOPress set to hide a post from search
+ * engines, as key => the value that means "hidden". (Rank Math keeps a list of robots words
+ * instead, read where these are used.) The pages read them, and the sitemap leaves such posts out.
+ *
+ * @return array<string, string>
+ */
+function tala_seo_legacy_noindex_marks() {
+	return array(
+		'_yoast_wpseo_meta-robots-noindex' => '1',
+		'_genesis_noindex'                 => '1',
+		'_seopress_robots_index'           => 'yes',
 	);
 }
 

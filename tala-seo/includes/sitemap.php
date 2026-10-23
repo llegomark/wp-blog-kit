@@ -188,8 +188,9 @@ function tala_seo_sitemap_skip_noindex( $args ) {
 add_filter( 'posts_where', 'tala_seo_sitemap_where', 10, 2 );
 
 /**
- * For the sitemap's post queries: leaves out posts whose noindex is set or that redirect. One
- * indexed lookup per post, where meta query clauses would join a post's meta rows with each other.
+ * For the sitemap's post queries: leaves out posts whose noindex is set (here, or by a previous SEO
+ * plugin whose setting still hides the page) or that redirect. One indexed lookup per post, where
+ * meta query clauses would join a post's meta rows with each other.
  *
  * @param string   $where WHERE clause.
  * @param WP_Query $query Query.
@@ -200,11 +201,13 @@ function tala_seo_sitemap_where( $where, $query ) {
 		return $where;
 	}
 	global $wpdb;
-	return $where . $wpdb->prepare(
-		" AND NOT EXISTS ( SELECT 1 FROM {$wpdb->postmeta} AS tala_seo_meta WHERE tala_seo_meta.post_id = {$wpdb->posts}.ID AND ( ( tala_seo_meta.meta_key = %s AND tala_seo_meta.meta_value = '1' ) OR ( tala_seo_meta.meta_key = %s AND tala_seo_meta.meta_value <> '' ) ) )",
-		TALA_SEO_NOINDEX,
-		TALA_SEO_REDIRECT
-	);
+	$hidden = array( $wpdb->prepare( '( tala_seo_meta.meta_key = %s AND tala_seo_meta.meta_value <> %s )', TALA_SEO_REDIRECT, '' ) );
+	foreach ( array( TALA_SEO_NOINDEX => '1' ) + tala_seo_legacy_noindex_marks() as $key => $mark ) {
+		$hidden[] = $wpdb->prepare( '( tala_seo_meta.meta_key = %s AND tala_seo_meta.meta_value = %s )', $key, $mark );
+	}
+	// Rank Math keeps a list of robots words, stored serialized: "noindex" is one of its items.
+	$hidden[] = $wpdb->prepare( '( tala_seo_meta.meta_key = %s AND tala_seo_meta.meta_value LIKE %s )', 'rank_math_robots', '%' . $wpdb->esc_like( 's:7:"noindex";' ) . '%' );
+	return $where . " AND NOT EXISTS ( SELECT 1 FROM {$wpdb->postmeta} AS tala_seo_meta WHERE tala_seo_meta.post_id = {$wpdb->posts}.ID AND ( " . implode( ' OR ', $hidden ) . ' ) )';
 }
 
 add_filter( 'wp_sitemaps_users_query_args', 'tala_seo_sitemap_skip_hidden_authors' );

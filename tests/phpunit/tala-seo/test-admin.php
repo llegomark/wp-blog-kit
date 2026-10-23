@@ -454,4 +454,22 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 		$this->assertTrue( user_can( $this->admin, 'edit_term_meta', $term, TALA_SEO_TITLE ) );
 		$this->assertTrue( user_can( $this->admin, 'edit_user_meta', $user, TALA_SEO_TITLE ) );
 	}
+
+
+	/**
+	 * A damaged option (a list where text belongs, a word where a URL belongs) never reaches the
+	 * rest of the plugin: the settings hand out URLs and text only, without a PHP warning.
+	 */
+	public function test_damaged_settings_are_harmless(): void {
+		// Saving cleans the option; only a direct database write could leave it like this.
+		$damaged  = static fn() => array(
+			'same_as' => array( 'https://www.facebook.com/guronotes', array( 'nested' ), 'not a link', 7 ),
+			'verify'  => 'words',
+		);
+		add_filter( 'pre_option_tala_seo', $damaged );
+		$settings = tala_seo_settings();
+		remove_filter( 'pre_option_tala_seo', $damaged );
+		$this->assertSame( array( 'https://www.facebook.com/guronotes' ), $settings['same_as'] );
+		$this->assertSame( '', $settings['verify']['google'] );
+	}
 }
