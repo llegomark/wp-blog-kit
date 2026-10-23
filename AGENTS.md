@@ -67,6 +67,25 @@ typography presets, and the plugin's blocks in the editor. Then, on the local si
 - The plugin readme follows WordPress.org's readme standard, checked by `npm run lint:readme`.
   Contributors are WordPress.org usernames (`edventuredev`); there is no donate link, by decision.
 
+## Repository protection (GitHub settings, not files)
+
+Set after the LiteLLM supply-chain attack of October 2026 (a stolen token pushed unsigned workflow
+commits to throwaway branches to read the secrets, then published malicious releases):
+
+- Rulesets: every branch requires signed commits (so a stolen token alone can't push code or
+  workflows); main can't be deleted or force-pushed; release tags can't be moved or deleted.
+- Releases are immutable once published, with a build attestation; the deploy compares the zip
+  with a local build before installing it.
+- Actions: only GitHub's own actions and the allowlisted owners (`shivammathur/setup-php`,
+  `WordPress/plugin-check-action`, `nick-fields/retry`) may run, every `uses:` must pin a full
+  commit SHA (GitHub refuses the run otherwise), the default token is read-only, workflows can't
+  approve pull requests, and a pull request from any outside contributor runs only after approval.
+  Adding an action to a workflow means adding its owner to the allowlist in Settings → Actions.
+- The repository holds no secrets, deploy keys or webhooks, and needs none: the release workflow
+  uses its own token, and deploys run from the maintainer's machine. Keep it that way.
+- Secret scanning with push protection is on; Dependabot keeps the pins and tools current, with a
+  14-day cooldown on new releases.
+
 ## Commits
 
 The pre-commit hook checks the staged files (`lint-staged.config.mjs`). GitHub re-runs WPCS, PHPStan,
