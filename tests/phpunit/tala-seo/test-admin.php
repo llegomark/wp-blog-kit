@@ -137,7 +137,8 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 	public function test_term_fields(): void {
 		$term  = self::factory()->category->create();
 		$_POST = array(
-			'tala_seo_term_nonce'  => wp_create_nonce( 'tala_seo_term' ),
+			'tag_ID'               => (string) $term,
+			'tala_seo_term_nonce'  => wp_create_nonce( 'tala_seo_term_' . $term ),
 			'tala_seo_title'       => 'Full guides for teachers',
 			'tala_seo_description' => "Every full guide\nin one place.",
 			'tala_seo_noindex'     => '1',
@@ -151,10 +152,50 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 		tala_seo_save_term_fields( $term );
 		$this->assertSame( 'Full guides for teachers', get_term_meta( $term, TALA_SEO_TITLE, true ), 'Quick Edit' );
 
-		$_POST = array( 'tala_seo_term_nonce' => wp_create_nonce( 'tala_seo_term' ) );
+		$_POST = array(
+			'tag_ID'              => (string) $term,
+			'tala_seo_term_nonce' => wp_create_nonce( 'tala_seo_term_' . $term ),
+		);
 		tala_seo_save_term_fields( $term );
 		$this->assertSame( array(), get_term_meta( $term, TALA_SEO_TITLE, false ), 'Emptied fields are deleted.' );
 		$this->assertSame( array(), get_term_meta( $term, TALA_SEO_NOINDEX, false ) );
+	}
+
+	/**
+	 * A category's edit form saves to that category only, and its nonce is good for that category
+	 * only: another term WordPress updates in the same request (an alias group) keeps its fields.
+	 * The "Add New" form saves the term it creates.
+	 */
+	public function test_term_fields_save_to_their_own_term(): void {
+		$edited = self::factory()->category->create();
+		$other  = self::factory()->category->create();
+		update_term_meta( $other, TALA_SEO_TITLE, 'Other title' );
+		$form  = get_echo( 'tala_seo_term_edit_fields', array( get_term( $edited ) ) );
+		$nonce = preg_match( '/name="tala_seo_term_nonce" value="([^"]+)"/', $form, $match ) ? $match[1] : '';
+		$_POST = array(
+			'tag_ID'              => (string) $edited,
+			'tala_seo_term_nonce' => $nonce,
+			'tala_seo_title'      => 'Edited title',
+		);
+		tala_seo_save_term_fields( $other );
+		tala_seo_save_term_fields( $edited );
+		$this->assertSame( 'Other title', get_term_meta( $other, TALA_SEO_TITLE, true ) );
+		$this->assertSame( 'Edited title', get_term_meta( $edited, TALA_SEO_TITLE, true ) );
+
+		$_POST['tag_ID'] = (string) $other;
+		tala_seo_save_term_fields( $other );
+		$this->assertSame( 'Other title', get_term_meta( $other, TALA_SEO_TITLE, true ), 'Not with another term\'s nonce' );
+
+		$added = self::factory()->category->create();
+		$_POST = array(
+			'tala_seo_term_nonce' => wp_create_nonce( 'tala_seo_term' ),
+			'tala_seo_title'      => 'New title',
+		);
+		tala_seo_term_field_hooks();
+		tala_seo_save_term_fields( $other ); // Not from the "created" hook: another term.
+		do_action( 'created_category', $added );
+		$this->assertSame( 'Other title', get_term_meta( $other, TALA_SEO_TITLE, true ) );
+		$this->assertSame( 'New title', get_term_meta( $added, TALA_SEO_TITLE, true ) );
 	}
 
 	/**
@@ -170,7 +211,7 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 			'email'                       => $user->user_email,
 			'nickname'                    => $user->nickname,
 			'display_name'                => $user->display_name,
-			'tala_seo_author_nonce'       => wp_create_nonce( 'tala_seo_author' ),
+			'tala_seo_author_nonce'       => wp_create_nonce( 'tala_seo_author_' . $this->admin ),
 			'tala_seo_author_title'       => 'Tala Tester, teacher',
 			'tala_seo_author_description' => 'Guides for teachers by Tala.',
 			'tala_seo_author_noindex'     => '1',
@@ -298,7 +339,7 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 		wp_set_current_user( $subscriber );
 		$_POST = array(
 			'tala_seo_photo'       => (string) $hidden,
-			'tala_seo_photo_nonce' => wp_create_nonce( 'tala_seo_photo' ),
+			'tala_seo_photo_nonce' => wp_create_nonce( 'tala_seo_photo_' . $subscriber ),
 		);
 		tala_seo_save_photo( $subscriber );
 		$this->assertSame( '', get_user_meta( $subscriber, 'tala_seo_photo', true ), 'An image of an unpublished post' );
@@ -336,12 +377,81 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 		wp_set_current_user( $author );
 		$_POST = array(
 			'tala_seo_photo'       => (string) $image,
-			'tala_seo_photo_nonce' => wp_create_nonce( 'tala_seo_photo' ),
+			'tala_seo_photo_nonce' => wp_create_nonce( 'tala_seo_photo_' . $author ),
 		);
 		tala_seo_save_photo( $author );
 		$this->assertSame( $image, tala_seo_photo_id( $author ), 'Shown on the site it was chosen on' );
 		restore_current_blog();
 
 		$this->assertSame( 0, tala_seo_photo_id( $author ), 'Not on another site' );
+	}
+
+	/**
+	 * The profile forms' nonces are good for the profile they were printed on only: one taken from
+	 * another user's form saves nothing, even for someone who may edit both.
+	 */
+	public function test_profile_nonces_belong_to_their_user(): void {
+		$other = self::factory()->user->create( array( 'role' => 'author' ) );
+		$nonce = static function ( string $form, string $field ): string {
+			return preg_match( '/name="' . $field . '" value="([^"]+)"/', $form, $match ) ? $match[1] : '';
+		};
+		$admin = get_userdata( $this->admin );
+
+		$_POST = array(
+			'tala_seo_photo'       => (string) self::$image_id,
+			'tala_seo_photo_nonce' => $nonce( get_echo( 'tala_seo_photo_field', array( $admin ) ), 'tala_seo_photo_nonce' ),
+		);
+		tala_seo_save_photo( $other );
+		$this->assertSame( '', get_user_meta( $other, 'tala_seo_photo', true ), 'Photo' );
+
+		$_POST = array(
+			'tala_seo_author_nonce' => $nonce( get_echo( 'tala_seo_author_fields', array( $admin ) ), 'tala_seo_author_nonce' ),
+			'tala_seo_author_title' => 'Not theirs',
+		);
+		tala_seo_save_author_fields( $other );
+		$this->assertSame( '', get_user_meta( $other, TALA_SEO_TITLE, true ), 'Author fields' );
+	}
+
+	/**
+	 * The photo picker is WordPress's media library, which only people who may upload files can
+	 * browse: others don't get a picker that can't show them anything.
+	 */
+	public function test_photo_picker_needs_upload_rights(): void {
+		$subscriber = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+		wp_set_current_user( $subscriber );
+		$this->assertStringNotContainsString( 'data-tala-media=', get_echo( 'tala_seo_photo_field', array( get_userdata( $subscriber ) ) ) );
+		tala_seo_admin_assets( 'profile.php' );
+		$this->assertFalse( wp_script_is( 'tala-seo-admin' ) );
+
+		wp_set_current_user( $this->admin );
+		$this->assertStringContainsString( 'data-tala-media=', get_echo( 'tala_seo_photo_field', array( get_userdata( $subscriber ) ) ) );
+	}
+
+	/**
+	 * The editor's settings can't end their script element or start markup, whatever the site is
+	 * called.
+	 */
+	public function test_editor_settings_are_safe_in_a_script(): void {
+		update_option( 'blogname', 'Notes & <3 tips' );
+		set_current_screen( 'post' );
+		tala_seo_editor_assets();
+		$config = (string) wp_scripts()->get_inline_script_data( 'tala-seo-editor', 'before' );
+		$this->assertStringContainsString( '\\u003C3', $config );
+		$this->assertStringNotContainsString( '<3', $config );
+	}
+
+	/**
+	 * Who may edit the SEO fields is decided for the user asked about, not whoever is logged in: an
+	 * administrator may edit them while a subscriber's request is running.
+	 */
+	public function test_meta_permissions_are_for_the_user_asked_about(): void {
+		$post = $this->publish_post();
+		$term = self::factory()->category->create();
+		$user = self::factory()->user->create( array( 'role' => 'author' ) );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'subscriber' ) ) );
+		$this->assertTrue( user_can( $this->admin, 'edit_post_meta', $post, TALA_SEO_DESCRIPTION ) );
+		$this->assertTrue( user_can( $this->admin, 'edit_post_meta', $post, TALA_SEO_MINOR_EDIT ) );
+		$this->assertTrue( user_can( $this->admin, 'edit_term_meta', $term, TALA_SEO_TITLE ) );
+		$this->assertTrue( user_can( $this->admin, 'edit_user_meta', $user, TALA_SEO_TITLE ) );
 	}
 }

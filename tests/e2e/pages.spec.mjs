@@ -74,6 +74,14 @@ test( 'robots.txt points to the sitemap and blocks no crawler', async ( { reques
 	expect( robots.match( /^Disallow:.*$/gm ) ).toEqual( [ 'Disallow: /wp-admin/' ] );
 } );
 
+test( 'theme and plugin files do nothing when requested directly', async ( { request } ) => {
+	for ( const path of [ '/wp-content/themes/tala-blog/patterns/post-list.php', '/wp-content/plugins/tala-seo/blocks/event/index.asset.php' ] ) {
+		const response = await request.get( path );
+		expect( response.status(), path ).toBe( 200 );
+		expect( await response.text(), path ).toBe( '' );
+	}
+} );
+
 test( 'the dev site does not serve its admin login', async ( { request } ) => {
 	const response = await request.get( '/.dev-credentials' );
 	expect( await response.text() ).not.toContain( 'PASSWORD=' );

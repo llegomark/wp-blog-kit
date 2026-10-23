@@ -60,7 +60,8 @@ class Tala_SEO_CLI {
 	 * @param array<string, string> $assoc_args Options.
 	 */
 	public function audit( array $args, array $assoc_args ): void {
-		$rows = array();
+		$format = $assoc_args['format'] ?? 'table';
+		$rows   = array();
 		foreach ( $this->post_ids( 'publish' ) as $id ) {
 			$problems = tala_seo_publish_problems(
 				(string) get_post_type( $id ),
@@ -71,12 +72,25 @@ class Tala_SEO_CLI {
 				$rows[] = array(
 					'ID'      => $id,
 					'type'    => get_post_type( $id ),
-					'title'   => get_the_title( $id ),
+					'title'   => $this->cell( get_the_title( $id ), 'csv' === $format ),
 					'missing' => implode( ', ', array_keys( $problems ) ),
 				);
 			}
 		}
-		WP_CLI\Utils\format_items( $assoc_args['format'] ?? 'table', $rows, array( 'ID', 'type', 'title', 'missing' ) );
+		WP_CLI\Utils\format_items( $format, $rows, array( 'ID', 'type', 'title', 'missing' ) );
+	}
+
+	/**
+	 * Text written by a site's authors, safe to print: one line without control characters (which
+	 * a terminal could act on), and in CSV no cell a spreadsheet would read as a formula.
+	 *
+	 * @param string $text Text.
+	 * @param bool   $csv  Whether the output is CSV.
+	 * @return string
+	 */
+	private function cell( string $text, bool $csv ): string {
+		$text = trim( (string) preg_replace( '/[\p{Cc}\s]+/u', ' ', $text ) );
+		return $csv && preg_match( '/^[=+\-@]/', $text ) ? "'" . $text : $text;
 	}
 
 	/**
@@ -110,7 +124,10 @@ class Tala_SEO_CLI {
 			) as $field => $key ) {
 				$this->copy( 'post', $id, $key, tala_seo_legacy_value( $id, $field ) );
 			}
-			$this->copy( 'post', $id, TALA_SEO_CANONICAL, tala_seo_sanitize_url( tala_seo_legacy_value( $id, 'canonical' ) ) );
+			$canonical = tala_seo_sanitize_url( tala_seo_legacy_value( $id, 'canonical' ) );
+			if ( $this->copy( 'post', $id, TALA_SEO_CANONICAL, $canonical ) ) {
+				WP_CLI::log( sprintf( 'Post %d canonical: %s', $id, $canonical ) );
+			}
 			$this->copy( 'post', $id, TALA_SEO_NOINDEX, tala_seo_legacy_value( $id, 'noindex' ) );
 			$redirect = $this->legacy_redirect( $id );
 			if ( $this->copy( 'post', $id, TALA_SEO_REDIRECT, $redirect ) ) {

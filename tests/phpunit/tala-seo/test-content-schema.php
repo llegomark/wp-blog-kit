@@ -471,4 +471,37 @@ class Test_Tala_SEO_Content_Schema extends Tala_SEO_Test_Case {
 		$this->assertSame( 'core/details', $variations['tala-seo-faq']['innerBlocks'][1][0] );
 		$this->assertSame( array( 'ordered' => true ), $variations['tala-seo-howto']['innerBlocks'][2][1] );
 	}
+
+	/**
+	 * Requests to YouTube's oEmbed accept a small answer and follow no redirect.
+	 */
+	public function test_youtube_requests_are_small(): void {
+		$seen = array();
+		add_filter(
+			'pre_http_request',
+			static function ( $response, $args ) use ( &$seen ) {
+				$seen[] = $args;
+				return $response;
+			},
+			9,
+			2
+		);
+		$this->publish_post( array( 'post_content' => $this->embed( 'https://youtu.be/aqz-KE-bpKQ' ) ) );
+		$this->assertSame( 65536, $seen[0]['limit_response_size'] ?? null );
+		$this->assertSame( 0, $seen[0]['redirection'] ?? null );
+	}
+
+	/**
+	 * Block attributes of the wrong type (lists where text belongs) are ignored without a warning:
+	 * a page never fills the error log because of what a block was saved with.
+	 */
+	public function test_odd_block_attributes_are_ignored(): void {
+		$content = '<!-- wp:group {"className":["tala-seo-faq"]} --><div class="wp-block-group"></div><!-- /wp:group -->'
+			. '<!-- wp:embed {"url":["https://youtu.be/aqz-KE-bpKQ"]} /-->'
+			. '<!-- wp:tala-seo/event {"name":["Event"],"startDate":{"day":1}} /-->'
+			. '<!-- wp:tala-seo/course {"name":["Course"],"description":["About"],"price":["1"],"priceCurrency":["PHP"],"providerUrl":["https://example.com/"]} /-->';
+		$post    = $this->publish_post( array( 'post_content' => $content ) );
+		$this->go_to( get_permalink( $post ) );
+		$this->assertCount( 1, $this->nodes( 'BlogPosting' ) );
+	}
 }

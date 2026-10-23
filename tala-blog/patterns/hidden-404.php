@@ -9,6 +9,8 @@
  * @package TalaBlog
  */
 
+defined( 'ABSPATH' ) || exit;
+
 ?>
 <!-- wp:heading {"level":1} -->
 <h1 class="wp-block-heading"><?php echo esc_html__( 'Page not found', 'tala-blog' ); ?></h1>

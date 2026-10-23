@@ -33,6 +33,8 @@ if [ "${1:-}" = --reset ] && [ -f "$SITE/wp-config.php" ]; then
   rm -rf "$SITE"
 fi
 if [ -f "$SITE/wp-config.php" ]; then
+  # A site made before this setting: its admin can't rewrite the repository's theme and plugin files.
+  wp config has DISALLOW_FILE_EDIT 2>/dev/null || wp config set DISALLOW_FILE_EDIT true --raw --quiet
   echo "The site already exists at $SITE ($URL). Use --reset to start over."
   exit 0
 fi
@@ -49,14 +51,17 @@ define( 'WP_DEBUG_LOG', true );          // wp-content/debug.log
 define( 'WP_DEBUG_DISPLAY', ! ( defined( 'WP_CLI' ) && WP_CLI ) ); // browser: on screen; WP-CLI: debug.log only
 define( 'SCRIPT_DEBUG', true );          // unminified core scripts: clearer editor errors
 define( 'WP_DEVELOPMENT_MODE', 'all' ); // no cached theme.json or pattern files: edits show at once
+define( 'DISALLOW_FILE_EDIT', true );  // the theme and plugin are this repository's files
 PHP
 if [ -n "${WP_DEV_DB_PASSWORD:-}" ]; then
   wp config set DB_PASSWORD "getenv( 'WP_DEV_DB_PASSWORD' ) ?: ''" --raw --quiet
 fi
 wp db create
 PASSWORD=$(openssl rand -base64 18 | tr -d '/+=')
-wp core install --url="$URL" --title="Guro Notes (dev)" --admin_user=admin --admin_password="$PASSWORD" \
-  --admin_email=dev@example.com --skip-email --quiet
+wp core install --url="$URL" --title="Guro Notes (dev)" --admin_user=admin --admin_email=dev@example.com \
+  --skip-email --quiet
+# The password reaches WordPress on standard input: on a command line, other local users could read it.
+printf '%s\n' "$PASSWORD" | wp eval 'wp_set_password( trim( (string) fgets( STDIN ) ), get_user_by( "login", "admin" )->ID );'
 install -m 600 /dev/null "$CREDENTIALS"
 printf 'URL=%s/wp-admin/\nUSER=admin\nPASSWORD=%s\n' "$URL" "$PASSWORD" > "$CREDENTIALS"
 

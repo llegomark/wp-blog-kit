@@ -48,6 +48,11 @@ In Appearance → Editor → Patterns → Header, select the logo placeholder be
 
 == Changelog ==
 
+= 1.6.2 =
+* The "Published", "Updated", "Pinned" and "Author" labels are inserted as written, whatever their translation holds.
+* A Page List in the menu is unwrapped only when its HTML is the list itself.
+* Pattern files do nothing when requested directly.
+
 = 1.6.1 =
 * Readme: installing from the GitHub releases.
 

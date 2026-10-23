@@ -9,6 +9,8 @@
  * @package TalaBlog
  */
 
+defined( 'ABSPATH' ) || exit;
+
 ?>
 <!-- wp:group {"metadata":{"name":<?php echo tala_blog_block_text( _x( 'Logo and site title', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-brand","style":{"spacing":{"blockGap":"var:preset|spacing|10"}},"layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"center"}} -->
 <div class="wp-block-group tala-brand"><!-- wp:site-logo {"width":28,"isLink":false,"className":"tala-logo"} /-->

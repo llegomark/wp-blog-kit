@@ -9,6 +9,8 @@
  * @package TalaBlog
  */
 
+defined( 'ABSPATH' ) || exit;
+
 ?>
 <!-- wp:query {"query":{"inherit":true},"className":"tala-list"} -->
 <div class="wp-block-query tala-list"><!-- wp:post-template -->

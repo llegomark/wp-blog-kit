@@ -82,7 +82,7 @@ function tala_seo_event_moment( $date, $time = '' ) {
  * @return array<string, mixed>|null Null without a name or a valid start date.
  */
 function tala_seo_event_data( array $attributes, $post ) {
-	$text = static fn( $key ) => trim( sanitize_text_field( (string) ( $attributes[ $key ] ?? '' ) ) );
+	$text = static fn( $key ) => trim( sanitize_text_field( tala_seo_scalar( $attributes[ $key ] ?? '' ) ) );
 
 	$name = $text( 'name' );
 	if ( '' === $name && $post ) {
@@ -132,7 +132,7 @@ function tala_seo_event_data( array $attributes, $post ) {
 		'tickets'      => tala_seo_sanitize_url( $attributes['ticketUrl'] ?? '' ),
 		'organizer'    => $text( 'organizer' ),
 		'organizerUrl' => tala_seo_sanitize_url( $attributes['organizerUrl'] ?? '' ),
-		'description'  => trim( sanitize_textarea_field( (string) ( $attributes['description'] ?? '' ) ) ),
+		'description'  => trim( sanitize_textarea_field( tala_seo_scalar( $attributes['description'] ?? '' ) ) ),
 	);
 }
 

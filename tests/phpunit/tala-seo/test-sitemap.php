@@ -200,4 +200,18 @@ class Test_Tala_SEO_Sitemap extends Tala_SEO_Test_Case {
 		$this->assertSame( home_url( '/' ), $home['loc'] );
 		$this->assertSame( get_post_modified_time( DATE_W3C, true, $newer ), $home['lastmod'] );
 	}
+
+	/**
+	 * "Hide from search engines" and "minor edit" are yes/no fields however they are written (a
+	 * custom field, XML-RPC), so a hidden post is hidden in its head and in the sitemap alike.
+	 */
+	public function test_switches_are_booleans(): void {
+		tala_seo_guard_setup(); // Registers the minor-edit field, as on a site.
+		$post = $this->publish_post();
+		update_post_meta( $post, TALA_SEO_NOINDEX, 'yes' );
+		update_post_meta( $post, TALA_SEO_MINOR_EDIT, 'yes' );
+		$this->assertSame( '1', get_post_meta( $post, TALA_SEO_NOINDEX, true ) );
+		$this->assertSame( '1', get_post_meta( $post, TALA_SEO_MINOR_EDIT, true ) );
+		$this->assertNotContains( get_permalink( $post ), $this->urls( 'posts', 'post' ) );
+	}
 }

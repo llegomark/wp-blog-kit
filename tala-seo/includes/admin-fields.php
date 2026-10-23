@@ -74,7 +74,7 @@ function tala_seo_term_edit_fields( $term ): void {
 	<tr class="form-field">
 		<th scope="row"><label for="tala-seo-title"><?php esc_html_e( 'SEO title', 'tala-seo' ); ?></label></th>
 		<td>
-			<?php wp_nonce_field( 'tala_seo_term', 'tala_seo_term_nonce' ); ?>
+			<?php wp_nonce_field( 'tala_seo_term_' . $term->term_id, 'tala_seo_term_nonce' ); ?>
 			<input type="text" id="tala-seo-title" name="tala_seo_title" value="<?php echo esc_attr( (string) get_term_meta( $term->term_id, TALA_SEO_TITLE, true ) ); ?>" placeholder="<?php echo esc_attr( '' !== $legacy_title ? $legacy_title : $term->name ); ?>" aria-describedby="tala-seo-title-help">
 			<p class="description" id="tala-seo-title-help"><?php echo esc_html( $help['title'] ); ?></p>
 		</td>
@@ -124,11 +124,19 @@ function tala_seo_term_form_script( $hook ): void {
 /**
  * Saves the term fields. Quick Edit and other saves without the form's nonce leave them alone.
  *
+ * The fields go to the term the form is for only: the edited term (its ID is in the form and in its
+ * nonce), or, from the "Add New" form, the term WordPress just created. Other terms WordPress
+ * updates in the same request, such as an alias group, keep theirs.
+ *
  * @param int $term_id Term ID.
  */
 function tala_seo_save_term_fields( $term_id ): void {
-	if ( ! isset( $_POST['tala_seo_term_nonce'] )
-		|| ! wp_verify_nonce( sanitize_key( wp_unslash( $_POST['tala_seo_term_nonce'] ) ), 'tala_seo_term' )
+	$editing = isset( $_POST['tag_ID'] );
+	$form_id = $editing ? absint( $_POST['tag_ID'] ) : 0;
+	$is_form = $editing ? $form_id === (int) $term_id : str_starts_with( (string) current_filter(), 'created_' );
+	if ( ! $is_form
+		|| ! isset( $_POST['tala_seo_term_nonce'] )
+		|| ! wp_verify_nonce( sanitize_key( wp_unslash( $_POST['tala_seo_term_nonce'] ) ), $editing ? 'tala_seo_term_' . $form_id : 'tala_seo_term' )
 		|| ! current_user_can( 'edit_term', $term_id ) ) {
 		return;
 	}
@@ -163,7 +171,7 @@ function tala_seo_author_fields( $user ): void {
 		<tr>
 			<th scope="row"><label for="tala-seo-author-title"><?php esc_html_e( 'SEO title', 'tala-seo' ); ?></label></th>
 			<td>
-				<?php wp_nonce_field( 'tala_seo_author', 'tala_seo_author_nonce' ); ?>
+				<?php wp_nonce_field( 'tala_seo_author_' . $user->ID, 'tala_seo_author_nonce' ); ?>
 				<input type="text" class="regular-text" id="tala-seo-author-title" name="tala_seo_author_title" value="<?php echo esc_attr( (string) get_user_meta( $user->ID, TALA_SEO_TITLE, true ) ); ?>" placeholder="<?php echo esc_attr( $user->display_name ); ?>">
 				<p class="description"><?php esc_html_e( 'Leave empty to use the display name.', 'tala-seo' ); ?></p>
 			</td>
@@ -252,6 +260,6 @@ function tala_seo_author_field_errors( $errors, $update, $user ): void {
 function tala_seo_author_form_verified( $user_id ) {
 	return $user_id > 0
 		&& isset( $_POST['tala_seo_author_nonce'] )
-		&& wp_verify_nonce( sanitize_key( wp_unslash( $_POST['tala_seo_author_nonce'] ) ), 'tala_seo_author' )
+		&& wp_verify_nonce( sanitize_key( wp_unslash( $_POST['tala_seo_author_nonce'] ) ), 'tala_seo_author_' . $user_id )
 		&& current_user_can( 'edit_user', $user_id );
 }

@@ -91,7 +91,8 @@ function tala_seo_schema_nodes() {
 	$queried = get_queried_object();
 	if ( is_singular( 'post' ) && $queried instanceof WP_Post ) {
 		$nodes[] = tala_seo_article_node( $queried );
-	} elseif ( is_author() ) {
+	} elseif ( is_author() && ! tala_seo_is_empty_archive() ) {
+		// A member who never published has an empty author page: no profile to describe.
 		$nodes[] = tala_seo_profile_page_node( get_queried_object_id() );
 	}
 	if ( is_singular( tala_seo_post_types() ) && $queried instanceof WP_Post ) {

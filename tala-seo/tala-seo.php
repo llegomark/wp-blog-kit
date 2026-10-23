@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Tala SEO
  * Description:       Lean SEO for blogs: titles, meta descriptions, canonicals, Open Graph, JSON-LD structured data (articles, YouTube videos, events, courses, FAQ and how-to), visible breadcrumbs, sitemap and robots.txt tuning, and a publish check that blocks posts without a meta description or featured image.
- * Version:           1.12.0
+ * Version:           1.13.0
  * Requires at least: 7.0
  * Requires PHP:      8.5
  * Author:            Edventure
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const TALA_SEO_VERSION = '1.12.0';
+const TALA_SEO_VERSION = '1.13.0';
 const TALA_SEO_FILE    = __FILE__;
 
 // Post meta keys. The leading underscore hides them from the Custom Fields box.
@@ -99,8 +99,9 @@ add_action( 'init', 'tala_seo_register_meta' );
  * Registers the per-post SEO fields so the block editor can read and save them over REST.
  */
 function tala_seo_register_meta(): void {
-	$can_edit = static function ( $allowed, $meta_key, $post_id ) {
-		return current_user_can( 'edit_post', $post_id );
+	// Asked for a given user (user_can()), who isn't always the one logged in.
+	$can_edit = static function ( $allowed, $meta_key, $post_id, $user_id ) {
+		return user_can( $user_id, 'edit_post', $post_id );
 	};
 
 	foreach ( tala_seo_post_types() as $type ) {
@@ -144,11 +145,13 @@ function tala_seo_register_meta(): void {
 			$type,
 			TALA_SEO_NOINDEX,
 			array(
-				'type'          => 'boolean',
-				'single'        => true,
-				'default'       => false,
-				'show_in_rest'  => true,
-				'auth_callback' => $can_edit,
+				'type'              => 'boolean',
+				'single'            => true,
+				'default'           => false,
+				'show_in_rest'      => true,
+				// Also for custom fields and XML-RPC, where REST's boolean schema doesn't apply.
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'auth_callback'     => $can_edit,
 			)
 		);
 		register_post_meta(

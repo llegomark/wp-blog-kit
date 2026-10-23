@@ -10,6 +10,8 @@
  * @package TalaBlog
  */
 
+defined( 'ABSPATH' ) || exit;
+
 ?>
 <!-- wp:group {"metadata":{"name":<?php echo tala_blog_block_text( _x( 'Menu overlay', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-overlay","backgroundColor":"base","textColor":"contrast","layout":{"type":"constrained"}} -->
 <div class="wp-block-group tala-overlay has-contrast-color has-base-background-color has-text-color has-background"><!-- wp:group {"metadata":{"name":<?php echo tala_blog_block_text( _x( 'Logo, title and close button', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-overlay-bar","layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"space-between"}} -->

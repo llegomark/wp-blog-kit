@@ -86,10 +86,12 @@ function tala_seo_remember_move( $meta_type, $id, $old_url, $new_url ): void {
 	if ( '' === $old || $old === $new ) {
 		return;
 	}
+	// The old address now belongs to this page or term only, and the new one, a current address
+	// again, to no one's old addresses.
 	foreach ( array( 'post', 'term' ) as $type ) {
 		delete_metadata( $type, 0, TALA_SEO_OLD_PATH, $old, true );
+		delete_metadata( $type, 0, TALA_SEO_OLD_PATH, $new, true );
 	}
-	delete_metadata( $meta_type, $id, TALA_SEO_OLD_PATH, $new );
 	add_metadata( $meta_type, $id, TALA_SEO_OLD_PATH, $old );
 
 	// Oldest first (meta is read in the order it was added): drop what is over the limit.

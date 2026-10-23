@@ -125,4 +125,17 @@ class Test_Tala_SEO_Share_Image extends Tala_SEO_Test_Case {
 		tala_seo_deactivate();
 		$this->assertFalse( wp_next_scheduled( 'tala_seo_make_share_crop', array( 999999 ) ) );
 	}
+
+	/**
+	 * The background crop is made once per image: a job that runs again (two first views queued it
+	 * twice) does nothing.
+	 */
+	public function test_crop_is_tried_once(): void {
+		remove_image_size( 'tala-seo-share' );
+		$image = $this->upload( 'cover-3.jpg' );
+		add_image_size( 'tala-seo-share', 1200, 630, true );
+		update_post_meta( $image, TALA_SEO_SHARE_CROP_TRIED, 1 );
+		do_action( 'tala_seo_make_share_crop', $image );
+		$this->assertFalse( image_get_intermediate_size( $image, 'tala-seo-share' ) );
+	}
 }

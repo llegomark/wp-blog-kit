@@ -9,6 +9,8 @@
  * @package TalaBlog
  */
 
+defined( 'ABSPATH' ) || exit;
+
 if ( WP_Block_Type_Registry::get_instance()->is_registered( 'tala-seo/breadcrumbs' ) ) :
 	?>
 <!-- wp:tala-seo/breadcrumbs /-->

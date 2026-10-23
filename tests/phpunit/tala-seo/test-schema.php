@@ -276,4 +276,58 @@ class Test_Tala_SEO_Schema extends Tala_SEO_Test_Case {
 		$this->assertStringStartsWith( '<script type="application/ld+json">', $printed );
 		$this->assertIsArray( json_decode( (string) preg_replace( '#^<script[^>]*>|</script>\s*$#', '', $printed ), true ) );
 	}
+
+	/**
+	 * Members who never published (subscribers, for example) have an author page WordPress serves
+	 * empty; it gets no ProfilePage and no rel="me", so it can't vouch for their profile links.
+	 */
+	public function test_profiles_only_for_authors_of_posts(): void {
+		$member = self::factory()->user->create(
+			array(
+				'role'        => 'subscriber',
+				'description' => 'Just a reader.',
+			)
+		);
+		update_user_meta( $member, 'tala_fediverse_url', 'https://mastodon.social/@reader' );
+		$this->go_to( get_author_posts_url( $member ) );
+		$this->assertArrayNotHasKey( 'ProfilePage', $this->schema() );
+		$this->assertStringNotContainsString( 'rel="me"', $this->head() );
+	}
+
+	/**
+	 * A parent page that isn't public (private or a draft) stays out of its child's breadcrumbs,
+	 * visible trail and markup alike.
+	 */
+	public function test_breadcrumbs_skip_parents_that_are_not_public(): void {
+		$parent = self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'private',
+				'post_title'  => 'Private parent',
+			)
+		);
+		$child  = $this->publish_post(
+			array(
+				'post_type'   => 'page',
+				'post_parent' => $parent,
+				'post_title'  => 'Public child',
+			)
+		);
+		$this->go_to( get_permalink( $child ) );
+		$trail = $this->show_breadcrumbs();
+		$this->assertStringContainsString( 'Public child', $trail );
+		$this->assertStringNotContainsString( 'Private parent', $trail );
+		$this->assertStringNotContainsString( 'Private parent', (string) wp_json_encode( $this->schema()['BreadcrumbList'] ) );
+	}
+
+	/**
+	 * A Breadcrumbs block hidden with block visibility shows no trail, so the page gets no
+	 * BreadcrumbList either.
+	 */
+	public function test_hidden_breadcrumbs_block_adds_no_markup(): void {
+		$post = $this->publish_post();
+		$this->go_to( get_permalink( $post ) );
+		do_blocks( '<!-- wp:tala-seo/breadcrumbs {"metadata":{"blockVisibility":false}} /-->' );
+		$this->assertArrayNotHasKey( 'BreadcrumbList', $this->schema() );
+	}
 }

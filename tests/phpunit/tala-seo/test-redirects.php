@@ -213,4 +213,17 @@ class Test_Tala_SEO_Redirects extends Tala_SEO_Test_Case {
 		$this->assertNull( $this->redirect_of( 'tala_seo_redirect_moved' ), 'Tala SEO leaves posts alone.' );
 		$this->assertSame( get_permalink( $post ), $this->redirect_of( 'wp_old_slug_redirect' )?->location );
 	}
+
+	/**
+	 * An address that is a page's or term's current one is no one's old address: when two
+	 * categories trade slugs, neither keeps sending the other's address elsewhere.
+	 */
+	public function test_current_address_is_no_old_address(): void {
+		$first  = self::factory()->category->create( array( 'slug' => 'tala-first' ) );
+		$second = self::factory()->category->create( array( 'slug' => 'tala-second' ) );
+		$this->publish_post( array( 'post_category' => array( $first, $second ) ) );
+		wp_update_term( $first, 'category', array( 'slug' => 'tala-spare' ) );
+		wp_update_term( $second, 'category', array( 'slug' => 'tala-first' ) );
+		$this->assertNotContains( 'category/tala-first', get_term_meta( $first, TALA_SEO_OLD_PATH, false ) );
+	}
 }

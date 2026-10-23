@@ -141,7 +141,8 @@ add_filter( 'get_canonical_url', 'tala_seo_custom_canonical', 10, 2 );
 function tala_seo_custom_canonical( $url, $post ) {
 	$custom = (string) get_post_meta( $post->ID, TALA_SEO_CANONICAL, true );
 	if ( '' === $custom ) {
-		$custom = tala_seo_legacy_value( $post->ID, 'canonical' );
+		// Another plugin's field: checked here, as nothing checked it when it was saved.
+		$custom = tala_seo_sanitize_url( tala_seo_legacy_value( $post->ID, 'canonical' ) );
 	}
 	return '' !== $custom ? $custom : $url;
 }
@@ -282,7 +283,8 @@ function tala_seo_print_head(): void {
 			$tags[] = sprintf( '<meta name="fediverse:creator" content="%s">', esc_attr( $handle ) );
 		}
 	}
-	if ( is_author() ) {
+	// Only on the author page of someone who published: an empty one can't vouch for a profile.
+	if ( is_author() && ! tala_seo_is_empty_archive() ) {
 		$profile = esc_url_raw( (string) get_the_author_meta( 'tala_fediverse_url', get_queried_object_id() ), array( 'https' ) );
 		if ( '' !== $profile ) {
 			$tags[] = sprintf( '<link rel="me" href="%s">', esc_url( $profile ) );

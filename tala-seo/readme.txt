@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.12.0
+Stable tag: 1.13.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,16 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.13.0 =
+* Security: the category, tag, author and photo forms each carry a check tied to the term or user they edit, and a category's form saves to that category only.
+* Security: who may edit the SEO fields is checked for the user asked about, not whoever is logged in.
+* Security: a canonical address left by another SEO plugin is used only when it is a real address, and "hide from search engines" and "minor edit" are saved as yes or no however they are written.
+* Author pages: members who never published get no profile markup and no "rel=me" link. The photo picker is offered to people who can upload files; a photo someone else chose stays when the profile is saved.
+* Breadcrumbs leave out parent pages that aren't public, and a hidden Breadcrumbs block adds no breadcrumb markup.
+* `wp tala-seo import` also lists the canonical addresses it copies; `wp tala-seo audit` prints plain one-line titles, and in CSV no title starts a spreadsheet formula.
+* Fixed: an address a page or category uses again is no longer kept as another's old address; the share crop is made once even when queued twice; block settings of the wrong type no longer fill the error log.
+* YouTube requests take a small answer and follow no redirect; FAQ questions and video captions are read in time that grows only with the length of the content.
 
 = 1.12.0 =
 * Security: the meta description a post list shows in place of an excerpt is escaped, so markup written into it shows as text.
@@ -187,6 +197,9 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 * First release.
 
 == Upgrade Notice ==
+
+= 1.13.0 =
+Hardening. Members who never published lose the profile markup on their empty author page. Subscribers and contributors no longer see a photo picker they couldn't use.
 
 = 1.12.0 =
 Security fixes; update soon. On multisite, authors choose their photo again on each site. An author photo attached to an unpublished post shows once that post is published.

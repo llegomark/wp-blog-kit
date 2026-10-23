@@ -10,6 +10,8 @@
  * @package TalaBlog
  */
 
+defined( 'ABSPATH' ) || exit;
+
 ?>
 <!-- wp:group {"className":"tala-footer","layout":{"type":"constrained"}} -->
 <div class="wp-block-group tala-footer"><!-- wp:pattern {"slug":"tala-blog/footer-site"} /--></div>

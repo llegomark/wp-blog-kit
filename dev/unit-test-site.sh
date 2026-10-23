@@ -38,6 +38,8 @@ if [ "${1:-}" = --reset ] && [ -f "$SITE/wp-config.php" ]; then
   rm -rf "$SITE"
 fi
 if [ -f "$SITE/wp-config.php" ]; then
+  # A site made before this setting: its admin can't rewrite the repository's theme and plugin files.
+  wp config has DISALLOW_FILE_EDIT 2>/dev/null || wp config set DISALLOW_FILE_EDIT true --raw --quiet
   echo "The site already exists at $SITE ($URL). Use --reset to start over."
   exit 0
 fi
@@ -52,12 +54,15 @@ define( 'WP_DEBUG_LOG', true );          // wp-content/debug.log
 define( 'WP_DEBUG_DISPLAY', ! ( defined( 'WP_CLI' ) && WP_CLI ) );
 define( 'SCRIPT_DEBUG', true );
 define( 'WP_DEVELOPMENT_MODE', 'all' );
+define( 'DISALLOW_FILE_EDIT', true );  // the theme and plugin are this repository's files
 PHP
 wp db create
 PASSWORD=$(openssl rand -base64 18 | tr -d '/+=')
 # A fairly long site title and an even longer tagline, as the handbook asks.
 wp core install --url="$URL" --title="Theme Unit Test: a fairly long site title to see how it wraps" \
-  --admin_user=admin --admin_password="$PASSWORD" --admin_email=dev@example.com --skip-email --quiet
+  --admin_user=admin --admin_email=dev@example.com --skip-email --quiet
+# The password reaches WordPress on standard input: on a command line, other local users could read it.
+printf '%s\n' "$PASSWORD" | wp eval 'wp_set_password( trim( (string) fgets( STDIN ) ), get_user_by( "login", "admin" )->ID );'
 wp option update blogdescription "And an even longer tagline, as the Theme Unit Test asks, to see how the header and footer handle it on a narrow phone screen" --quiet
 install -m 600 /dev/null "$CREDENTIALS"
 printf 'URL=%s/wp-admin/\nUSER=admin\nPASSWORD=%s\n' "$URL" "$PASSWORD" > "$CREDENTIALS"

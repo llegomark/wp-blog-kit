@@ -51,7 +51,7 @@ function tala_seo_course_modes() {
  * @return array<string, mixed>|null Null without a name.
  */
 function tala_seo_course_data( array $attributes, $post ) {
-	$text = static fn( $key ) => trim( sanitize_text_field( (string) ( $attributes[ $key ] ?? '' ) ) );
+	$text = static fn( $key ) => trim( sanitize_text_field( tala_seo_scalar( $attributes[ $key ] ?? '' ) ) );
 
 	$name = $text( 'name' );
 	if ( '' === $name && $post ) {
@@ -80,7 +80,7 @@ function tala_seo_course_data( array $attributes, $post ) {
 
 	return array(
 		'name'          => $name,
-		'description'   => trim( sanitize_textarea_field( (string) ( $attributes['description'] ?? '' ) ) ),
+		'description'   => trim( sanitize_textarea_field( tala_seo_scalar( $attributes['description'] ?? '' ) ) ),
 		'provider'      => $provider,
 		'provider_url'  => $provider_url,
 		'provider_type' => $provider_type,

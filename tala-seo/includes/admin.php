@@ -50,7 +50,8 @@ function tala_seo_editor_assets(): void {
 		'defaultCategory' => (int) get_option( 'default_category' ),
 		'sitePublic'      => (bool) get_option( 'blog_public' ),
 	);
-	wp_add_inline_script( 'tala-seo-editor', 'window.talaSeo = ' . wp_json_encode( $config ) . ';', 'before' );
+	// Hex escapes for < > & so no value (the site name) can end the script element or start markup.
+	wp_add_inline_script( 'tala-seo-editor', 'window.talaSeo = ' . wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP ) . ';', 'before' );
 	wp_set_script_translations( 'tala-seo-editor', 'tala-seo' );
 }
 
@@ -337,7 +338,7 @@ add_action( 'admin_enqueue_scripts', 'tala_seo_admin_assets' );
  * @param string $hook Admin page.
  */
 function tala_seo_admin_assets( $hook ): void {
-	if ( ! in_array( $hook, array( 'settings_page_tala-seo', 'profile.php', 'user-edit.php' ), true ) ) {
+	if ( ! in_array( $hook, array( 'settings_page_tala-seo', 'profile.php', 'user-edit.php' ), true ) || ! current_user_can( 'upload_files' ) ) {
 		return;
 	}
 	wp_enqueue_media();
@@ -486,10 +487,14 @@ function tala_seo_photo_field( $user ): void {
 			<td>
 				<img id="tala-seo-photo-preview" src="<?php echo esc_url( $src ); ?>" alt="" width="96" height="96" style="border-radius:50%;object-fit:cover;display:block;margin-bottom:8px" <?php echo $src ? '' : 'hidden'; ?>>
 				<input type="hidden" id="tala-seo-photo" name="tala_seo_photo" value="<?php echo esc_attr( $id ? (string) $id : '' ); ?>">
-				<button type="button" class="button" data-tala-media="tala-seo-photo" data-preview="tala-seo-photo-preview" data-title="<?php esc_attr_e( 'Author photo', 'tala-seo' ); ?>" data-button="<?php esc_attr_e( 'Use this photo', 'tala-seo' ); ?>"><?php esc_html_e( 'Choose photo', 'tala-seo' ); ?></button>
-				<button type="button" class="button-link" data-tala-media-clear="tala-seo-photo" data-preview="tala-seo-photo-preview"><?php esc_html_e( 'Remove', 'tala-seo' ); ?></button>
-				<p class="description"><?php esc_html_e( 'A real photo of the author: square, at least 300 × 300 px. Shown with their articles and on their author page instead of Gravatar.', 'tala-seo' ); ?></p>
-				<?php wp_nonce_field( 'tala_seo_photo', 'tala_seo_photo_nonce' ); ?>
+				<?php if ( current_user_can( 'upload_files' ) ) : // The picker is the media library, which needs this. ?>
+					<button type="button" class="button" data-tala-media="tala-seo-photo" data-preview="tala-seo-photo-preview" data-title="<?php esc_attr_e( 'Author photo', 'tala-seo' ); ?>" data-button="<?php esc_attr_e( 'Use this photo', 'tala-seo' ); ?>"><?php esc_html_e( 'Choose photo', 'tala-seo' ); ?></button>
+					<button type="button" class="button-link" data-tala-media-clear="tala-seo-photo" data-preview="tala-seo-photo-preview"><?php esc_html_e( 'Remove', 'tala-seo' ); ?></button>
+					<p class="description"><?php esc_html_e( 'A real photo of the author: square, at least 300 × 300 px. Shown with their articles and on their author page instead of Gravatar.', 'tala-seo' ); ?></p>
+				<?php else : ?>
+					<p class="description"><?php esc_html_e( 'A real photo of the author, shown with their articles and on their author page. Someone who can upload files, such as an editor, can choose it here.', 'tala-seo' ); ?></p>
+				<?php endif; ?>
+				<?php wp_nonce_field( 'tala_seo_photo_' . $user->ID, 'tala_seo_photo_nonce' ); ?>
 			</td>
 		</tr>
 	</table>
@@ -507,10 +512,13 @@ add_action( 'edit_user_profile_update', 'tala_seo_save_photo' );
 function tala_seo_save_photo( $user_id ): void {
 	if ( ! current_user_can( 'edit_user', $user_id )
 		|| ! isset( $_POST['tala_seo_photo_nonce'] )
-		|| ! wp_verify_nonce( sanitize_key( wp_unslash( $_POST['tala_seo_photo_nonce'] ) ), 'tala_seo_photo' ) ) {
+		|| ! wp_verify_nonce( sanitize_key( wp_unslash( $_POST['tala_seo_photo_nonce'] ) ), 'tala_seo_photo_' . $user_id ) ) {
 		return;
 	}
 	$id = absint( $_POST['tala_seo_photo'] ?? 0 );
+	if ( $id && (int) get_user_meta( $user_id, tala_seo_photo_key(), true ) === $id ) {
+		return; // Unchanged (perhaps chosen by someone else for this user).
+	}
 	// Only an image the person saving may see: an ID typed into the form can't reach someone else's.
 	if ( $id && wp_attachment_is_image( $id ) && current_user_can( 'read_post', $id ) ) {
 		update_user_meta( $user_id, tala_seo_photo_key(), $id );

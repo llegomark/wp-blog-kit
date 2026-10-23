@@ -96,7 +96,10 @@ function tala_seo_build_breadcrumb_trail() {
 		$trail[] = tala_seo_crumb( get_the_title( $queried ), get_permalink( $queried ) );
 	} elseif ( is_page() && $queried instanceof WP_Post ) {
 		foreach ( array_reverse( get_post_ancestors( $queried ) ) as $ancestor ) {
-			$trail[] = tala_seo_crumb( get_the_title( $ancestor ), get_permalink( $ancestor ) );
+			// A private or draft parent page isn't shown to visitors, so neither is its title here.
+			if ( is_post_publicly_viewable( $ancestor ) ) {
+				$trail[] = tala_seo_crumb( get_the_title( $ancestor ), get_permalink( $ancestor ) );
+			}
 		}
 		$trail[] = tala_seo_crumb( get_the_title( $queried ), get_permalink( $queried ) );
 	} elseif ( is_singular() ) {
@@ -219,9 +222,18 @@ function tala_seo_register_breadcrumbs_block(): void {
 /**
  * Renders the visible breadcrumb trail.
  *
+ * @param array<string, mixed> $attributes Block attributes.
+ * @param string               $content    Block content (none).
+ * @param WP_Block|null        $block      Block.
  * @return string
  */
-function tala_seo_render_breadcrumbs() {
+function tala_seo_render_breadcrumbs( $attributes = array(), $content = '', $block = null ) {
+	// Hidden with block visibility: WordPress drops the output after this runs, so show no trail
+	// here either, and the page gets no BreadcrumbList for it.
+	$visibility = $block instanceof WP_Block ? ( $block->parsed_block['attrs']['metadata']['blockVisibility'] ?? null ) : null;
+	if ( false === $visibility ) {
+		return '';
+	}
 	// In the editor (block preview over REST) show an example trail.
 	if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
 		$trail = array(

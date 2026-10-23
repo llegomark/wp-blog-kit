@@ -9,6 +9,8 @@
  * @package TalaBlog
  */
 
+defined( 'ABSPATH' ) || exit;
+
 ?>
 <!-- wp:post-author {"avatarSize":64,"showBio":true,"byline":<?php echo tala_blog_block_text( __( 'Written by', 'tala-blog' ) ); ?>,"isLink":true,"className":"tala-author"} /-->
 

@@ -44,8 +44,8 @@ jobs:
       contents: write # tags and releases
       id-token: write # signs the build attestation
       attestations: write # stores it
+    # The token is given only to the steps that call gh, not to build.sh or the notes script.
     env:
-      GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
@@ -68,6 +68,8 @@ jobs:
 
       - name: Make sure the checks passed on this commit
         if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           conclusion=$(gh run list --workflow checks.yml --commit "$SHA" --event push --limit 1 --json conclusion --jq '.[0].conclusion // ""')
           if [ "$conclusion" != success ]; then
@@ -77,6 +79,8 @@ jobs:
 
       - name: Find the versions without a release
         id: new
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           tags=()
           for product in tala-seo tala-blog; do
@@ -130,9 +134,17 @@ jobs:
       - name: Publish the releases
         if: steps.new.outputs.tags != ''
         env:
+          GH_TOKEN: ${{ github.token }}
           TAGS: ${{ steps.new.outputs.tags }}
         run: |
           for tag in $TAGS; do
+            # An existing tag keeps its commit (GitHub would ignore --target), so the release would
+            # sit on another commit than the zip was built from: stop instead.
+            tagged=$(gh api "repos/$GH_REPO/git/ref/tags/$tag" --jq .object.sha 2>/dev/null || true)
+            if [ -n "$tagged" ] && [ "$tagged" != "$SHA" ]; then
+              echo "::error::The tag $tag already exists on $tagged, not $SHA; nothing is published."
+              exit 1
+            fi
             product=${tag%-*}
             version=${tag##*-}
             case $product in

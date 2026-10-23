@@ -9,6 +9,8 @@
  * @package TalaBlog
  */
 
+defined( 'ABSPATH' ) || exit;
+
 ?>
 <!-- wp:group {"className":"tala-terms","layout":{"type":"default"}} -->
 <div class="wp-block-group tala-terms"><!-- wp:post-terms {"term":"category","prefix":<?php /* translators: Shown before the article's categories; keep the space at the end. */ echo tala_blog_block_text( __( 'Filed under: ', 'tala-blog' ) ); ?>} /-->

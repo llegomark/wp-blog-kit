@@ -345,4 +345,51 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 			tala_seo_register_breadcrumbs_block();
 		}
 	}
+
+	/**
+	 * The labels the theme adds ("Published", "Pinned", "Author") are inserted as written: a
+	 * translation holding "$0" or a backslash shows as it is.
+	 */
+	public function test_labels_are_inserted_as_written(): void {
+		$odd    = static fn( $translation, $text, $domain ) => 'tala-blog' === $domain && in_array( $text, array( 'Published', 'Pinned', 'Author' ), true ) ? $text . ' $0 \1' : $translation;
+		add_filter( 'gettext', $odd, 10, 3 );
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post   = $this->publish_post( array( 'post_author' => $author ) );
+
+		$this->go_to( get_permalink( $post ) );
+		$this->assertStringContainsString( 'Published $0 \1</span><time', $this->render( '<!-- wp:post-date /-->', $post ) );
+
+		stick_post( $post );
+		$this->go_to( home_url( '/' ) );
+		$this->assertStringContainsString( 'Pinned $0 \1</span><time', $this->render( '<!-- wp:post-date /-->', $post ) );
+
+		$comment = self::factory()->comment->create(
+			array(
+				'comment_post_ID' => $post,
+				'user_id'         => $author,
+			)
+		);
+		$block   = new WP_Block( parse_blocks( '<!-- wp:comment-author-name /-->' )[0], array( 'commentId' => $comment ) );
+		$this->assertStringContainsString( 'Author $0 \1</span></div>', $block->render() );
+	}
+
+	/**
+	 * Inside a Navigation block, the Page List's own list is unwrapped only when the HTML starts with
+	 * that list: anything another plugin put before it is left as it is.
+	 */
+	public function test_page_list_unwrapped_only_from_its_own_list(): void {
+		$instance = new WP_Block(
+			array(
+				'blockName'    => 'core/page-list',
+				'attrs'        => array(),
+				'innerBlocks'  => array(),
+				'innerHTML'    => '',
+				'innerContent' => array(),
+			),
+			array( 'showSubmenuIcon' => true )
+		);
+		$list     = '<ul class="wp-block-page-list"><li>Home</li></ul>';
+		$this->assertSame( '<li>Home</li>', tala_blog_page_list_in_navigation( $list, array(), $instance ) );
+		$this->assertSame( 'Note: a > b ' . $list, tala_blog_page_list_in_navigation( 'Note: a > b ' . $list, array(), $instance ) );
+	}
 }

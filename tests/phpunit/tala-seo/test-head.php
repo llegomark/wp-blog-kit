@@ -314,4 +314,15 @@ class Test_Tala_SEO_Head extends Tala_SEO_Test_Case {
 		$this->go_to( get_permalink( $post ) );
 		$this->assertStringNotContainsString( 'A summary of the protected post.', $this->head() );
 	}
+
+	/**
+	 * A canonical address left by another SEO plugin is used only when it is an address; anything
+	 * else (here a script URL) leaves the post's own.
+	 */
+	public function test_legacy_canonical_must_be_an_address(): void {
+		$post = $this->publish_post( array( 'meta_input' => array( 'rank_math_canonical_url' => 'javascript:alert(1)' ) ) );
+		$this->go_to( get_permalink( $post ) );
+		$this->assertSame( get_permalink( $post ), $this->meta( 'og:url' ) );
+		$this->assertSame( get_permalink( $post ), $this->canonical() );
+	}
 }

@@ -10,6 +10,8 @@
  * @package TalaBlog
  */
 
+defined( 'ABSPATH' ) || exit;
+
 ?>
 <!-- wp:comments {"className":"tala-comments"} -->
 <div class="wp-block-comments tala-comments"><!-- wp:comments-title {"level":2} /-->

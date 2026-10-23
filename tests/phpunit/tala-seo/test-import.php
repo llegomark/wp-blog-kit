@@ -239,4 +239,28 @@ class Test_Tala_SEO_Import extends Tala_SEO_Test_Case {
 		$this->assertSame( 'description', $rows[0]['missing'] );
 		$this->assertNotContains( $ready, array_column( $rows, 'ID' ) );
 	}
+
+	/**
+	 * The import lists each canonical address it copies, like redirects, so they can be checked.
+	 */
+	public function test_copied_canonicals_are_listed(): void {
+		$post = $this->legacy_post( array( '_yoast_wpseo_canonical' => 'https://example.org/original/' ) );
+		$this->import();
+		$printed = implode( "\n", array_column( WP_CLI::$messages, 1 ) );
+		$this->assertStringContainsString( "Post $post canonical: https://example.org/original/", $printed );
+	}
+
+	/**
+	 * The audit prints titles as plain one-line text, and in CSV a title can't start a spreadsheet
+	 * formula.
+	 */
+	public function test_audit_titles_are_plain(): void {
+		$post = $this->publish_post( array( 'post_title' => "=SUM(1)\u{009B}x\ny" ) );
+		delete_post_meta( $post, TALA_SEO_DESCRIPTION );
+		( new Tala_SEO_CLI() )->audit( array(), array( 'format' => 'csv' ) );
+		$this->assertSame( "'=SUM(1) x y", WP_CLI::$tables[0]['items'][0]['title'] );
+		WP_CLI::reset();
+		( new Tala_SEO_CLI() )->audit( array(), array() );
+		$this->assertSame( '=SUM(1) x y', WP_CLI::$tables[0]['items'][0]['title'], 'A table is not a spreadsheet.' );
+	}
 }

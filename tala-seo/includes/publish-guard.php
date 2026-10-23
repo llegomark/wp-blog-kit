@@ -64,12 +64,13 @@ function tala_seo_guard_setup(): void {
 			$type,
 			TALA_SEO_MINOR_EDIT,
 			array(
-				'type'          => 'boolean',
-				'single'        => true,
-				'default'       => false,
-				'show_in_rest'  => true,
-				'auth_callback' => static function ( $allowed, $meta_key, $post_id ) {
-					return current_user_can( 'edit_post', $post_id );
+				'type'              => 'boolean',
+				'single'            => true,
+				'default'           => false,
+				'show_in_rest'      => true,
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'auth_callback'     => static function ( $allowed, $meta_key, $post_id, $user_id ) {
+					return user_can( $user_id, 'edit_post', $post_id );
 				},
 			)
 		);

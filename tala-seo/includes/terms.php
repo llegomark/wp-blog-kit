@@ -52,8 +52,8 @@ function tala_seo_register_archive_meta(): void {
 				$taxonomy,
 				$key,
 				$args + array(
-					'auth_callback' => static function ( $allowed, $meta_key, $term_id ) {
-						return current_user_can( 'edit_term', $term_id );
+					'auth_callback' => static function ( $allowed, $meta_key, $term_id, $user_id ) {
+						return user_can( $user_id, 'edit_term', $term_id );
 					},
 				)
 			);
@@ -62,8 +62,8 @@ function tala_seo_register_archive_meta(): void {
 			'user',
 			$key,
 			$args + array(
-				'auth_callback' => static function ( $allowed, $meta_key, $user_id ) {
-					return current_user_can( 'edit_user', $user_id );
+				'auth_callback' => static function ( $allowed, $meta_key, $object_id, $user_id ) {
+					return user_can( $user_id, 'edit_user', $object_id );
 				},
 			)
 		);

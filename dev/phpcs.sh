@@ -11,6 +11,7 @@ PHPCS_VERSION=3.13.6          # WPCS 3.x needs PHP_CodeSniffer 3.x
 WPCS_VERSION=3.4.1
 UTILS_VERSION=1.2.3
 EXTRA_VERSION=1.5.1
+PHP_WASM_VERSION=3.1.60      # @php-wasm/cli: a fixed version (3.1.57 has no native module for Node 26)
 PHPCS_KEY=5CB4F778BF9BC4FB67AE511D96E91A992CF22FF4   # official PHPCS release key (PHPCS README)
 
 mkdir -p "$T/standards"
@@ -21,24 +22,33 @@ if [ ! -f "$T/phpcs.phar" ] || [ "$(cat "$T/.phpcs-version" 2>/dev/null)" != "$P
   GNUPGHOME=$(mktemp -d); export GNUPGHOME; trap 'rm -rf "$GNUPGHOME"' EXIT
   gpg --quiet --keyserver hkps://keys.openpgp.org --recv-keys "$PHPCS_KEY" 2>/dev/null
   for f in phpcs.phar phpcbf.phar; do
-    gpg --status-fd 1 --verify "$T/$f.asc" "$T/$f" 2>/dev/null | grep -q "VALIDSIG $PHPCS_KEY" \
-      || { echo "Signature check failed for $f; not running it." >&2; rm -f "$T/$f"; exit 1; }
+    # A good signature by that key, and not one from a key since revoked or expired (GnuPG reports
+    # VALIDSIG for those too, but REVKEYSIG or EXPKEYSIG instead of GOODSIG).
+    status=$(gpg --status-fd 1 --verify "$T/$f.asc" "$T/$f" 2>/dev/null || true)
+    if ! grep -q "GOODSIG" <<<"$status" || ! grep -q "VALIDSIG $PHPCS_KEY" <<<"$status" \
+      || grep -qE "REVKEYSIG|EXPKEYSIG|EXPSIG" <<<"$status"; then
+      echo "Signature check failed for $f; not running it." >&2; rm -f "$T/$f"; exit 1
+    fi
   done
   echo "$PHPCS_VERSION" > "$T/.phpcs-version"
 fi
-fetch() {   # repo tag dir
+fetch() {   # repo tag dir sha256: the tag's archive, checked against the SHA-256 recorded here
   if [ "$(cat "$T/standards/$3/.version" 2>/dev/null)" != "$2" ]; then
     rm -rf "$T/standards/$3"; mkdir -p "$T/standards/$3"
-    curl -fsSL "https://codeload.github.com/$1/tar.gz/refs/tags/$2" | tar -xz -C "$T/standards/$3" --strip-components=1
+    curl -fsSL -o "$T/standards/$3.tar.gz" "https://codeload.github.com/$1/tar.gz/refs/tags/$2"
+    echo "$4  $T/standards/$3.tar.gz" | sha256sum -c --quiet - \
+      || { echo "Checksum failed for $1 $2; not using it." >&2; rm -f "$T/standards/$3.tar.gz"; exit 1; }
+    tar -xzf "$T/standards/$3.tar.gz" -C "$T/standards/$3" --strip-components=1
+    rm -f "$T/standards/$3.tar.gz"
     echo "$2" > "$T/standards/$3/.version"
   fi
 }
-fetch WordPress/WordPress-Coding-Standards "$WPCS_VERSION" wpcs
-fetch PHPCSStandards/PHPCSUtils "$UTILS_VERSION" phpcsutils
-fetch PHPCSStandards/PHPCSExtra "$EXTRA_VERSION" phpcsextra
+fetch WordPress/WordPress-Coding-Standards "$WPCS_VERSION" wpcs 6bc480573c0475bfdbd562dc3239d487d57e02552e2867cabf7f3b567ff9af23
+fetch PHPCSStandards/PHPCSUtils "$UTILS_VERSION" phpcsutils 1bd2198fefb8e9081ce35332127aca50f01cd4106d6f7f6bd28c0d507041d6c9
+fetch PHPCSStandards/PHPCSExtra "$EXTRA_VERSION" phpcsextra ee20b0d5f1f295dba7f37b259283c6c7544b57803600c9b825d10806ad614c1c
 
 PATHS="$T/standards/wpcs,$T/standards/phpcsutils,$T/standards/phpcsextra"
-run() { npx -y @php-wasm/cli@latest "$@" 2>&1 | grep -v -E '^npm notice|fgets\(\): Read of'; }
+run() { npx -y "@php-wasm/cli@$PHP_WASM_VERSION" "$@" 2>&1 | grep -v -E '^npm notice|fgets\(\): Read of'; }
 if [ "${1:-}" = --fix ]; then
   shift
   run "$T/phpcbf.phar" --runtime-set installed_paths "$PATHS" "$@" || true

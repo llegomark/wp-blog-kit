@@ -17,9 +17,13 @@ src, out = sys.argv[1], sys.argv[2]
 with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
     for root, dirs, files in os.walk(src):
         dirs[:] = sorted(d for d in dirs if not d.startswith("."))
-        for f in sorted(files):
-            if not f.startswith("."):
-                path = os.path.join(root, f)
+        for name in dirs + sorted(f for f in files if not f.startswith(".")):
+            path = os.path.join(root, name)
+            # A link would put whatever it points to into the zip (a file outside the folder, or a
+            # secret of the machine building it): only real files are packed.
+            if os.path.islink(path):
+                sys.exit(f"build.sh: {path} is a symbolic link; the zip takes real files only.")
+            if os.path.isfile(path):
                 z.write(path, path)
 PY
   echo "dist/$dir-$v.zip"

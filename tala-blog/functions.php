@@ -69,8 +69,10 @@ function tala_blog_page_list_in_navigation( $html, $block, $instance ) {
 	}
 	$html = trim( $html );
 	$list = new WP_HTML_Tag_Processor( $html );
-	if ( ! $list->next_tag() || 'UL' !== $list->get_tag() || ! $list->has_class( 'wp-block-page-list' )
-		|| ! str_ends_with( $html, '</ul>' ) ) {
+	// Only HTML that is the list itself: then the first ">" ends its start tag, as WordPress escapes
+	// ">" in attribute values.
+	if ( ! str_starts_with( $html, '<ul' ) || ! $list->next_tag() || 'UL' !== $list->get_tag()
+		|| ! $list->has_class( 'wp-block-page-list' ) || ! str_ends_with( $html, '</ul>' ) ) {
 		return $html;
 	}
 	return substr( $html, (int) strpos( $html, '>' ) + 1, -strlen( '</ul>' ) );
@@ -182,11 +184,26 @@ function tala_blog_label_dates( $html, $block, $instance ) {
 		return '';
 	}
 	$label = $modified ? __( 'Updated', 'tala-blog' ) : __( 'Published', 'tala-blog' );
-	return (string) preg_replace( '/<time\b/', '<span class="tala-date-label">' . esc_html( $label ) . '</span><time', $html, 1 );
+	return tala_blog_before_time( $html, '<span class="tala-date-label">' . esc_html( $label ) . '</span>' );
 }
 
 // Priority 20: after Enhanced Responsive Images (10), which doesn't see the CSS width either.
 add_filter( 'render_block_core/post-featured-image', 'tala_blog_list_thumb_sizes', 20, 2 );
+
+/**
+ * A block's HTML with some HTML inserted just before its first <time> tag. Inserted as it is, so a
+ * label's translation holding "$1" or a backslash stays text.
+ *
+ * @param string $html   Block HTML.
+ * @param string $insert HTML to insert.
+ * @return string
+ */
+function tala_blog_before_time( $html, $insert ) {
+	if ( ! preg_match( '/<time\b/', $html, $match, PREG_OFFSET_CAPTURE ) ) {
+		return $html;
+	}
+	return substr_replace( $html, $insert, $match[0][1], 0 );
+}
 
 /**
  * Gives article-list thumbnails their real width in `sizes`: 5.5rem, and 8rem from 40em up, as in
@@ -257,7 +274,7 @@ function tala_blog_pinned_label( $html, $block, $instance ) {
 	if ( '' === trim( $html ) || ! $post_id || ! empty( $block['attrs']['displayType'] ) || ! is_home() || is_paged() || ! is_sticky( $post_id ) ) {
 		return $html;
 	}
-	return (string) preg_replace( '/<time\b/', '<span class="tala-pinned">' . esc_html__( 'Pinned', 'tala-blog' ) . '</span><time', $html, 1 );
+	return tala_blog_before_time( $html, '<span class="tala-pinned">' . esc_html__( 'Pinned', 'tala-blog' ) . '</span>' );
 }
 
 add_filter( 'render_block_core/comment-author-name', 'tala_blog_author_comment_badge', 10, 3 );
@@ -278,7 +295,8 @@ function tala_blog_author_comment_badge( $html, $block, $instance ) {
 		return $html;
 	}
 	$badge = ' <span class="tala-comment-badge">' . esc_html__( 'Author', 'tala-blog' ) . '</span>';
-	return (string) preg_replace( '#</div>\s*$#', $badge . '</div>', trim( $html ), 1 );
+	$html  = trim( $html );
+	return str_ends_with( $html, '</div>' ) ? substr( $html, 0, -strlen( '</div>' ) ) . $badge . '</div>' : $html;
 }
 
 add_filter( 'comment_form_defaults', 'tala_blog_comment_form_heading' );

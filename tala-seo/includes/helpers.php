@@ -75,6 +75,17 @@ function tala_seo_thin_taxonomies() {
 }
 
 /**
+ * A text value from data saved in any shape (block attributes, custom fields), or '' when it isn't
+ * text: a list or an object where text belongs is ignored instead of becoming "Array".
+ *
+ * @param mixed $value Value.
+ * @return string
+ */
+function tala_seo_scalar( $value ) {
+	return is_scalar( $value ) ? (string) $value : '';
+}
+
+/**
  * Sanitizes a one-line text value: no tags, no line breaks, collapsed spaces.
  *
  * @param mixed $value Raw value.
@@ -240,6 +251,9 @@ add_action( 'tala_seo_make_share_crop', 'tala_seo_make_share_crop' );
  */
 function tala_seo_make_share_crop( $attachment_id ): void {
 	$attachment_id = (int) $attachment_id;
+	if ( get_post_meta( $attachment_id, TALA_SEO_SHARE_CROP_TRIED, true ) ) {
+		return; // Already tried, by a job queued twice.
+	}
 	update_post_meta( $attachment_id, TALA_SEO_SHARE_CROP_TRIED, 1 );
 	if ( ! wp_attachment_is_image( $attachment_id ) ) {
 		return;
@@ -364,7 +378,7 @@ function tala_seo_social_fields() {
  * @return string
  */
 function tala_seo_sanitize_url( $value ) {
-	$url  = esc_url_raw( trim( (string) $value ), array( 'http', 'https' ) );
+	$url  = esc_url_raw( trim( tala_seo_scalar( $value ) ), array( 'http', 'https' ) );
 	$host = (string) wp_parse_url( $url, PHP_URL_HOST );
 	return preg_match( '/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z][a-z0-9-]*[a-z0-9]$/i', $host ) ? $url : '';
 }

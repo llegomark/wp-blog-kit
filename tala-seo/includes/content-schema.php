@@ -116,7 +116,7 @@ function tala_seo_find_blocks( array $blocks, callable $accept ): array {
  */
 function tala_seo_is_group( array $block, string $class_name ): bool {
 	return 'core/group' === $block['blockName']
-		&& in_array( $class_name, explode( ' ', (string) ( $block['attrs']['className'] ?? '' ) ), true );
+		&& in_array( $class_name, explode( ' ', tala_seo_scalar( $block['attrs']['className'] ?? '' ) ), true );
 }
 
 /**
@@ -133,6 +133,31 @@ function tala_seo_block_html( array $block ): string {
 		$html .= is_string( $chunk ) ? $chunk : tala_seo_block_html( $block['innerBlocks'][ $inner++ ] );
 	}
 	return $html;
+}
+
+/**
+ * The HTML inside the first $tag element of some HTML (a Details block's <summary>, an embed's
+ * <figcaption>), or '' when there is none. A plain search, so the time it takes grows only with the
+ * length of the HTML, whatever the HTML holds.
+ *
+ * @param string $html HTML.
+ * @param string $tag  Tag name, lowercase.
+ * @return string
+ */
+function tala_seo_element_html( string $html, string $tag ): string {
+	$offset = 0;
+	$start  = stripos( $html, '<' . $tag, $offset );
+	while ( false !== $start ) {
+		$next = $html[ $start + strlen( $tag ) + 1 ] ?? '';
+		if ( '>' === $next || '/' === $next || ctype_space( $next ) ) {
+			$open  = strpos( $html, '>', $start );
+			$close = false !== $open ? stripos( $html, '</' . $tag . '>', $open ) : false;
+			return false !== $open && false !== $close ? substr( $html, $open + 1, $close - $open - 1 ) : '';
+		}
+		$offset = $start + 1; // A longer tag name, such as <summary-note>.
+		$start  = stripos( $html, '<' . $tag, $offset );
+	}
+	return '';
 }
 
 /**
@@ -165,7 +190,7 @@ function tala_seo_faq_node( array $blocks, string $url ) {
 			// The question is the <summary>, at the start of the block's own HTML; the answer is the
 			// blocks inside it.
 			$opening  = (string) ( $details['innerContent'][0] ?? '' );
-			$question = preg_match( '#<summary\b[^>]*>(.*?)</summary>#is', $opening, $match ) ? tala_seo_clean_text( $match[1] ) : '';
+			$question = tala_seo_clean_text( tala_seo_element_html( $opening, 'summary' ) );
 			$answer   = tala_seo_html_text( implode( '', array_map( 'tala_seo_block_html', $details['innerBlocks'] ) ) );
 			if ( '' !== $question && '' !== $answer && ! isset( $questions[ $question ] ) ) {
 				$questions[ $question ] = array(
@@ -261,7 +286,7 @@ function tala_seo_youtube_videos( array $blocks ): array {
 	$videos = array();
 	$embeds = tala_seo_find_blocks( $blocks, static fn( $block ) => 'core/embed' === $block['blockName'] );
 	foreach ( $embeds as $embed ) {
-		$id = tala_seo_youtube_id( (string) ( $embed['attrs']['url'] ?? '' ) );
+		$id = tala_seo_youtube_id( tala_seo_scalar( $embed['attrs']['url'] ?? '' ) );
 		if ( '' !== $id && ! isset( $videos[ $id ] ) ) {
 			$videos[ $id ] = $embed;
 		}
@@ -330,11 +355,9 @@ function tala_seo_video_nodes( $post, array $blocks, string $url ): array {
 			'embedUrl'     => 'https://www.youtube.com/embed/' . $id,
 		);
 		// The caption under the video describes it, when there is one.
-		if ( preg_match( '#<figcaption\b[^>]*>(.*?)</figcaption>#is', tala_seo_block_html( $embed ), $match ) ) {
-			$caption = tala_seo_clean_text( $match[1] );
-			if ( '' !== $caption ) {
-				$node['description'] = $caption;
-			}
+		$caption = tala_seo_clean_text( tala_seo_element_html( tala_seo_block_html( $embed ), 'figcaption' ) );
+		if ( '' !== $caption ) {
+			$node['description'] = $caption;
 		}
 		$nodes[] = $node;
 	}
@@ -418,7 +441,14 @@ function tala_seo_fetch_video( string $id ) {
 		),
 		'https://www.youtube.com/oembed'
 	);
-	$response = wp_safe_remote_get( $endpoint, array( 'timeout' => 5 ) );
+	$response = wp_safe_remote_get(
+		$endpoint,
+		array(
+			'timeout'             => 5,
+			'redirection'         => 0, // YouTube answers directly.
+			'limit_response_size' => 65536, // A title and a thumbnail address.
+		)
+	);
 	if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
 		return null;
 	}
@@ -443,8 +473,8 @@ function tala_seo_fetch_video( string $id ) {
  * @return array{price: string, currency: string}
  */
 function tala_seo_block_price( $price, $currency ): array {
-	$price    = trim( sanitize_text_field( (string) $price ) );
-	$currency = strtoupper( trim( sanitize_text_field( (string) $currency ) ) );
+	$price    = trim( sanitize_text_field( tala_seo_scalar( $price ) ) );
+	$currency = strtoupper( trim( sanitize_text_field( tala_seo_scalar( $currency ) ) ) );
 	if ( ! is_numeric( $price ) || (float) $price < 0 || ! preg_match( '/^[A-Z]{3}$/', $currency ) ) {
 		return array(
 			'price'    => '',
