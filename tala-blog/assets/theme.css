@@ -79,28 +79,69 @@ footer.wp-block-template-part {
 	border-bottom: 1px solid var(--wp--preset--color--rule);
 }
 
-/* Header menu: the site's pages (swap in a Navigation block in the Site Editor for a custom menu). */
-.tala-nav .wp-block-page-list {
-	display: flex;
-	flex-wrap: wrap;
+/* Header menu: a Navigation block with the site's menu, or its pages until there is one. On phones it
+   folds behind a menu button and opens into the menu overlay (parts/navigation-overlay.html). */
+.tala-header .wp-block-navigation {
 	gap: 0.25rem var(--wp--preset--spacing--30);
-	margin: 0;
-	padding: 0;
-	list-style: none;
-	font-size: var(--wp--preset--font-size--small);
 }
 
-.tala-nav .wp-block-page-list .wp-block-page-list {
-	display: none; /* child pages stay out of the header */
+/* Submenus drop down in the page's colours, light or dark (WordPress draws them black on white),
+   unless the menu has colours of its own. The overlay's menu sits inside this one and lists them inline. */
+.tala-header .wp-block-navigation:not(.has-background) .wp-block-navigation__submenu-container:not(.tala-overlay *) {
+	border-color: var(--wp--preset--color--rule);
+	background-color: var(--wp--preset--color--base);
+	color: var(--wp--preset--color--contrast);
 }
 
-.tala-nav a,
+/* The menu overlay: the full screen in the page's colours. Its top bar lines up with the header, so the
+   close button takes the menu button's place. */
+.tala-overlay {
+	min-height: 100dvh;
+	padding: var(--wp--preset--spacing--30);
+}
+
+.tala-overlay-bar {
+	padding-block-end: var(--wp--preset--spacing--30);
+	border-bottom: 1px solid var(--wp--preset--color--rule);
+}
+
+.tala-overlay .wp-block-navigation-overlay-close {
+	min-width: 44px;
+	min-height: 44px;
+	margin: -10px; /* a 44px touch target in the 24px place of the menu button */
+	color: inherit;
+}
+
+.tala-overlay-menu {
+	font-size: var(--wp--preset--font-size--large);
+}
+
+/* Submenus in the overlay: indented under their item and spaced like the other items (WordPress uses
+   the page's block gap for both). */
+.tala-overlay-menu .has-child.open-always,
+.tala-overlay-menu .has-child.open-always.wp-block-navigation-submenu,
+.tala-overlay-menu .has-child.open-always .wp-block-navigation__submenu-container {
+	gap: 0.25rem;
+}
+
+.tala-overlay-menu .has-child.open-always .wp-block-navigation__submenu-container {
+	padding-inline: var(--wp--preset--spacing--30) 0;
+}
+
+.tala-overlay-menu a {
+	text-decoration: none;
+}
+
+.tala-overlay-menu a:hover {
+	color: var(--wp--preset--color--accent);
+	text-decoration: underline;
+}
+
 .tala-header .wp-block-navigation a {
 	color: var(--wp--preset--color--contrast);
 	text-decoration: none;
 }
 
-.tala-nav a:hover,
 .tala-header .wp-block-navigation a:hover {
 	color: var(--wp--preset--color--accent);
 	text-decoration: underline;

@@ -1,9 +1,9 @@
 === Tala SEO ===
 Tags: seo, schema, json-ld, sitemap, breadcrumbs
-Requires at least: 6.6
+Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.6.1
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -60,6 +60,9 @@ At least 1200 × 675 px. Tala SEO crops each one to 1200 × 630 for link preview
 Google retired those rich results. The plugin only outputs structured data Google still uses.
 
 == Changelog ==
+
+= 1.7.0 =
+* Changed: requires WordPress 7.0 or newer. The SEO panel and the pre-publish checklist use only the current editor API (`wp.editor`), without the fallback for older versions.
 
 = 1.6.1 =
 * Changed: the editor and admin scripts and styles follow WordPress's JavaScript and CSS coding standards, now checked by ESLint and Stylelint. Nothing changes in how they work.

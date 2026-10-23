@@ -21,7 +21,7 @@ function tala_seo_editor_assets(): void {
 	wp_enqueue_script(
 		'tala-seo-editor',
 		$base . 'editor.js',
-		array( 'wp-components', 'wp-core-data', 'wp-data', 'wp-edit-post', 'wp-editor', 'wp-element', 'wp-html-entities', 'wp-i18n', 'wp-plugins', 'wp-block-editor' ),
+		array( 'wp-block-editor', 'wp-components', 'wp-core-data', 'wp-data', 'wp-editor', 'wp-element', 'wp-html-entities', 'wp-i18n', 'wp-plugins' ),
 		TALA_SEO_VERSION,
 		true
 	);

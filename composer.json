@@ -5,6 +5,7 @@
 	"license": "GPL-2.0-or-later",
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+		"php-stubs/wordpress-stubs": "7.1.2 as 6.9.4",
 		"php-stubs/wp-cli-stubs": "^2.11",
 		"phpstan/extension-installer": "^1.4",
 		"phpstan/phpstan": "^2.1",

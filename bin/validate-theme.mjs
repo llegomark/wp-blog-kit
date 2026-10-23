@@ -18,7 +18,9 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import Ajv from 'ajv-draft-04';
+import Ajv from 'ajv';
+import Ajv2019 from 'ajv/dist/2019.js';
+import Ajv2020 from 'ajv/dist/2020.js';
 
 const ROOT = fileURLToPath( new URL( '..', import.meta.url ) );
 const THEME = 'tala-blog';
@@ -106,7 +108,7 @@ function lineAt( text, index ) {
 }
 
 /**
- * A header value from a theme file or plugin file ("Requires at least: 6.6").
+ * A header value from a theme file or plugin file ("Requires at least: 7.0").
  *
  * @param {string} source File contents.
  * @param {string} name   Header name.
@@ -219,6 +221,24 @@ function pointerLines( text ) {
 }
 
 /**
+ * The Ajv class for a schema's JSON Schema draft. WordPress's schemas use draft-07 (from 7.0); the
+ * newer drafts are ready for when they move on.
+ *
+ * @param {Object} schema JSON Schema.
+ * @return {typeof Ajv} Ajv class for that draft.
+ */
+function validatorFor( schema ) {
+	const draft = String( schema.$schema || '' );
+	if ( draft.includes( '2020-12' ) ) {
+		return Ajv2020;
+	}
+	if ( draft.includes( '2019-09' ) ) {
+		return Ajv2019;
+	}
+	return Ajv; // draft-07
+}
+
+/**
  * Validates JSON files against a WordPress schema (schemas.wp.org). Their "$schema" must name the
  * same version, or trunk.
  *
@@ -239,7 +259,8 @@ async function validateSchema( files, kind, version ) {
 		if ( ! response.ok ) {
 			throw new Error( `HTTP ${ response.status }` );
 		}
-		validate = new Ajv( { strict: false, allErrors: true } ).compile( await response.json() );
+		const schema = await response.json();
+		validate = new ( validatorFor( schema ) )( { strict: false, allErrors: true } ).compile( schema );
 	} catch ( error ) {
 		// Offline, a commit shouldn't fail for want of the schema; in CI it must.
 		const message = `Could not load ${ url } (${ error.message }), so ${ kind }.json files were not checked against it.`;

@@ -4,10 +4,12 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 
 | Folder | What it is |
 |---|---|
-| `tala-blog/` | Block theme. Minimalist: near-black text on a near-white page, the same inverted in automatic dark mode, system fonts (no downloads), labelled Published/Updated dates, author box with bio under every article, breadcrumbs, "Filed under" categories and tags, article lists with thumbnails and numbered pages, dated comments, print styles. Translation-ready and accessible (WCAG 2.2 AA checks pass in both colour schemes). |
+| `tala-blog/` | Block theme. Minimalist: near-black text on a near-white page, the same inverted in automatic dark mode, a header menu that opens full screen on phones, system fonts (no downloads), labelled Published/Updated dates, author box with bio under every article, breadcrumbs, "Filed under" categories and tags, article lists with thumbnails and numbered pages, dated comments, print styles. Translation-ready and accessible (WCAG 2.2 AA checks pass in both colour schemes). |
 | `tala-seo/` | SEO plugin. Titles, meta descriptions, canonicals, robots rules, Open Graph, JSON-LD, sitemap and robots.txt tuning, redirects for moved pages and categories, and a publish check. |
 | `dev/` | Demo content and a WordPress Playground blueprint for local testing (not deployed). |
 | `build.sh` | Packages both as zips in `dist/`. |
+
+Both need WordPress 7.0 or newer and PHP 8.1 or newer. They follow the current WordPress release and carry no code for older versions.
 
 ## What Tala SEO does
 
@@ -74,7 +76,7 @@ dev/serve.sh                  # http://127.0.0.1:8080 (admin login: ~/Sites/blog
 |---|---|
 | `composer lint` | WordPress Coding Standards: WPCS 3.4 with WordPress-Core, WordPress-Docs and WordPress-Extra (`phpcs.xml.dist`) |
 | `composer fix` | the automatic coding-standards fixes |
-| `composer analyse` | PHPStan level 8 with the WordPress extension (`phpstan.neon.dist`) |
+| `composer analyse` | PHPStan level 8 with the WordPress extension (`phpstan.neon.dist`), against WordPress 7.1's functions and classes |
 | `composer plugin-check` | WordPress Plugin Check, including experimental checks, against the local site; exits 1 on any finding |
 | `composer check` | all of the above |
 | `npm run lint:css` | Stylelint with WordPress's CSS coding standards (`@wordpress/stylelint-config`, `stylelint.config.mjs`); `lint:css:fix` fixes what it can |
@@ -87,6 +89,8 @@ A pre-commit hook (husky and lint-staged, set up by `npm ci`) runs these on the 
 Without a local PHP, `dev/phpcs.sh` and `dev/plugin-check.sh` run the same checks in PHP compiled to WebAssembly and WordPress Playground. The PHPCS downloads are verified against the release key.
 
 GitHub runs the same checks on every push to `main` and every pull request (`.github/workflows/checks.yml`): coding standards and PHPStan on PHP 8.5, Stylelint, ESLint and the theme validator on Node 24, and Plugin Check through [WordPress/plugin-check-action](https://github.com/WordPress/plugin-check-action) against the latest WordPress. Every Monday it also checks the plugin against WordPress trunk, the release in development; a finding there is an early warning and doesn't fail the build. The actions are pinned to commit SHAs, and Dependabot proposes updates. Theme Check isn't part of CI; run `wp theme-check run tala-blog` on the local site.
+
+`composer.json` loads the WordPress 7.1 stubs as `7.1.2 as 6.9.4`: the WP-CLI stubs still accept only WordPress 6 stubs in their latest release, though their next one won't (php-stubs/wp-cli-stubs#25). Drop the alias once that release is out.
 
 The one deliberate exception is Plugin Check's `plugin_updater_detected`. It flags the `Update URI: false` header, which keeps this private plugin from ever being "updated" by an unrelated wordpress.org plugin with the same name.
 
@@ -105,4 +109,3 @@ The one deliberate exception is Plugin Check's `plugin_updater_detected`. It fla
 **Not used on purpose:**
 - a build step: the editor scripts are plain JavaScript using the `wp.*` globals (Node is only for the linters)
 - web fonts and jQuery
-- the Navigation block's automatic page list, which nests lists and fails accessibility checks

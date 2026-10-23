@@ -34,6 +34,7 @@ define( 'WP_DEBUG', true );
 define( 'WP_DEBUG_LOG', true );          // wp-content/debug.log
 define( 'WP_DEBUG_DISPLAY', ! ( defined( 'WP_CLI' ) && WP_CLI ) ); // browser: on screen; WP-CLI: debug.log only
 define( 'SCRIPT_DEBUG', true );          // unminified core scripts: clearer editor errors
+define( 'WP_DEVELOPMENT_MODE', 'all' ); // no cached theme.json or pattern files: edits show at once
 PHP
 wp db create
 PASSWORD=$(openssl rand -base64 18 | tr -d '/+=')

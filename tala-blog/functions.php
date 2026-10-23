@@ -49,6 +49,33 @@ function tala_blog_search_aria_label( $metadata ) {
 	return $metadata;
 }
 
+add_filter( 'render_block_core/page-list', 'tala_blog_page_list_in_navigation', 10, 3 );
+
+/**
+ * Inside a Navigation block, a Page List gives only its list items: the Navigation block wraps the
+ * items of a menu in a list of its own, so the Page List's own list would sit directly inside that
+ * one, which isn't valid HTML (screen readers and Lighthouse report it). The header shows a Page List
+ * this way until the site has a menu. Navigation passes "showSubmenuIcon" to the blocks inside it,
+ * so a Page List anywhere else is left alone.
+ *
+ * @param string               $html     Rendered Page List.
+ * @param array<string, mixed> $block    Parsed block.
+ * @param WP_Block             $instance Block instance.
+ * @return string
+ */
+function tala_blog_page_list_in_navigation( $html, $block, $instance ) {
+	if ( ! array_key_exists( 'showSubmenuIcon', $instance->context ) ) {
+		return $html;
+	}
+	$html = trim( $html );
+	$list = new WP_HTML_Tag_Processor( $html );
+	if ( ! $list->next_tag() || 'UL' !== $list->get_tag() || ! $list->has_class( 'wp-block-page-list' )
+		|| ! str_ends_with( $html, '</ul>' ) ) {
+		return $html;
+	}
+	return substr( $html, (int) strpos( $html, '>' ) + 1, -strlen( '</ul>' ) );
+}
+
 // Don't fetch pattern directory patterns into the editor.
 add_filter( 'should_load_remote_block_patterns', '__return_false' );
 

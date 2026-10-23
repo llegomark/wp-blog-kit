@@ -1,5 +1,5 @@
 === Tala Blog ===
-Requires at least: 6.6
+Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.1
 License: GPLv2 or later
@@ -13,6 +13,7 @@ Tala Blog is a block theme for blogs that are mostly read on phones.
 
 * A quiet reading page: near-black text on a near-white page, a 640 px column, fine dotted link underlines and hairline dividers. Dark mode is the same look inverted, chosen automatically from the reader's device setting.
 * System fonts only: nothing to download, and the theme's CSS is inlined, so a page needs no stylesheet requests.
+* A header menu: the site's menu, or its pages until there is one. On phones it folds behind a menu button and opens full screen in the page's colours, light or dark.
 * Article pages: breadcrumbs, "Published" and "Updated" dates, featured image, "Filed under" categories and tags, an author box with biography, links to the previous and next articles, and comments with their dates.
 * Article lists (home page, archives, search results): title, summary, date and a thumbnail of the featured image, with numbered pages.
 * Accessible: one H1 per page, uniquely named landmarks (two search forms on a page get different names), a skip link, visible keyboard focus, text contrast of at least 6:1 and form fields of at least 3:1 in both colour schemes, and long words that wrap instead of widening the page when zoomed.
@@ -29,9 +30,13 @@ As many as Settings → Reading → "Blog pages show at most" says (10 by defaul
 
 = How do I change the header menu? =
 
-The header lists the site's pages. For a hand-made menu, replace the page list with a Navigation block in Appearance → Editor → Patterns → Header.
+In Appearance → Editor → Navigation. Until you make a menu, the header lists the site's pages (child pages left out), and WordPress saves that list as a menu called "Navigation" that you can edit. On phones the same menu opens from the menu button; its full-screen view is the "Menu overlay" template part in Appearance → Editor → Patterns.
 
 == Changelog ==
+
+= 1.3.0 =
+* New: the header shows the site's menu (a Navigation block named "Primary"), or the site's pages until there is one, as a single list for screen readers. On phones it folds behind a menu button and opens full screen in the page's colours, light or dark, with the site title and a close button. That screen is the "Menu overlay" template part.
+* Changed: requires WordPress 7.0 or newer, and the theme carries no code for older versions. A header customized in the Site Editor before this update keeps its old page list; clear its customizations (Appearance → Editor → Patterns → Header) to get the new menu.
 
 = 1.2.0 =
 * Changed: a minimalist look. Light mode is near-black text (#3f3f3f) on a near-white page (#fcfcfc), with black for emphasis; dark mode is the same, inverted (#e3e3e3 on #121212). The pad-paper margin line and the chalkboard colours are gone, and the palette colours are named by their role.

@@ -21,10 +21,7 @@
 	const decodeEntities = wp.htmlEntities.decodeEntities;
 	const { useSelect } = wp.data;
 	const { useEntityProp } = wp.coreData;
-	const editorApi = wp.editor || {};
-	const legacyApi = wp.editPost || {};
-	const DocumentPanel = editorApi.PluginDocumentSettingPanel || legacyApi.PluginDocumentSettingPanel;
-	const PrePublishPanel = editorApi.PluginPrePublishPanel || legacyApi.PluginPrePublishPanel;
+	const { PluginDocumentSettingPanel: DocumentPanel, PluginPrePublishPanel: PrePublishPanel } = wp.editor;
 	const KEYS = cfg.keys;
 	const NONE = [];
 
@@ -373,7 +370,7 @@
 
 	function SeoPanel() {
 		const s = useSeo();
-		if ( ! DocumentPanel || ! Object.prototype.hasOwnProperty.call( cfg.requirements, s.postType ) ) {
+		if ( ! Object.prototype.hasOwnProperty.call( cfg.requirements, s.postType ) ) {
 			return null;
 		}
 		const description = String( s.meta[ KEYS.description ] || '' );
@@ -471,7 +468,7 @@
 
 	function PrePublish() {
 		const s = useSeo();
-		if ( ! PrePublishPanel || ! Object.prototype.hasOwnProperty.call( cfg.requirements, s.postType ) ) {
+		if ( ! Object.prototype.hasOwnProperty.call( cfg.requirements, s.postType ) ) {
 			return null;
 		}
 		const blocked = buildChecks( s ).required.some( function( item ) {
