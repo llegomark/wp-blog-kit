@@ -12,8 +12,11 @@
 		"php-stubs/wp-cli-stubs": "^2.11",
 		"phpstan/extension-installer": "^1.4",
 		"phpstan/phpstan": "^2.1",
+		"phpunit/phpunit": "^9.6",
 		"szepeviktor/phpstan-wordpress": "^2.0",
-		"wp-coding-standards/wpcs": "^3.4"
+		"wp-coding-standards/wpcs": "^3.4",
+		"wp-phpunit/wp-phpunit": "^7.1",
+		"yoast/phpunit-polyfills": "^4.0"
 	},
 	"config": {
 		"allow-plugins": {
@@ -31,6 +34,11 @@
 			"@lint",
 			"@analyse",
 			"@plugin-check"
+		],
+		"test:install": "tests/bin/install-wp-tests.sh",
+		"test": [
+			"@test:install",
+			"phpunit"
 		]
 	},
 	"scripts-descriptions": {
@@ -38,6 +46,8 @@
 		"fix": "Apply automatic WordPress Coding Standards fixes.",
 		"analyse": "Static analysis with PHPStan and the WordPress extension (phpstan.neon.dist).",
 		"plugin-check": "Run WordPress Plugin Check on tala-seo against the local site.",
-		"check": "Run every check: coding standards, static analysis and Plugin Check."
+		"check": "Run every check: coding standards, static analysis and Plugin Check.",
+		"test:install": "Download WordPress for the tests (.cache/wordpress) and create the empty test database.",
+		"test": "PHPUnit integration tests on WordPress's test framework (phpunit.xml.dist)."
 	}
 }

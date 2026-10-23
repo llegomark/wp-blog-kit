@@ -301,7 +301,7 @@ function tala_seo_author_profiles( $user_id ) {
 	foreach ( array_keys( tala_seo_social_fields() ) as $field ) {
 		$links[] = get_the_author_meta( $field, $user_id );
 	}
-	$links = array_filter( array_map( esc_url_raw( ... ), array_map( trim( ... ), $links ) ) );
+	$links = array_filter( array_map( tala_seo_sanitize_url( ... ), $links ) );
 	return array_values( array_unique( $links ) );
 }
 
@@ -323,14 +323,27 @@ function tala_seo_social_fields() {
 }
 
 /**
+ * An absolute http(s) address on a named host, or ''. "example.com/page" becomes
+ * "http://example.com/page"; plain words, which esc_url_raw() alone would turn into an address
+ * such as "http://not%20a%20link", are refused.
+ *
+ * @param mixed $value Raw value.
+ * @return string
+ */
+function tala_seo_sanitize_url( $value ) {
+	$url  = esc_url_raw( trim( (string) $value ), array( 'http', 'https' ) );
+	$host = (string) wp_parse_url( $url, PHP_URL_HOST );
+	return preg_match( '/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z][a-z0-9-]*[a-z0-9]$/i', $host ) ? $url : '';
+}
+
+/**
  * A redirect target: an absolute http(s) address, or ''.
  *
  * @param mixed $value Raw value.
  * @return string
  */
 function tala_seo_sanitize_redirect( $value ) {
-	$url = esc_url_raw( trim( (string) $value ), array( 'http', 'https' ) );
-	return '' !== $url && wp_parse_url( $url, PHP_URL_HOST ) ? $url : '';
+	return tala_seo_sanitize_url( $value );
 }
 
 /**
@@ -397,7 +410,7 @@ function tala_seo_sanitize_settings( $input ) {
 	$same_as = array();
 	$lines   = is_array( $input['same_as'] ?? null ) ? $input['same_as'] : (array) preg_split( '/\R/', (string) ( $input['same_as'] ?? '' ) );
 	foreach ( $lines as $line ) {
-		$url = esc_url_raw( trim( (string) $line ), array( 'http', 'https' ) );
+		$url = tala_seo_sanitize_url( $line );
 		if ( '' !== $url ) {
 			$same_as[] = $url;
 		}

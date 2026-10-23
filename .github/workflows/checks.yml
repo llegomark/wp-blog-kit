@@ -1,7 +1,8 @@
-# The same checks as `composer check` and `npm run lint`, on GitHub's servers: WordPress Coding
-# Standards and PHPStan level 8 for the PHP, WordPress's CSS and JavaScript standards (Stylelint,
-# ESLint), theme.json and block.json against WordPress's schemas with the patterns and block
-# markup, and WordPress's Plugin Check for the plugin.
+# The same checks as `composer check`, `npm run lint` and the tests, on GitHub's servers: WordPress
+# Coding Standards and PHPStan level 8 for the PHP, WordPress's CSS and JavaScript standards
+# (Stylelint, ESLint), theme.json and block.json against WordPress's schemas with the patterns and
+# block markup, WordPress's Plugin Check for the plugin, the PHPUnit integration tests on
+# WordPress's test framework, and the browser tests (Playwright) on the demo site.
 # Every action is pinned to a full commit SHA (the comment names the release); Dependabot
 # proposes updates (.github/dependabot.yml).
 name: Checks
@@ -77,6 +78,105 @@ jobs:
 
       - name: theme.json, block.json, patterns and block markup
         run: npm run lint:theme
+
+  phpunit:
+    name: PHPUnit (WordPress latest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # A throwaway database for the tests (they empty it on every run).
+    services:
+      database:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root --password=root"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      WP_TESTS_DB_HOST: 127.0.0.1:3306
+      WP_TESTS_DB_USER: root
+      WP_TESTS_DB_PASSWORD: root
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP 8.5 (the version the servers run)
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.5'
+          coverage: none
+          extensions: mysqli, gd, exif, intl, zip
+          tools: composer:v2, wp-cli
+
+      - name: Install the tools from composer.lock
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # Downloads WordPress into .cache/wordpress, creates the test database, then runs PHPUnit.
+      - name: PHPUnit integration tests
+        run: composer test
+
+  e2e:
+    name: Browser tests (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      database:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root --password=root"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    # dev/site.sh and the tests' WP-CLI calls use this database server.
+    env:
+      WP_DEV_DB_HOST: 127.0.0.1:3306
+      WP_DEV_DB_USER: root
+      WP_DEV_DB_PASSWORD: root
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP 8.5 (the version the servers run)
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.5'
+          coverage: none
+          extensions: mysqli, gd, exif, intl, zip
+          tools: wp-cli
+
+      - name: Set up Node (the version in .nvmrc)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # --ignore-scripts: no package runs code while installing. Playwright uses the runner's own
+      # Google Chrome, so no browser is downloaded either.
+      - name: Install the tools from package-lock.json
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Create the demo site (dev/site.sh)
+        run: dev/site.sh
+
+      # Starts the site with dev/serve.sh (playwright.config.mjs).
+      - name: Browser tests
+        run: npm run test:e2e
+
+      - name: Keep the traces of failed tests
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-traces
+          path: .cache/playwright/
+          retention-days: 7
 
   plugin-check:
     name: Plugin Check (WordPress ${{ matrix.wordpress }})

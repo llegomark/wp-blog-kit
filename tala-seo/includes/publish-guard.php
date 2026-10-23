@@ -79,13 +79,28 @@ function tala_seo_guard_setup(): void {
 }
 
 /**
- * Block-editor and REST saves: refuse to publish with a clear message the editor shows.
+ * Block-editor and REST saves: refuse to publish with a clear message the editor shows. A save
+ * that passes is marked as checked for the insert that follows, because WordPress saves the post
+ * before its description and featured image, so tala_seo_guard_insert() would see neither yet.
  *
  * @param stdClass|WP_Error $prepared Post about to be saved.
  * @param WP_REST_Request   $request  Request.
  * @return stdClass|WP_Error
  */
 function tala_seo_rest_guard( $prepared, $request ) {
+	$result                           = tala_seo_rest_check( $prepared, $request );
+	$GLOBALS['tala_seo_rest_checked'] = ! is_wp_error( $result );
+	return $result;
+}
+
+/**
+ * Checks a REST save.
+ *
+ * @param stdClass|WP_Error $prepared Post about to be saved.
+ * @param WP_REST_Request   $request  Request.
+ * @return stdClass|WP_Error
+ */
+function tala_seo_rest_check( $prepared, $request ) {
 	if ( is_wp_error( $prepared ) || str_contains( $request->get_route(), '/autosaves' ) ) {
 		return $prepared;
 	}
@@ -168,7 +183,12 @@ function tala_seo_guard_insert( $data, $postarr ) {
 		}
 	}
 
-	if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST )
+	// A REST save was checked in tala_seo_rest_guard() just before this insert, also when a plugin or
+	// WP-CLI runs one inside PHP (rest_do_request(), where REST_REQUEST isn't defined).
+	$rest_checked = ! empty( $GLOBALS['tala_seo_rest_checked'] );
+	unset( $GLOBALS['tala_seo_rest_checked'] );
+
+	if ( ( defined( 'REST_REQUEST' ) && REST_REQUEST ) || $rest_checked
 		|| ! in_array( $data['post_status'], array( 'publish', 'future' ), true )
 		|| ! in_array( $data['post_type'], tala_seo_post_types(), true )
 		|| ( $id && in_array( get_post_status( $id ), array( 'publish', 'future' ), true ) ) ) {

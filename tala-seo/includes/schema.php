@@ -47,7 +47,8 @@ function tala_seo_schema_nodes() {
 	}
 	$nodes = array();
 
-	if ( is_front_page() ) {
+	// The home page is its first page: page 2 of the post list is not where the site describes itself.
+	if ( is_front_page() && ! is_paged() ) {
 		$nodes[] = tala_seo_website_node();
 		$nodes[] = tala_seo_publisher_node();
 	}

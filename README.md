@@ -83,12 +83,22 @@ dev/serve.sh                  # http://127.0.0.1:8080 (admin login: ~/Sites/blog
 | `npm run lint:js` | ESLint with WordPress's JavaScript coding standards (`@wordpress/eslint-plugin`, `eslint.config.mjs`), text domains included; `lint:js:fix` fixes what it can |
 | `npm run lint:theme` | `bin/validate-theme.mjs`: `theme.json` and `block.json` against WordPress's schemas for the "Requires at least" version, pattern headers, block markup in templates, parts and patterns, and no hard-coded text in templates and parts |
 | `npm run lint` | the three above, plus `composer lint` |
+| `composer test` | PHPUnit integration tests (`tests/phpunit/`) on WordPress's own test framework: Tala SEO's head tags, structured data, sitemap, redirects, publish check, admin forms, import and share images, and Tala Blog's block filters, patterns and template parts |
+| `npm run test:e2e` | browser tests (`tests/e2e/`, Playwright) on the local site: every kind of page, the phone menu frame by frame, layout shifts, the logo, axe in light and dark mode on phone and desktop, and the block editor's validation of the theme |
 
-A pre-commit hook (husky and lint-staged, set up by `npm ci`) runs these on the staged files of each commit.
+A pre-commit hook (husky and lint-staged, set up by `npm ci`) runs the linters on the staged files of each commit.
+
+### Tests
+
+The PHPUnit tests run on WordPress's test framework (`wp-phpunit`, PHPUnit 9.6, the version WordPress itself runs its tests on). Each test runs in a database transaction against a real WordPress with Tala SEO active and Tala Blog as the theme. `composer test` downloads WordPress into `.cache/wordpress` and creates the test database `wp_tests_blogkit` the first time; it uses MariaDB through its Unix socket as your user, as `dev/setup-arch.sh` sets up, and the `WP_TESTS_DB_*` variables in `tests/phpunit/wp-tests-config.php` select another server. The test database is emptied on every run: never point it at a site.
+
+The browser tests need the local site (`dev/site.sh`); they start `dev/serve.sh` if it isn't running, and use the Google Chrome installed on the machine. They change settings (a menu, a logo) with WP-CLI and put them back.
+
+A change in behaviour comes with a test that fails without it.
 
 Without a local PHP, `dev/phpcs.sh` and `dev/plugin-check.sh` run the same checks in PHP compiled to WebAssembly and WordPress Playground. The PHPCS downloads are verified against the release key.
 
-GitHub runs the same checks on every push to `main` and every pull request (`.github/workflows/checks.yml`): coding standards and PHPStan on PHP 8.5, Stylelint, ESLint and the theme validator on Node 24, and Plugin Check through [WordPress/plugin-check-action](https://github.com/WordPress/plugin-check-action) against the latest WordPress. Every Monday it also checks the plugin against WordPress trunk, the release in development; a finding there is an early warning and doesn't fail the build. The actions are pinned to commit SHAs, and Dependabot proposes updates. Theme Check isn't part of CI; run `wp theme-check run tala-blog` on the local site.
+GitHub runs the same checks on every push to `main` and every pull request (`.github/workflows/checks.yml`): coding standards and PHPStan on PHP 8.5, Stylelint, ESLint and the theme validator on Node 24, the PHPUnit tests and the browser tests (with a MySQL 8.4 database), and Plugin Check through [WordPress/plugin-check-action](https://github.com/WordPress/plugin-check-action) against the latest WordPress. Every Monday it also checks the plugin against WordPress trunk, the release in development; a finding there is an early warning and doesn't fail the build. The actions are pinned to commit SHAs, and Dependabot proposes updates. Theme Check isn't part of CI; run `wp theme-check run tala-blog` on the local site.
 
 `composer.json` loads the WordPress 7.1 stubs as `7.1.2 as 6.9.4`: the WP-CLI stubs still accept only WordPress 6 stubs in their latest release, though their next one won't (php-stubs/wp-cli-stubs#25). Drop the alias once that release is out.
 
@@ -100,6 +110,7 @@ The one deliberate exception is Plugin Check's `plugin_updater_detected`. It fla
 
 ### Test results (October 2026: WordPress 7.1, PHP 8.5.12)
 
+- `composer test`: 73 PHPUnit tests pass. `npm run test:e2e`: 79 browser tests pass, axe included.
 - Every page type renders without PHP notices, and every theme template passes the block editor's validator.
 - The publish check holds in the editor, over REST, in Quick Edit and WP-CLI saves, and for scheduling.
 - The WP-CLI commands `audit` and `import` (including `--dry-run`) work; Yoast titles built from `%%variables%%` are skipped.

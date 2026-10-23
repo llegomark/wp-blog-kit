@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Tala SEO
  * Description:       Lean SEO for blogs: titles, meta descriptions, canonicals, Open Graph, JSON-LD structured data, visible breadcrumbs, sitemap and robots.txt tuning, and a publish check that blocks posts without a meta description or featured image.
- * Version:           1.8.0
+ * Version:           1.8.1
  * Requires at least: 7.0
  * Requires PHP:      8.5
  * Author:            Mark Anthony Llego
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const TALA_SEO_VERSION = '1.8.0';
+const TALA_SEO_VERSION = '1.8.1';
 const TALA_SEO_FILE    = __FILE__;
 
 // Post meta keys. The leading underscore hides them from the Custom Fields box.
@@ -126,7 +126,7 @@ function tala_seo_register_meta(): void {
 				'single'            => true,
 				'default'           => '',
 				'show_in_rest'      => true,
-				'sanitize_callback' => 'esc_url_raw',
+				'sanitize_callback' => 'tala_seo_sanitize_url',
 				'auth_callback'     => $can_edit,
 			)
 		);

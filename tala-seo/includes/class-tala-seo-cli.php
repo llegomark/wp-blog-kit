@@ -110,7 +110,7 @@ class Tala_SEO_CLI {
 			) as $field => $key ) {
 				$this->copy( 'post', $id, $key, tala_seo_legacy_value( $id, $field ) );
 			}
-			$this->copy( 'post', $id, TALA_SEO_CANONICAL, esc_url_raw( tala_seo_legacy_value( $id, 'canonical' ) ) );
+			$this->copy( 'post', $id, TALA_SEO_CANONICAL, tala_seo_sanitize_url( tala_seo_legacy_value( $id, 'canonical' ) ) );
 			$this->copy( 'post', $id, TALA_SEO_NOINDEX, tala_seo_legacy_value( $id, 'noindex' ) );
 			$this->copy( 'post', $id, TALA_SEO_REDIRECT, $this->legacy_redirect( $id ) );
 			if ( is_object_in_taxonomy( (string) get_post_type( $id ), 'category' ) && ! get_post_meta( $id, TALA_SEO_PRIMARY_CATEGORY, true ) ) {

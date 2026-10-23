@@ -3,7 +3,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.8.0
+Stable tag: 1.8.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -60,6 +60,14 @@ At least 1200 × 675 px. Tala SEO crops each one to 1200 × 630 for link preview
 Google retired those rich results. The plugin only outputs structured data Google still uses.
 
 == Changelog ==
+
+= 1.8.1 =
+* Fixed: parent categories whose posts are all in subcategories are in the sitemap, as their pages may be indexed.
+* Fixed: WebSite and Organization markup is on the home page itself, not on its page 2 and later.
+* Fixed: plain words in an address field (redirect, canonical, official profiles, author profile links) are refused instead of being turned into an address like "http://not%20a%20link".
+* Fixed: a post saved through the REST API inside PHP (a plugin's rest_do_request(), WP-CLI's REST commands) is no longer kept as a draft when it has everything it needs.
+* Fixed: no PHP warning from the SEO column when Quick Edit saves a post.
+* Changed: the breadcrumb trail and the sitemap's list of categories and tags are worked out once per page request (main query) rather than once per PHP process.
 
 = 1.8.0 =
 * Changed: requires PHP 8.5 or newer, the version the servers run. The code uses current language features: array_find() and array_first(), first-class callables, typed properties and class constants, and a never return type for the permalink switch.

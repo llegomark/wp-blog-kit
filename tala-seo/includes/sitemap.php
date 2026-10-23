@@ -44,15 +44,19 @@ function tala_seo_sitemap_taxonomies( $taxonomies ) {
 add_filter( 'wp_sitemaps_taxonomies_query_args', 'tala_seo_sitemap_skip_thin_terms', 10, 2 );
 
 /**
- * Lists only the category and tag pages that may be indexed: not the ones marked hidden, nor tag
- * pages with too few posts. Core counts the sitemap's pages with the same arguments, so paging
- * stays correct.
+ * Lists exactly the category and tag pages that may be indexed: not the ones marked hidden, nor tag
+ * pages with too few posts, but parent categories whose posts are all in subcategories (their page
+ * lists those posts, so it isn't empty; WordPress would only count a term's own posts). Core counts
+ * the sitemap's pages with the same arguments, so paging stays correct.
  *
  * @param array<string, mixed> $args     WP_Term_Query arguments.
  * @param string               $taxonomy Taxonomy.
  * @return array<string, mixed>
  */
 function tala_seo_sitemap_skip_thin_terms( $args, $taxonomy ) {
+	if ( is_taxonomy_hierarchical( $taxonomy ) ) {
+		$args['hierarchical'] = true;
+	}
 	$ids = tala_seo_indexable_term_ids( $taxonomy );
 	if ( $ids ) {
 		$args['include'] = $ids;
@@ -68,8 +72,16 @@ function tala_seo_sitemap_skip_thin_terms( $args, $taxonomy ) {
  * @return int[]|null
  */
 function tala_seo_indexable_term_ids( $taxonomy ) {
-	static $cache = array();
-	if ( ! array_key_exists( $taxonomy, $cache ) ) {
+	global $wp_query;
+	/**
+	 * Results by main query and taxonomy: core asks again for every page of a sitemap.
+	 *
+	 * @var WeakMap<WP_Query, array<string, int[]|null>> $memo
+	 */
+	static $memo = new WeakMap();
+	$query       = $wp_query instanceof WP_Query ? $wp_query : new WP_Query();
+	$known       = $memo[ $query ] ?? array();
+	if ( ! array_key_exists( $taxonomy, $known ) ) {
 		$ids    = array();
 		$hidden = 0;
 		$terms  = get_terms(
@@ -85,9 +97,10 @@ function tala_seo_indexable_term_ids( $taxonomy ) {
 				$ids[] = $term->term_id;
 			}
 		}
-		$cache[ $taxonomy ] = $hidden ? $ids : null;
+		$known[ $taxonomy ] = $hidden ? $ids : null;
+		$memo[ $query ]     = $known;
 	}
-	return $cache[ $taxonomy ];
+	return $known[ $taxonomy ];
 }
 
 add_filter( 'wp_sitemaps_posts_query_args', 'tala_seo_sitemap_skip_noindex' );

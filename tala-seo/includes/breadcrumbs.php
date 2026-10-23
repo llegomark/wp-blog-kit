@@ -9,15 +9,33 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * The breadcrumb trail for the current page: Home › (Blog ›) Category › Post.
+ * The breadcrumb trail for the current page: Home › (Blog ›) Category › Post. The block and the
+ * structured data both ask for it, so it is worked out once per main query (a new query, such as a
+ * test's next page, gets its own).
  *
  * @return array<int,array{name:string,url:string}>
  */
 function tala_seo_breadcrumb_trail() {
-	static $trail = null;
-	if ( null !== $trail ) {
-		return $trail;
+	global $wp_query;
+	/**
+	 * Trails by main query.
+	 *
+	 * @var WeakMap<WP_Query, array<int,array{name:string,url:string}>> $trails
+	 */
+	static $trails = new WeakMap();
+	if ( ! $wp_query instanceof WP_Query ) {
+		return tala_seo_build_breadcrumb_trail();
 	}
+	$trails[ $wp_query ] ??= tala_seo_build_breadcrumb_trail();
+	return $trails[ $wp_query ];
+}
+
+/**
+ * Works out the breadcrumb trail for the current page.
+ *
+ * @return array<int,array{name:string,url:string}>
+ */
+function tala_seo_build_breadcrumb_trail() {
 	$trail = array();
 	if ( is_front_page() || is_404() ) {
 		return $trail;

@@ -5,11 +5,18 @@
 #   dev/site.sh            create the site if it doesn't exist yet
 #   dev/site.sh --reset    delete it (files and database) and create it again with fresh demo content
 #
+# The database login is your Linux user through MariaDB's Unix socket, with no password. Another
+# server (CI uses a database container) comes from WP_DEV_DB_HOST, WP_DEV_DB_USER and
+# WP_DEV_DB_PASSWORD; wp-config.php then reads the password from the environment, so it is never
+# stored or put on a command line.
+#
 # The theme and plugin are symlinked from this repository, so edits show up immediately.
 set -euo pipefail
 KIT=$(cd "$(dirname "$0")/.." && pwd)
 SITE=${WP_DEV_SITE:-$HOME/Sites/blogkit}
 DB=wp_blogkit
+DB_USER=${WP_DEV_DB_USER:-$USER}
+DB_HOST=${WP_DEV_DB_HOST:-localhost}
 URL=http://127.0.0.1:8080
 wp() { command wp --path="$SITE" "$@"; }
 
@@ -27,8 +34,7 @@ mkdir -p "$SITE"
 # characters, which loses files in wp-includes/php-ai-client (WordPress 7).
 wp core download https://wordpress.org/latest.zip --quiet
 wp core verify-checksums --quiet
-# Database login through the Unix socket as your Linux user: no password exists or is stored.
-wp config create --dbname="$DB" --dbuser="$USER" --dbpass='' --dbhost=localhost --skip-check --quiet --extra-php <<'PHP'
+wp config create --dbname="$DB" --dbuser="$DB_USER" --dbpass='' --dbhost="$DB_HOST" --skip-check --quiet --extra-php <<'PHP'
 define( 'WP_ENVIRONMENT_TYPE', 'local' );
 define( 'WP_DEBUG', true );
 define( 'WP_DEBUG_LOG', true );          // wp-content/debug.log
@@ -36,6 +42,9 @@ define( 'WP_DEBUG_DISPLAY', ! ( defined( 'WP_CLI' ) && WP_CLI ) ); // browser: o
 define( 'SCRIPT_DEBUG', true );          // unminified core scripts: clearer editor errors
 define( 'WP_DEVELOPMENT_MODE', 'all' ); // no cached theme.json or pattern files: edits show at once
 PHP
+if [ -n "${WP_DEV_DB_PASSWORD:-}" ]; then
+  wp config set DB_PASSWORD "getenv( 'WP_DEV_DB_PASSWORD' ) ?: ''" --raw --quiet
+fi
 wp db create
 PASSWORD=$(openssl rand -base64 18 | tr -d '/+=')
 wp core install --url="$URL" --title="Guro Notes (dev)" --admin_user=admin --admin_password="$PASSWORD" \

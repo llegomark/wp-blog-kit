@@ -22,13 +22,15 @@ Everything must follow official WordPress practice, as checked by WordPress's ow
 ```bash
 composer fix && composer check    # WPCS, PHPStan level 8, Plugin Check (exits 1 on any finding)
 npm run lint                      # Stylelint, ESLint, theme.json/block.json schemas, patterns, block markup
+composer test                     # PHPUnit integration tests on WordPress's test framework
+npm run test:e2e                  # browser tests on the local site: pages, menu, layout, logo, axe, editor
 ```
 
-Then test on the local site (http://127.0.0.1:8080):
-- pages render with no PHP notices, and `wp-content/debug.log` stays clean
-- templates still validate in the editor
-- for the plugin: the publish check and the JSON-LD output (BlogPosting, BreadcrumbList,
-  ProfilePage, WebSite and Organization on the home page only)
+A change in behaviour comes with a test in `tests/phpunit/` or `tests/e2e/` that fails without it
+(check that it does). The tests cover the pages, the JSON-LD (BlogPosting, BreadcrumbList,
+ProfilePage, WebSite and Organization on the home page only), the publish check and the editor's
+validation of the templates. Then, on the local site (http://127.0.0.1:8080):
+- `wp-content/debug.log` stays clean
 - for visible changes: Lighthouse on a mobile article page (Accessibility, Best Practices, SEO)
 
 ## Rules that come from decisions, not taste
@@ -49,8 +51,8 @@ Then test on the local site (http://127.0.0.1:8080):
 ## Commits
 
 The pre-commit hook checks the staged files (`lint-staged.config.mjs`). GitHub re-runs WPCS, PHPStan,
-Stylelint, ESLint, the theme validator and Plugin Check on every push and pull request
-(`.github/workflows/checks.yml`). Pushing doesn't replace running the checks first; it catches what
+Stylelint, ESLint, the theme validator, the PHPUnit and browser tests, and Plugin Check on every push
+and pull request (`.github/workflows/checks.yml`). Pushing doesn't replace running the checks first; it catches what
 slipped through. If a run fails, fix it in a new commit.
 
 

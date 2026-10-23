@@ -4,6 +4,7 @@
 
 	<file>tala-seo</file>
 	<file>tala-blog</file>
+	<file>tests</file>
 
 	<exclude-pattern>*/dist/*</exclude-pattern>
 	<exclude-pattern>*/dev/*</exclude-pattern>
@@ -49,6 +50,32 @@
 			<property name="prefixes" type="array">
 				<element value="tala_seo"/>
 				<element value="tala_blog"/>
+			</property>
+			<property name="custom_test_classes" type="array">
+				<element value="Tala_SEO_Test_Case"/>
+			</property>
+		</properties>
+		<!-- The tests' bootstrap and config run before WordPress and define its own constants
+		     (ABSPATH, DB_NAME), and the WP-CLI stand-in has WP-CLI's names: none can take a prefix. -->
+		<exclude-pattern>tests/phpunit/bootstrap\.php</exclude-pattern>
+		<exclude-pattern>tests/phpunit/wp-tests-config\.php</exclude-pattern>
+		<exclude-pattern>tests/phpunit/includes/env\.php</exclude-pattern>
+		<exclude-pattern>tests/phpunit/includes/class-wp-cli\.php</exclude-pattern>
+		<exclude-pattern>tests/phpunit/includes/wp-cli-utils\.php</exclude-pattern>
+	</rule>
+
+	<!-- Tests extend this base class (tests/phpunit/includes/class-tala-seo-test-case.php). -->
+	<rule ref="WordPress.Files.FileName">
+		<properties>
+			<property name="custom_test_classes" type="array">
+				<element value="Tala_SEO_Test_Case"/>
+			</property>
+		</properties>
+	</rule>
+	<rule ref="WordPress.WP.GlobalVariablesOverride">
+		<properties>
+			<property name="custom_test_classes" type="array">
+				<element value="Tala_SEO_Test_Case"/>
 			</property>
 		</properties>
 	</rule>

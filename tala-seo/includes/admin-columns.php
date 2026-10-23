@@ -189,12 +189,12 @@ function tala_seo_status_list( $items ) {
 
 /**
  * Loads the featured images (and their alt text) of the whole list in one query instead of one
- * per row.
+ * per row. A Quick Edit save shows a single row without a list query: nothing to load then.
  */
 function tala_seo_prime_thumbnails(): void {
 	static $done = false;
 	global $wp_query;
-	if ( ! $done && $wp_query instanceof WP_Query ) {
+	if ( ! $done && $wp_query instanceof WP_Query && is_array( $wp_query->posts ) ) {
 		update_post_thumbnail_cache( $wp_query );
 	}
 	$done = true;

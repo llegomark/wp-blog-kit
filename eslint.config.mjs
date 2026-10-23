@@ -8,7 +8,8 @@ import globals from 'globals';
 
 export default [
 	{
-		ignores: [ 'node_modules/', 'vendor/', 'dist/', 'dev/.tools/', '.agents/', '.claude/' ],
+		// .cache/ holds the tests' copy of WordPress and the browser tests' output.
+		ignores: [ 'node_modules/', 'vendor/', 'dist/', 'dev/.tools/', '.agents/', '.claude/', '.cache/' ],
 	},
 	...wordpress.configs[ 'recommended-with-formatting' ],
 	{
@@ -31,11 +32,21 @@ export default [
 		},
 	},
 	{
-		// Tools that run in Node: this file, lint-staged's, and bin/.
+		// Tools that run in Node: this file, lint-staged's, Playwright's, and bin/.
 		files: [ '*.mjs', 'bin/**/*.mjs' ],
 		languageOptions: {
 			sourceType: 'module',
 			globals: globals.node,
+		},
+	},
+	// Browser tests: WordPress's rules for Playwright. They run in Node, and the functions they pass
+	// to page.evaluate() run in the browser.
+	...wordpress.configs[ 'test-playwright' ].map( ( config ) => ( { ...config, files: [ 'tests/e2e/**/*.mjs' ] } ) ),
+	{
+		files: [ 'tests/e2e/**/*.mjs' ],
+		languageOptions: {
+			sourceType: 'module',
+			globals: { ...globals.node, ...globals.browser },
 		},
 	},
 ];
