@@ -56,11 +56,22 @@ a {
 /* Form fields: borders and placeholders keep at least 3:1 against the page (WCAG 1.4.11). */
 .wp-block-search__input,
 .wp-block-post-comments-form input:not([type="submit"]):not([type="checkbox"]),
-.wp-block-post-comments-form textarea {
+.wp-block-post-comments-form textarea,
+.post-password-form input[type="password"] {
 	border: 1px solid var(--wp--preset--color--muted);
 	border-radius: 5px;
 	background-color: var(--wp--preset--color--base);
 	color: var(--wp--preset--color--contrast);
+}
+
+/* The password field of a protected post: the size of the search field, and on a line of its own. */
+.post-password-form input[type="password"] {
+	display: block;
+	width: 100%;
+	max-width: 20rem;
+	margin-block-start: 0.25rem;
+	padding: 0.6em 0.75em;
+	font: inherit;
 }
 
 .wp-block-search__input::placeholder {
@@ -242,13 +253,20 @@ footer.wp-block-template-part {
 	overflow-x: auto;
 }
 
-/* Tables: hairlines in the line colour and a washed header row, in both colour schemes. */
-.wp-block-post-content :where(table) td,
-.wp-block-post-content :where(table) th {
-	border-color: var(--wp--preset--color--rule);
+/* Tables: hairlines in the line colour and a washed header row, in both colour schemes. Tables
+   from classic content get the Table block's lines and spacing. */
+.wp-block-post-content :where(table) {
+	border-collapse: collapse;
 }
 
-.wp-block-table thead {
+.wp-block-post-content :where(table) td,
+.wp-block-post-content :where(table) th {
+	padding: 0.5em;
+	border: 1px solid var(--wp--preset--color--rule);
+}
+
+.wp-block-table thead,
+.wp-block-post-content :where(table) thead {
 	border-bottom: 1px solid var(--wp--preset--color--rule);
 	background-color: var(--wp--preset--color--wash);
 }
@@ -259,6 +277,103 @@ footer.wp-block-template-part {
 
 .wp-block-table.is-style-stripes {
 	border-bottom-color: var(--wp--preset--color--rule);
+}
+
+/* Classic content: posts written before the block editor, or in a Classic block. The classic editor
+   aligns images with classes WordPress lays out only for blocks, captions them with [caption], and
+   makes galleries with [gallery]. (WordPress's Post Content block already contains the floats.) */
+
+.wp-block-post-content :where(img, .wp-caption).alignleft {
+	float: left;
+	margin: 0.3em 1.5em 1em 0;
+}
+
+.wp-block-post-content :where(img, .wp-caption).alignright {
+	float: right;
+	margin: 0.3em 0 1em 1.5em;
+}
+
+.wp-block-post-content :where(img, .wp-caption).aligncenter {
+	display: block;
+	margin-inline: auto;
+}
+
+/* Captions and embedded players fit the column, whatever width the classic editor wrote on them
+   (a player's border included). */
+.wp-caption,
+.wp-block-post-content :where(iframe, embed, object, video) {
+	box-sizing: border-box;
+	max-width: 100%;
+}
+
+/* Images are never wider than the column, with or without the classes the editors add. */
+.wp-block-post-content :where(img) {
+	max-width: 100%;
+	height: auto;
+}
+
+.wp-caption img {
+	display: block;
+}
+
+.wp-caption-text,
+.wp-caption-dd,
+.gallery-caption {
+	margin: 0.5em 0 0;
+	color: var(--wp--preset--color--muted);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+/* Quotes, in articles and comments, look like the Quote block (theme.json): washed and rounded. A
+   pull quote keeps its own look. */
+:where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not([class]):not(.wp-block-pullquote > blockquote)) {
+	margin-inline: 0;
+	padding: var(--wp--preset--spacing--30);
+	border-radius: 5px;
+	background-color: var(--wp--preset--color--wash);
+}
+
+:where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not([class]):not(.wp-block-pullquote > blockquote)) > :first-child {
+	margin-block-start: 0;
+}
+
+:where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not([class]):not(.wp-block-pullquote > blockquote)) > :last-child {
+	margin-block-end: 0;
+}
+
+/* [gallery]: a grid in the number of columns chosen (3 unless the gallery says otherwise). */
+.gallery {
+	display: grid;
+	grid-template-columns: repeat(var(--tala-gallery-columns, 3), minmax(0, 1fr));
+	gap: var(--wp--preset--spacing--20);
+}
+
+.gallery-columns-1 { --tala-gallery-columns: 1; }
+
+.gallery-columns-2 { --tala-gallery-columns: 2; }
+
+.gallery-columns-4 { --tala-gallery-columns: 4; }
+
+.gallery-columns-5 { --tala-gallery-columns: 5; }
+
+.gallery-columns-6 { --tala-gallery-columns: 6; }
+
+.gallery-columns-7 { --tala-gallery-columns: 7; }
+
+.gallery-columns-8 { --tala-gallery-columns: 8; }
+
+.gallery-columns-9 { --tala-gallery-columns: 9; }
+
+.gallery-item {
+	margin: 0;
+	text-align: center;
+}
+
+.gallery-icon img {
+	display: block;
+	max-width: 100%;
+	height: auto;
+	margin-inline: auto;
 }
 
 /* Author box under the article */
@@ -317,6 +432,12 @@ footer.wp-block-template-part {
 	font-size: var(--wp--preset--font-size--small);
 }
 
+/* A title with a very long word wraps inside the link instead of widening the page. */
+.tala-post-nav > * {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
 .tala-comments {
 	margin-block-start: var(--wp--preset--spacing--50);
 }
@@ -352,6 +473,21 @@ footer.wp-block-template-part {
 .tala-comment-meta .wp-block-comment-date,
 .tala-comment-meta .wp-block-comment-date a {
 	color: var(--wp--preset--color--muted);
+}
+
+/* "Author" beside the name of the article's author. */
+.tala-comment-badge {
+	margin-inline-start: 0.4em;
+	padding-inline: 0.4em;
+	border: 1px solid var(--wp--preset--color--rule);
+	border-radius: 3px;
+	color: var(--wp--preset--color--muted);
+	font-weight: 400;
+}
+
+.tala-comments-closed {
+	color: var(--wp--preset--color--muted);
+	font-size: var(--wp--preset--font-size--small);
 }
 
 /* Post lists: one entry per line, divided by hairlines */
@@ -430,6 +566,13 @@ footer.wp-block-template-part {
 
 .tala-list .wp-block-post-excerpt__excerpt {
 	margin: 0;
+}
+
+/* "Pinned" before the date of a sticky post at the top of the home page. */
+.tala-pinned {
+	margin-inline-end: 0.5em;
+	color: var(--wp--preset--color--contrast);
+	font-weight: 600;
 }
 
 .tala-list .wp-block-query-pagination {

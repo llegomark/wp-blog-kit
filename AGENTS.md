@@ -33,6 +33,9 @@ ItemList, FAQPage, HowTo),
 the publish check, the editor's validation of the templates, and the plugin's blocks in the editor. Then, on the local site (http://127.0.0.1:8080):
 - `wp-content/debug.log` stays clean
 - for visible changes: Lighthouse on a mobile article page (Accessibility, Best Practices, SEO)
+- for theme changes: WordPress's Theme Unit Test on `dev/unit-test-site.sh` (the theme alone, without
+  Tala SEO): `node dev/unit-test-check.mjs` must pass, then the handbook's checklist by eye
+  (https://make.wordpress.org/themes/handbook/review/theme-unit-test/)
 - for visible changes to the SEO panel, the publish check, Settings → SEO, the SEO column or the
   plugin's blocks: `node dev/screenshots.mjs` takes the readme's screenshots again
 

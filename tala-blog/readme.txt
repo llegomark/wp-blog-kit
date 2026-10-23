@@ -21,7 +21,10 @@ Tala Blog is a block theme for blogs that are mostly read on phones.
 * Prints just the article, with its dates and author, in black on white.
 * Translation-ready: every text in the templates comes from translatable patterns (text domain tala-blog), and translated block settings are escaped as JSON, so no translation can break a block.
 
-Pairs with the Tala SEO plugin, which provides the breadcrumbs block and the structured data. Without the plugin, the breadcrumbs are simply left out.
+* Older posts look right too: images aligned by the classic editor, [caption] and [gallery], fixed-width video embeds, plain tables and quotes, password forms, untitled posts, and titles with very long words, checked with WordPress's Theme Unit Test on phones and desktops, left to right and right to left.
+* A pinned (sticky) post is marked "Pinned" at the top of the home page, the article author's comments are marked "Author", and a post that has stopped taking comments says so under them.
+
+Pairs with the Tala SEO plugin, which provides the breadcrumbs block and the structured data. Without the plugin, the breadcrumbs are simply left out, and the theme works on its own.
 
 == Frequently Asked Questions ==
 
@@ -38,6 +41,14 @@ In Appearance → Editor → Navigation. Until you make a menu, the header lists
 In Appearance → Editor → Patterns → Header, select the logo placeholder beside the site title and choose an image. It appears 28 px wide in the header and in the phone menu. A square or round image works best. The logo isn't a link and screen readers skip it, because the site title beside it already names the site and links to the home page.
 
 == Changelog ==
+
+= 1.6.0 =
+* New: classic content from the classic editor looks right: images aligned left, right or centred with text around them, captions and [gallery] grids, video players and wide images that fit a phone, and plain tables and quotes styled like their blocks.
+* New: "Pinned" marks the sticky post at the top of the home page; "Author" marks the comments of the article's author; "Comments are closed." appears under the comments of a post that no longer takes them.
+* New: a post without a title gets its date as the heading, linked in article lists, so it can still be opened.
+* Fixed: the breadcrumbs come from a pattern that is empty without the Tala SEO plugin, so the Site Editor no longer reports a missing block when the plugin is off.
+* Fixed: a very long word in the next or previous article's title wraps instead of widening the page on phones.
+* Changed: "Leave a Reply" is a level-two heading, like the comments' title, so headings don't skip a level on articles with no comments yet. The password field of a protected post is a full-size field.
 
 = 1.5.1 =
 * Theme header and readme: Edventure is the author and copyright holder; the readme names the WordPress.org contributor.

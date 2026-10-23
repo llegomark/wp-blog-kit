@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.10.1
+Stable tag: 1.10.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -89,6 +89,9 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.10.2 =
+* Fixed: in the Breadcrumbs block, a title with a very long word wraps instead of widening the page on phones.
 
 = 1.10.1 =
 * Changed: Edventure is the plugin's author.

@@ -214,3 +214,105 @@ function tala_blog_list_thumb_sizes( $html, $block ) {
 	$tags->set_attribute( 'sizes', $auto . '(min-width: 40em) 8rem, 5.5rem' );
 	return $tags->get_updated_html();
 }
+
+add_filter( 'render_block_core/post-title', 'tala_blog_untitled_post', 10, 3 );
+
+/**
+ * A post without a title still gets its heading: the post's date, linked where the title would
+ * be, so it can be told apart and opened from a list. (WordPress renders nothing, which leaves the
+ * article without a level-one heading and a list entry without a link.)
+ *
+ * @param string               $html     Rendered Title.
+ * @param array<string, mixed> $block    Parsed block.
+ * @param WP_Block             $instance Block instance.
+ * @return string
+ */
+function tala_blog_untitled_post( $html, $block, $instance ) {
+	$post_id = (int) ( $instance->context['postId'] ?? get_the_ID() );
+	if ( '' !== trim( $html ) || ! $post_id || '' !== trim( get_the_title( $post_id ) ) ) {
+		return $html;
+	}
+	$level = (int) ( $block['attrs']['level'] ?? 2 );
+	$tag   = $level >= 1 && $level <= 6 ? 'h' . $level : 'p';
+	$text  = esc_html( (string) get_the_date( '', $post_id ) );
+	if ( ! empty( $block['attrs']['isLink'] ) ) {
+		$text = '<a href="' . esc_url( (string) get_permalink( $post_id ) ) . '">' . $text . '</a>';
+	}
+	$class = trim( 'wp-block-post-title ' . ( is_string( $block['attrs']['className'] ?? null ) ? $block['attrs']['className'] : '' ) );
+	return sprintf( '<%1$s class="%2$s">%3$s</%1$s>', $tag, esc_attr( $class ), $text );
+}
+
+add_filter( 'render_block_core/post-date', 'tala_blog_pinned_label', 10, 3 );
+
+/**
+ * Marks a sticky post "Pinned" where it is pinned: at the top of the home page's first page.
+ *
+ * @param string               $html     Block HTML.
+ * @param array<string, mixed> $block    Parsed block.
+ * @param WP_Block             $instance Block instance.
+ * @return string
+ */
+function tala_blog_pinned_label( $html, $block, $instance ) {
+	$post_id = (int) ( $instance->context['postId'] ?? 0 );
+	if ( '' === trim( $html ) || ! $post_id || ! empty( $block['attrs']['displayType'] ) || ! is_home() || is_paged() || ! is_sticky( $post_id ) ) {
+		return $html;
+	}
+	return (string) preg_replace( '/<time\b/', '<span class="tala-pinned">' . esc_html__( 'Pinned', 'tala-blog' ) . '</span><time', $html, 1 );
+}
+
+add_filter( 'render_block_core/comment-author-name', 'tala_blog_author_comment_badge', 10, 3 );
+
+/**
+ * Marks the comments of the article's author "Author", the same comments WordPress gives the
+ * "bypostauthor" class.
+ *
+ * @param string               $html     Block HTML.
+ * @param array<string, mixed> $block    Parsed block.
+ * @param WP_Block             $instance Block instance.
+ * @return string
+ */
+function tala_blog_author_comment_badge( $html, $block, $instance ) {
+	$comment = get_comment( (int) ( $instance->context['commentId'] ?? 0 ) );
+	$post    = $comment ? get_post( (int) $comment->comment_post_ID ) : null;
+	if ( '' === trim( $html ) || ! $comment || ! $post || ! (int) $comment->user_id || (int) $comment->user_id !== (int) $post->post_author ) {
+		return $html;
+	}
+	$badge = ' <span class="tala-comment-badge">' . esc_html__( 'Author', 'tala-blog' ) . '</span>';
+	return (string) preg_replace( '#</div>\s*$#', $badge . '</div>', trim( $html ), 1 );
+}
+
+add_filter( 'comment_form_defaults', 'tala_blog_comment_form_heading' );
+
+/**
+ * "Leave a Reply" is a heading of the article's level two, like the comments' title before it.
+ * WordPress makes it a level three, which skips a level on an article with no comments yet.
+ *
+ * @param array<string, mixed> $defaults Comment form arguments.
+ * @return array<string, mixed>
+ */
+function tala_blog_comment_form_heading( $defaults ) {
+	$defaults['title_reply_before'] = '<h2 id="reply-title" class="comment-reply-title">';
+	$defaults['title_reply_after']  = '</h2>';
+	return $defaults;
+}
+
+add_filter( 'render_block_core/post-comments-form', 'tala_blog_comments_closed', 10, 3 );
+
+/**
+ * Under the comments of a post that no longer takes comments, a note saying so where the form
+ * would be, as WordPress's default themes do. Nothing where there are no comments, on pages, or
+ * while a password hides the comments.
+ *
+ * @param string               $html     Rendered Comments Form (empty when comments are closed).
+ * @param array<string, mixed> $block    Parsed block.
+ * @param WP_Block             $instance Block instance.
+ * @return string
+ */
+function tala_blog_comments_closed( $html, $block, $instance ) {
+	$post = get_post( (int) ( $instance->context['postId'] ?? 0 ) );
+	if ( '' !== trim( (string) $html ) || ! $post || 'page' === $post->post_type || comments_open( $post )
+		|| post_password_required( $post ) || ! get_comments_number( $post ) || ! post_type_supports( $post->post_type, 'comments' ) ) {
+		return $html;
+	}
+	return '<p class="tala-comments-closed">' . esc_html__( 'Comments are closed.', 'tala-blog' ) . '</p>';
+}

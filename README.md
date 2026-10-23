@@ -75,6 +75,8 @@ dev/serve.sh                  # http://127.0.0.1:8080 (admin login: ~/Sites/blog
 
 `dev/site.sh --reset` starts the site over. Query Monitor and Plugin Check are installed on it.
 
+`dev/unit-test-site.sh` builds a second site for [WordPress's Theme Unit Test](https://make.wordpress.org/themes/handbook/review/theme-unit-test/) in `~/Sites/themeunit`: Tala Blog alone (no Tala SEO, as a theme must work by itself), WordPress's test content (`themeunittestdata.wordpress.xml` and the 64 block test posts, pinned and checksummed), and the settings the handbook asks for (a long title and tagline, 5 posts per page, comments threaded 3 deep and paged by 5, month-and-name addresses, a short and a long menu). `dev/unit-test-site.sh --serve` serves it at http://127.0.0.1:8081, and `node dev/unit-test-check.mjs` then checks every page of it on a phone and a desktop: HTTP status, PHP notices, JavaScript errors, nothing wider than the screen, a level-one heading, and axe in light and dark mode (on what the theme draws; the test posts' content is inaccessible on purpose in places). How things look is still the handbook's checklist, by eye.
+
 ### Checks (run them all before every commit)
 
 | Command | What it runs |
@@ -90,7 +92,7 @@ dev/serve.sh                  # http://127.0.0.1:8080 (admin login: ~/Sites/blog
 | `npm run lint:readme` | `bin/validate-readme.mjs`: `tala-seo/readme.txt` by the rules of [WordPress.org's readme validator](https://wordpress.org/plugins/developers/readme-validator/) (its errors, warnings and notes, ported from the plugin directory's parser), plus a match with the plugin header, "Tested up to" the current WordPress, upgrade notices within 300 characters, a changelog entry for the release, and an image in `.wordpress-org/` for each screenshot caption. Contributors, tag usage and the WordPress release are looked up on WordPress.org. The one note left on purpose: no donate link, as the plugin takes no donations. |
 | `npm run lint` | the four above, plus `composer lint` |
 | `composer test` | PHPUnit integration tests (`tests/phpunit/`) on WordPress's own test framework: Tala SEO's head tags, structured data (videos, events, courses, FAQ and how-to included), sitemap, redirects, publish check, admin forms, import and share images, and Tala Blog's block filters, patterns and template parts |
-| `npm run test:e2e` | browser tests (`tests/e2e/`, Playwright) on the local site: every kind of page, the phone menu frame by frame, layout shifts, the logo, axe in light and dark mode on phone and desktop, the block editor's validation of the theme, and Tala SEO's FAQ, How-to, Event and Course blocks and video dates in the editor and on the page |
+| `npm run test:e2e` | browser tests (`tests/e2e/`, Playwright) on the local site: every kind of page, the phone menu frame by frame, layout shifts, the logo, axe in light and dark mode on phone and desktop, the block editor's validation of the theme, classic content (aligned images, captions, galleries, embeds, tables, quotes, long words, password forms), and Tala SEO's FAQ, How-to, Event and Course blocks and video dates in the editor and on the page |
 
 A pre-commit hook (husky and lint-staged, set up by `npm ci`) runs the linters on the staged files of each commit.
 
