@@ -13,12 +13,15 @@ Everything must follow official WordPress practice, as checked by WordPress's ow
    - static analysis: `wp-phpstan`
 
    Install one with `npx skills add WordPress/agent-skills --skill <name> --yes`.
-2. Start the local site: `dev/serve.sh`. The site is created with `dev/site.sh`; see the README.
+2. Install the tools once: `composer install` and `npm ci` (Node 24 or newer; it also sets up the
+   pre-commit hook).
+3. Start the local site: `dev/serve.sh`. The site is created with `dev/site.sh`; see the README.
 
 ## After changing code: all of these must pass
 
 ```bash
 composer fix && composer check    # WPCS, PHPStan level 8, Plugin Check (exits 1 on any finding)
+npm run lint                      # Stylelint, ESLint, theme.json/block.json schemas, patterns, block markup
 ```
 
 Then test on the local site (http://127.0.0.1:8080):
@@ -33,7 +36,11 @@ Then test on the local site (http://127.0.0.1:8080):
 - SEO output follows Google Search Central. Never add FAQPage, HowTo or SearchAction markup
   (Google retired them), and never use a placeholder author image.
 - Don't block AI crawlers (robots.txt or anything else).
-- No build step, no web fonts, no jQuery. Keep the theme's CSS inlined (`assets/theme.css`).
+- No build step, no web fonts, no jQuery. Keep the theme's CSS inlined (`assets/theme.css`). Node and npm
+  are for the linters only; nothing they install ships in the theme or plugin.
+- Fix lint findings in the code. Only switch a rule off in `stylelint.config.mjs` or `eslint.config.mjs`,
+  with a comment saying why, when it can't apply here; never with disable comments in `assets/theme.css`,
+  which is inlined into every page.
 - Keep `Update URI: false` in the theme and plugin headers. The plugin is private.
 - Use the text domains `tala-seo` and `tala-blog`, and the prefixes `tala_seo_` and `tala_blog_`.
 - When you change the plugin or theme version, bump `Version:`, `Stable tag:` (in readme.txt)
@@ -41,7 +48,10 @@ Then test on the local site (http://127.0.0.1:8080):
 
 ## Commits
 
-GitHub re-runs WPCS, PHPStan and Plugin Check on every push and pull request (`.github/workflows/checks.yml`). Pushing doesn't replace running `composer check` first; it catches what slipped through. If a run fails, fix it in a new commit.
+The pre-commit hook checks the staged files (`lint-staged.config.mjs`). GitHub re-runs WPCS, PHPStan,
+Stylelint, ESLint, the theme validator and Plugin Check on every push and pull request
+(`.github/workflows/checks.yml`). Pushing doesn't replace running the checks first; it catches what
+slipped through. If a run fails, fix it in a new commit.
 
 
 Commit to `main` only after `composer check` passes. Commits are signed by the maintainer's key.

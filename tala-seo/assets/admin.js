@@ -2,10 +2,10 @@
  * Media picker for Settings → SEO (default share image) and user profiles (author photo).
  * A button with data-tala-media="<input id>" opens the library; data-tala-media-clear empties it.
  */
-( function () {
+( function() {
 	'use strict';
 
-	document.addEventListener( 'click', function ( event ) {
+	document.addEventListener( 'click', function( event ) {
 		const pick = event.target.closest( '[data-tala-media]' );
 		const clear = event.target.closest( '[data-tala-media-clear]' );
 
@@ -19,7 +19,7 @@
 				library: { type: 'image' },
 				multiple: false,
 			} );
-			frame.on( 'select', function () {
+			frame.on( 'select', function() {
 				const image = frame.state().get( 'selection' ).first().toJSON();
 				input.value = image.id;
 				preview.src = image.sizes && image.sizes.medium ? image.sizes.medium.url : image.url;
@@ -36,4 +36,4 @@
 			preview.hidden = true;
 		}
 	} );
-} )();
+}() );

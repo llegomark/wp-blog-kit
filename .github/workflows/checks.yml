@@ -1,5 +1,7 @@
-# The same checks as `composer check`, on GitHub's servers: WordPress Coding Standards and
-# PHPStan level 8 for the theme and the plugin, and WordPress's Plugin Check for the plugin.
+# The same checks as `composer check` and `npm run lint`, on GitHub's servers: WordPress Coding
+# Standards and PHPStan level 8 for the PHP, WordPress's CSS and JavaScript standards (Stylelint,
+# ESLint), theme.json and block.json against WordPress's schemas with the patterns and block
+# markup, and WordPress's Plugin Check for the plugin.
 # Every action is pinned to a full commit SHA (the comment names the release); Dependabot
 # proposes updates (.github/dependabot.yml).
 name: Checks
@@ -46,6 +48,35 @@ jobs:
 
       - name: PHPStan level 8
         run: composer analyse
+
+  frontend:
+    name: CSS, JavaScript and theme files
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node (the version in .nvmrc)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # --ignore-scripts: no package runs code while installing (the pre-commit hook isn't needed here).
+      - name: Install the tools from package-lock.json
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Stylelint (WordPress CSS coding standards)
+        run: npm run lint:css
+
+      - name: ESLint (WordPress JavaScript coding standards)
+        run: npm run lint:js
+
+      - name: theme.json, block.json, patterns and block markup
+        run: npm run lint:theme
 
   plugin-check:
     name: Plugin Check (WordPress ${{ matrix.wordpress }})

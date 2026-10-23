@@ -3,8 +3,11 @@
  * length meters, primary category, minor edit, noindex, canonical, redirect) and a checklist in the
  * pre-publish sidebar.
  * Publishing is enforced on the server; this only explains what is missing.
+ *
+ * @param {Object} wp  WordPress's script globals.
+ * @param {Object} cfg Settings from PHP (window.talaSeo).
  */
-( function ( wp, cfg ) {
+( function( wp, cfg ) {
 	'use strict';
 
 	if ( ! cfg ) {
@@ -114,13 +117,13 @@
 				value: Math.min( width, g.upper ),
 				'aria-hidden': 'true',
 			} ),
-			el( 'span', { className: 'tala-seo-meter__text' }, verdict.text )
+			el( 'span', { className: 'tala-seo-meter__text' }, verdict.text ),
 		);
 	}
 
 	function countImagesWithoutAlt( blocks ) {
 		let count = 0;
-		blocks.forEach( function ( block ) {
+		blocks.forEach( function( block ) {
 			if ( block.name === 'core/image' && block.attributes.url && ! String( block.attributes.alt || '' ).trim() ) {
 				count++;
 			}
@@ -132,7 +135,7 @@
 	}
 
 	function useSeo() {
-		const state = useSelect( function ( select ) {
+		const state = useSelect( function( select ) {
 			const editor = select( 'core/editor' );
 			const core = select( 'core' );
 			const featuredId = editor.getEditedPostAttribute( 'featured_media' ) || 0;
@@ -142,8 +145,8 @@
 				isLive: [ 'publish', 'future' ].indexOf( editor.getCurrentPostAttribute( 'status' ) ) !== -1,
 				title: editor.getEditedPostAttribute( 'title' ) || '',
 				link: editor.getPermalink() || '',
-				featuredId: featuredId,
-				media: featuredId ? core.getMedia( featuredId ) : null,
+				featuredId,
+				media: featuredId ? core.getEntityRecord( 'postType', 'attachment', featuredId ) : null,
 				categories: editor.getEditedPostAttribute( 'categories' ) || NONE,
 				hasCategories: cfg.primaryTypes.indexOf( editor.getCurrentPostType() ) !== -1,
 				author: authorId ? core.getEntityRecord( 'root', 'user', authorId, { context: 'view' } ) : null,
@@ -154,7 +157,7 @@
 		const values = meta || {};
 		return Object.assign( {}, state, {
 			meta: values,
-			set: function ( key, value ) {
+			set( key, value ) {
 				const next = Object.assign( {}, values );
 				next[ key ] = value;
 				setMeta( next );
@@ -164,6 +167,9 @@
 
 	/**
 	 * Requirements (enforced on publish) and Google recommendations (advice only).
+	 *
+	 * @param {Object} s The editor state from useSeo().
+	 * @return {{required: Object[], advice: Object[]}} The checklist items.
 	 */
 	function buildChecks( s ) {
 		const needed = cfg.requirements[ s.postType ] || [];
@@ -208,20 +214,18 @@
 
 		const width = s.media && s.media.media_details ? s.media.media_details.width : 0;
 		if ( width ) {
-			advice.push( {
-				ok: width >= 1200,
-				label:
-					width >= 1200
-						? __( 'Featured image is at least 1200 px wide (Google Discover)', 'tala-seo' )
-						: sprintf(
-								/* translators: %d: image width in pixels. */
-								__( 'Featured image is %d px wide; Google Discover asks for at least 1200 px', 'tala-seo' ),
-								width
-						  ),
-			} );
+			let widthLabel = __( 'Featured image is at least 1200 px wide (Google Discover)', 'tala-seo' );
+			if ( width < 1200 ) {
+				widthLabel = sprintf(
+					/* translators: %d: image width in pixels. */
+					__( 'Featured image is %d px wide; Google Discover asks for at least 1200 px', 'tala-seo' ),
+					width,
+				);
+			}
+			advice.push( { ok: width >= 1200, label: widthLabel } );
 		}
 		if ( s.postType === 'post' ) {
-			const real = s.categories.filter( function ( id ) {
+			const real = s.categories.filter( function( id ) {
 				return id !== cfg.defaultCategory;
 			} );
 			advice.push( {
@@ -231,16 +235,15 @@
 					: __( 'Choose a category other than the default one', 'tala-seo' ),
 			} );
 		}
-		advice.push( {
-			ok: s.imagesWithoutAlt === 0,
-			label: s.imagesWithoutAlt
-				? sprintf(
-						/* translators: %d: number of images. */
-						_n( '%d image in the article has no alternative text', '%d images in the article have no alternative text', s.imagesWithoutAlt, 'tala-seo' ),
-						s.imagesWithoutAlt
-				  )
-				: __( 'Every image in the article has alternative text', 'tala-seo' ),
-		} );
+		let altLabel = __( 'Every image in the article has alternative text', 'tala-seo' );
+		if ( s.imagesWithoutAlt ) {
+			altLabel = sprintf(
+				/* translators: %d: number of images. */
+				_n( '%d image in the article has no alternative text', '%d images in the article have no alternative text', s.imagesWithoutAlt, 'tala-seo' ),
+				s.imagesWithoutAlt,
+			);
+		}
+		advice.push( { ok: s.imagesWithoutAlt === 0, label: altLabel } );
 		if ( s.author ) {
 			const bio = String( s.author.description || '' ).trim();
 			advice.push( {
@@ -250,7 +253,23 @@
 					: __( 'Add a biography to the author profile; it is shown under the article', 'tala-seo' ),
 			} );
 		}
-		return { required: required, advice: advice };
+		return { required, advice };
+	}
+
+	const CHECK_MARKS = { ok: '✓', missing: '✕', advice: '!' };
+
+	/**
+	 * A checklist item's state: done, missing (needed to publish) or advice.
+	 *
+	 * @param {Object}  item     Item with an `ok` flag.
+	 * @param {boolean} required Whether the list holds publish requirements.
+	 * @return {string} ok, missing or advice.
+	 */
+	function checkState( item, required ) {
+		if ( item.ok ) {
+			return 'ok';
+		}
+		return required ? 'missing' : 'advice';
 	}
 
 	function CheckList( props ) {
@@ -264,16 +283,16 @@
 			el(
 				'ul',
 				{ className: 'tala-seo-checklist' },
-				props.items.map( function ( item, i ) {
-					const state = item.ok ? 'ok' : props.required ? 'missing' : 'advice';
+				props.items.map( function( item, i ) {
+					const state = checkState( item, props.required );
 					return el(
 						'li',
 						{ key: i, className: 'is-' + state },
-						el( 'span', { className: 'tala-seo-checklist__mark', 'aria-hidden': 'true' }, item.ok ? '✓' : props.required ? '✕' : '!' ),
-						el( 'span', null, item.label )
+						el( 'span', { className: 'tala-seo-checklist__mark', 'aria-hidden': 'true' }, CHECK_MARKS[ state ] ),
+						el( 'span', null, item.label ),
 					);
-				} )
-			)
+				} ),
+			),
 		);
 	}
 
@@ -283,7 +302,7 @@
 			Fragment,
 			null,
 			el( CheckList, { title: __( 'Needed to publish', 'tala-seo' ), items: checks.required, required: true } ),
-			el( CheckList, { title: __( 'Recommended by Google', 'tala-seo' ), items: checks.advice, required: false } )
+			el( CheckList, { title: __( 'Recommended by Google', 'tala-seo' ), items: checks.advice, required: false } ),
 		);
 	}
 
@@ -292,7 +311,7 @@
 			const url = new URL( link );
 			const parts = url.pathname.split( '/' ).filter( Boolean ).map( decodeURIComponent );
 			return [ url.host ].concat( parts ).join( ' › ' );
-		} catch ( e ) {
+		} catch {
 			return link;
 		}
 	}
@@ -315,8 +334,8 @@
 			el(
 				'div',
 				{ className: 'tala-seo-preview__description' + ( description ? '' : ' is-empty' ) },
-				description || __( 'Add a meta description to choose the text shown here.', 'tala-seo' )
-			)
+				description || __( 'Add a meta description to choose the text shown here.', 'tala-seo' ),
+			),
 		);
 	}
 
@@ -324,12 +343,12 @@
 		const s = props.seo;
 		const ids = s.categories;
 		const terms = useSelect(
-			function ( select ) {
+			function( select ) {
 				return ids.length > 1
 					? select( 'core' ).getEntityRecords( 'taxonomy', 'category', { include: ids, per_page: 100, context: 'view' } )
 					: null;
 			},
-			[ ids.join( ',' ) ]
+			[ ids ],
 		);
 		if ( ! s.hasCategories || ids.length < 2 || ! terms ) {
 			return null;
@@ -341,12 +360,12 @@
 			label: __( 'Primary category', 'tala-seo' ),
 			value: ids.indexOf( current ) !== -1 ? current : 0,
 			options: [ { label: __( 'Automatic (the first category)', 'tala-seo' ), value: 0 } ].concat(
-				terms.map( function ( term ) {
+				terms.map( function( term ) {
 					return { label: decodeEntities( term.name ), value: term.id };
-				} )
+				} ),
 			),
 			help: __( 'Leads the breadcrumbs, and the address too if it contains the category.', 'tala-seo' ),
-			onChange: function ( value ) {
+			onChange( value ) {
 				s.set( KEYS.primary, Number( value ) );
 			},
 		} );
@@ -362,7 +381,7 @@
 		const count = sprintf(
 			/* translators: %d: number of characters. */
 			_n( '%d character.', '%d characters.', description.length, 'tala-seo' ),
-			description.length
+			description.length,
 		);
 
 		return el(
@@ -380,9 +399,9 @@
 					null,
 					el( LengthMeter, { kind: 'title', text: fullTitle( s ) } ),
 					' ',
-					__( 'Leave empty to use the post title. The site name is added at the end.', 'tala-seo' )
+					__( 'Leave empty to use the post title. The site name is added at the end.', 'tala-seo' ),
 				),
-				onChange: function ( value ) {
+				onChange( value ) {
 					s.set( KEYS.title, value );
 				},
 			} ),
@@ -396,30 +415,29 @@
 					null,
 					el( LengthMeter, { kind: 'description', text: description.trim() } ),
 					' ',
-					count + ' ' + __( 'Summarize the page in a sentence or two.', 'tala-seo' )
+					count + ' ' + __( 'Summarize the page in a sentence or two.', 'tala-seo' ),
 				),
-				onChange: function ( value ) {
+				onChange( value ) {
 					s.set( KEYS.description, value );
 				},
 			} ),
 			el( PrimaryCategory, { seo: s } ),
-			s.isLive
-				? el( ToggleControl, {
-						__nextHasNoMarginBottom: true,
-						label: __( 'Minor edit: keep the "Updated" date', 'tala-seo' ),
-						help: __( 'For typo fixes. Google asks that the updated date only change when the content really changes.', 'tala-seo' ),
-						checked: !! s.meta[ KEYS.minorEdit ],
-						onChange: function ( value ) {
-							s.set( KEYS.minorEdit, value );
-						},
-				  } )
-				: null,
+			s.isLive &&
+				el( ToggleControl, {
+					__nextHasNoMarginBottom: true,
+					label: __( 'Minor edit: keep the "Updated" date', 'tala-seo' ),
+					help: __( 'For typo fixes. Google asks that the updated date only change when the content really changes.', 'tala-seo' ),
+					checked: !! s.meta[ KEYS.minorEdit ],
+					onChange( value ) {
+						s.set( KEYS.minorEdit, value );
+					},
+				} ),
 			el( ToggleControl, {
 				__nextHasNoMarginBottom: true,
 				label: __( 'Hide from search engines', 'tala-seo' ),
 				help: __( 'Adds noindex and leaves this page out of the sitemap.', 'tala-seo' ),
 				checked: !! s.meta[ KEYS.noindex ],
-				onChange: function ( value ) {
+				onChange( value ) {
 					s.set( KEYS.noindex, value );
 				},
 			} ),
@@ -431,7 +449,7 @@
 				value: s.meta[ KEYS.canonical ] || '',
 				placeholder: s.link,
 				help: __( 'Only when this content was first published at another address. Leave empty otherwise.', 'tala-seo' ),
-				onChange: function ( value ) {
+				onChange( value ) {
 					s.set( KEYS.canonical, value );
 				},
 			} ),
@@ -443,11 +461,11 @@
 				value: s.meta[ KEYS.redirect ] || '',
 				placeholder: 'https://',
 				help: __( 'Sends visitors and search engines from this post to another address (301), for example after merging two guides. Leave empty otherwise.', 'tala-seo' ),
-				onChange: function ( value ) {
+				onChange( value ) {
 					s.set( KEYS.redirect, value );
 				},
 			} ),
-			el( Checks, { seo: s } )
+			el( Checks, { seo: s } ),
 		);
 	}
 
@@ -456,7 +474,7 @@
 		if ( ! PrePublishPanel || ! Object.prototype.hasOwnProperty.call( cfg.requirements, s.postType ) ) {
 			return null;
 		}
-		const blocked = buildChecks( s ).required.some( function ( item ) {
+		const blocked = buildChecks( s ).required.some( function( item ) {
 			return ! item.ok;
 		} );
 		return el(
@@ -470,13 +488,13 @@
 			blocked
 				? el( 'p', { className: 'tala-seo-prepublish__note' }, __( 'Publishing will be refused until the items marked ✕ are done.', 'tala-seo' ) )
 				: null,
-			el( Checks, { seo: s } )
+			el( Checks, { seo: s } ),
 		);
 	}
 
 	wp.plugins.registerPlugin( 'tala-seo', {
-		render: function () {
+		render() {
 			return el( Fragment, null, el( SeoPanel ), el( PrePublish ) );
 		},
 	} );
-} )( window.wp, window.talaSeo );
+}( window.wp, window.talaSeo ) );

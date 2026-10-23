@@ -33,6 +33,9 @@ The header lists the site's pages. For a hand-made menu, replace the page list w
 
 == Changelog ==
 
+= 1.1.2 =
+* Changed: the stylesheet follows WordPress's CSS coding standards, now checked by Stylelint. Nothing changes in how the theme looks.
+
 = 1.1.1 =
 * Faster article lists on phones: thumbnails tell the browser their real width (5.5rem, 8rem on wider screens), so it downloads the 300 px image instead of the 768 or 1024 px one.
 

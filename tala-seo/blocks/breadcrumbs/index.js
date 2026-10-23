@@ -1,7 +1,9 @@
 /**
  * Breadcrumbs block (editor side). The trail is built by PHP; the editor shows a preview.
+ *
+ * @param {Object} wp WordPress's script globals.
  */
-( function ( wp ) {
+( function( wp ) {
 	const el = wp.element.createElement;
 	const ServerSideRender = wp.serverSideRender;
 	const useBlockProps = wp.blockEditor.useBlockProps;
@@ -11,11 +13,11 @@
 			return el(
 				'div',
 				useBlockProps(),
-				el( ServerSideRender, { block: 'tala-seo/breadcrumbs', attributes: props.attributes } )
+				el( ServerSideRender, { block: 'tala-seo/breadcrumbs', attributes: props.attributes } ),
 			);
 		},
-		save: function () {
+		save() {
 			return null;
 		},
 	} );
-} )( window.wp );
+}( window.wp ) );

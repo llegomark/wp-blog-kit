@@ -3,7 +3,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.6.0
+Stable tag: 1.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -60,6 +60,10 @@ At least 1200 × 675 px. Tala SEO crops each one to 1200 × 630 for link preview
 Google retired those rich results. The plugin only outputs structured data Google still uses.
 
 == Changelog ==
+
+= 1.6.1 =
+* Changed: the editor and admin scripts and styles follow WordPress's JavaScript and CSS coding standards, now checked by ESLint and Stylelint. Nothing changes in how they work.
+* Fixed: the SEO panel no longer calls `getMedia`, which WordPress 6.9 deprecated (a warning in the browser console).
 
 = 1.6.0 =
 * New: shared links use a 1200 × 630 (1.91:1) crop of the featured image, the shape Facebook, LinkedIn, X and messaging apps show, instead of the 16:9 crop they had to trim. Google's structured data keeps its 16:9, 4:3 and 1:1 crops.

@@ -6,6 +6,7 @@
 
 /* Dark mode: the chalkboard palette lives in theme.json (settings.custom.dark). */
 @media (prefers-color-scheme: dark) {
+
 	:root {
 		--wp--preset--color--base: var(--wp--custom--dark--base);
 		--wp--preset--color--contrast: var(--wp--custom--dark--contrast);
@@ -91,6 +92,7 @@ a {
 }
 
 @media (min-width: 48em) {
+
 	.tala-paper::before {
 		inset-inline-start: -1.75rem;
 	}
@@ -286,6 +288,7 @@ a {
 }
 
 @media (min-width: 40em) {
+
 	.tala-list-thumb {
 		flex-basis: 8rem;
 	}
@@ -319,6 +322,7 @@ a {
 /* Printing: just the article, with its dates and author, in black on white. */
 
 @media print {
+
 	:root {
 		--wp--preset--color--base: #fff;
 		--wp--preset--color--contrast: #000;
