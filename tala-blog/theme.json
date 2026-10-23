@@ -168,6 +168,7 @@
 	"templateParts": [
 		{ "name": "header", "title": "Header", "area": "header" },
 		{ "name": "footer", "title": "Footer", "area": "footer" },
+		{ "name": "footer-without-search", "title": "Footer without search", "area": "footer" },
 		{ "name": "navigation-overlay", "title": "Menu overlay", "area": "navigation-overlay" }
 	]
 }

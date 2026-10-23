@@ -4,8 +4,8 @@
  * Slug: tala-blog/search
  * Categories: text
  * Inserter: no
- * Description: The search form on search results and on the 404 page. The footer has its own, named
- * differently, so the two search landmarks on those pages can be told apart.
+ * Description: The search form at the top of search results and the 404 page. Those pages use the
+ * footer without search, so this is their only search form.
  *
  * @package TalaBlog
  */

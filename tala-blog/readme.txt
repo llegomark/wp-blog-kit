@@ -16,7 +16,7 @@ Tala Blog is a block theme for blogs that are mostly read on phones.
 * A header menu: the site's menu, or its pages until there is one. On phones it folds behind a menu button and opens full screen in the page's colours, light or dark.
 * Article pages: breadcrumbs, "Published" and "Updated" dates, featured image, "Filed under" categories and tags, an author box with biography, links to the previous and next articles, and comments with their dates.
 * Article lists (home page, archives, search results): title, summary, date and a thumbnail of the featured image, with numbered pages.
-* Accessible: one H1 per page, uniquely named landmarks (two search forms on a page get different names), a skip link, visible keyboard focus, text contrast of at least 6:1 and form fields of at least 3:1 in both colour schemes, and long words that wrap instead of widening the page when zoomed.
+* Accessible: one H1 per page, uniquely named landmarks, one search form per page, a skip link, visible keyboard focus, text contrast of at least 6:1 and form fields of at least 3:1 in both colour schemes, and long words that wrap instead of widening the page when zoomed.
 * Prints just the article, with its dates and author, in black on white.
 * Translation-ready: every text in the templates comes from translatable patterns (text domain tala-blog), and translated block settings are escaped as JSON, so no translation can break a block.
 
@@ -33,6 +33,9 @@ As many as Settings → Reading → "Blog pages show at most" says (10 by defaul
 In Appearance → Editor → Navigation. Until you make a menu, the header lists the site's pages (child pages left out), and WordPress saves that list as a menu called "Navigation" that you can edit. On phones the same menu opens from the menu button; its full-screen view is the "Menu overlay" template part in Appearance → Editor → Patterns.
 
 == Changelog ==
+
+= 1.4.1 =
+* Fixed: search results and 404 pages show one search form, at the top, instead of a second one in the footer that repeated the search words. They use the new "Footer without search" template part; the site title and tagline row is one pattern shared by both footers. Search or 404 templates customized in the Site Editor keep the old footer until their customizations are cleared.
 
 = 1.4.0 =
 * Changed: requires PHP 8.5 or newer, the version the servers run. The theme's PHP uses current language features (array_find(), arrow functions); nothing changes in how it looks or works.
