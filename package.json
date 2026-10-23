@@ -8,12 +8,13 @@
 		"npm": ">=11"
 	},
 	"scripts": {
-		"lint": "npm run lint:css && npm run lint:js && npm run lint:theme && npm run lint:php",
+		"lint": "npm run lint:css && npm run lint:js && npm run lint:theme && npm run lint:readme && npm run lint:php",
 		"lint:css": "stylelint \"**/*.css\"",
 		"lint:css:fix": "stylelint \"**/*.css\" --fix",
 		"lint:js": "eslint .",
 		"lint:js:fix": "eslint . --fix",
 		"lint:theme": "node bin/validate-theme.mjs",
+		"lint:readme": "node bin/validate-readme.mjs",
 		"lint:php": "composer run lint",
 		"prepare": "husky",
 		"test:e2e": "playwright test"

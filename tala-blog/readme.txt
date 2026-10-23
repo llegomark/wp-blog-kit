@@ -1,4 +1,5 @@
 === Tala Blog ===
+Contributors: edventuredev
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
@@ -37,6 +38,9 @@ In Appearance → Editor → Navigation. Until you make a menu, the header lists
 In Appearance → Editor → Patterns → Header, select the logo placeholder beside the site title and choose an image. It appears 28 px wide in the header and in the phone menu. A square or round image works best. The logo isn't a link and screen readers skip it, because the site title beside it already names the site and links to the home page.
 
 == Changelog ==
+
+= 1.5.1 =
+* Theme header and readme: Edventure is the author and copyright holder; the readme names the WordPress.org contributor.
 
 = 1.5.0 =
 * New: the site logo, when the site has one, beside the site title in the header and in the phone menu. Both use one pattern ("Logo and site title"), so the menu's top bar still lines up exactly with the header.
@@ -87,7 +91,7 @@ In Appearance → Editor → Patterns → Header, select the logo placeholder be
 
 == Copyright ==
 
-Tala Blog WordPress Theme, (C) 2026 Mark Anthony Llego.
+Tala Blog WordPress Theme, (C) 2026 Edventure.
 Tala Blog is distributed under the terms of the GNU GPL.
 
 This program is free software: you can redistribute it and/or modify
@@ -104,4 +108,4 @@ GNU General Public License for more details.
 
 The theme bundles no third-party fonts, images, scripts or icons.
 
-Screenshot (screenshot.png): the theme showing the kit's own demo content and a generated demo image, (C) 2026 Mark Anthony Llego, GPLv2 or later.
+Screenshot (screenshot.png): the theme showing the kit's own demo content and a generated demo image, (C) 2026 Edventure, GPLv2 or later.

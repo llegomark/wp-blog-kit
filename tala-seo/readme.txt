@@ -1,9 +1,10 @@
 === Tala SEO ===
+Contributors: edventuredev
 Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.10.0
+Stable tag: 1.10.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -79,7 +80,19 @@ Google's event results only cover events at a physical place that the public can
 
 From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title and thumbnail, but not the date. Open the SEO panel, find the video under "Videos" and enter the date shown under it on YouTube. Until then the video has no VideoObject markup, since Google requires the date.
 
+== Screenshots ==
+
+1. The SEO panel in the block editor: a preview of the Google result, and the SEO title and meta description with length meters measured in pixels, as Google cuts them.
+2. The publish check: a post without a meta description or a featured image can't be published, and the panel says what is missing.
+3. Settings → SEO, starting with the setup checklist.
+4. The SEO column in the list of posts: what each one has and what it still needs.
+5. The Event and Course blocks on a phone.
+
 == Changelog ==
+
+= 1.10.1 =
+* Changed: Edventure is the plugin's author.
+* Readme: contributors, screenshots and upgrade notices, as WordPress.org's readme validator suggests.
 
 = 1.10.0 =
 * New: the Course block, a card with a course's description, provider, level, format, time, instructor and cost, described as a Course for Google's course list. A post with several courses gets an ItemList of them, each at its card's anchor; a list of posts that are all courses (three or more) gets the ItemList of a summary page.
@@ -149,3 +162,23 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 
 = 1.0.0 =
 * First release.
+
+== Upgrade Notice ==
+
+= 1.10.1 =
+Readme and author details only. Nothing changes on your site.
+
+= 1.10.0 =
+New Course block for Google's course list. Give each course its own post and file them in a category of their own, three or more, so its page lists them.
+
+= 1.9.0 =
+New Event block, FAQ and How-to groups, and markup for YouTube videos. Enter each video's YouTube publish date in the SEO panel: videos without one get no video markup.
+
+= 1.8.0 =
+Requires PHP 8.5. Check your server's PHP version before updating.
+
+= 1.7.0 =
+Requires WordPress 7.0.
+
+= 1.6.0 =
+Run `wp media regenerate --only-missing` once, to make the new 1200 × 630 share crop of existing images.

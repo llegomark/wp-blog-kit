@@ -21,7 +21,7 @@ Everything must follow official WordPress practice, as checked by WordPress's ow
 
 ```bash
 composer fix && composer check    # WPCS, PHPStan level 8, Plugin Check (exits 1 on any finding)
-npm run lint                      # Stylelint, ESLint, theme.json/block.json schemas, patterns, block markup
+npm run lint                      # Stylelint, ESLint, theme.json/block.json schemas, patterns, block markup, plugin readme
 composer test                     # PHPUnit integration tests on WordPress's test framework
 npm run test:e2e                  # browser tests on the local site: pages, menu, layout, logo, axe, editor
 ```
@@ -33,6 +33,8 @@ ItemList, FAQPage, HowTo),
 the publish check, the editor's validation of the templates, and the plugin's blocks in the editor. Then, on the local site (http://127.0.0.1:8080):
 - `wp-content/debug.log` stays clean
 - for visible changes: Lighthouse on a mobile article page (Accessibility, Best Practices, SEO)
+- for visible changes to the SEO panel, the publish check, Settings → SEO, the SEO column or the
+  plugin's blocks: `node dev/screenshots.mjs` takes the readme's screenshots again
 
 ## Rules that come from decisions, not taste
 
@@ -51,7 +53,10 @@ the publish check, the editor's validation of the templates, and the plugin's bl
 - Keep `Update URI: false` in the theme and plugin headers. The plugin is private.
 - Use the text domains `tala-seo` and `tala-blog`, and the prefixes `tala_seo_` and `tala_blog_`.
 - When you change the plugin or theme version, bump `Version:`, `Stable tag:` (in readme.txt)
-  and the changelog, then run `./build.sh`.
+  and the changelog, then run `./build.sh`. Add an upgrade notice (under 300 characters) when
+  updating needs the site owner to do something or know something.
+- The plugin readme follows WordPress.org's readme standard, checked by `npm run lint:readme`.
+  Contributors are WordPress.org usernames (`edventuredev`); there is no donate link, by decision.
 
 ## Commits
 
