@@ -140,8 +140,8 @@ jobs:
           for tag in $TAGS; do
             # An existing tag keeps its commit (GitHub would ignore --target), so the release would
             # sit on another commit than the zip was built from: stop instead.
-            tagged=$(gh api "repos/$GH_REPO/git/ref/tags/$tag" --jq .object.sha 2>/dev/null || true)
-            if [ -n "$tagged" ] && [ "$tagged" != "$SHA" ]; then
+            # gh exits non-zero when there is no such tag (and prints GitHub's error, not a commit).
+            if tagged=$(gh api "repos/$GH_REPO/git/ref/tags/$tag" --jq .object.sha 2>/dev/null) && [ "$tagged" != "$SHA" ]; then
               echo "::error::The tag $tag already exists on $tagged, not $SHA; nothing is published."
               exit 1
             fi
