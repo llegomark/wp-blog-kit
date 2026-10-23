@@ -95,6 +95,12 @@ jobs:
         with:
           persist-credentials: false
 
+      # The action's wp-env otherwise runs PHP 8.3, where a plugin that requires PHP 8.5 can't be
+      # activated. wp-env reads this file next to the .wp-env.json the action writes.
+      - name: Run WordPress on PHP 8.5 (the version the servers run)
+        run: |
+          echo '{ "phpVersion": "8.5" }' > .wp-env.override.json
+
       - name: Plugin Check
         uses: WordPress/plugin-check-action@10857da14b6c2246d15402b3e69f777edcf8c12e # v1.1.9
         with:

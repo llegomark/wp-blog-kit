@@ -24,7 +24,7 @@ function tala_seo_settings() {
 	return array(
 		'publisher_type'   => 'person' === ( $saved['publisher_type'] ?? '' ) ? 'person' : 'organization',
 		'publisher_name'   => (string) ( $saved['publisher_name'] ?? '' ),
-		'same_as'          => array_values( array_map( 'strval', (array) ( $saved['same_as'] ?? array() ) ) ),
+		'same_as'          => array_values( array_map( strval( ... ), (array) ( $saved['same_as'] ?? array() ) ) ),
 		'home_description' => (string) ( $saved['home_description'] ?? '' ),
 		'default_image'    => (int) ( $saved['default_image'] ?? 0 ),
 		'tag_min_posts'    => min( 100, max( 0, (int) ( $saved['tag_min_posts'] ?? 2 ) ) ),
@@ -61,7 +61,7 @@ function tala_seo_is_thin_term( $term ) {
  * @return string[]
  */
 function tala_seo_thin_taxonomies() {
-	return array_map( 'strval', (array) apply_filters( 'tala_seo_thin_taxonomies', array( 'post_tag' ) ) );
+	return array_map( strval( ... ), (array) apply_filters( 'tala_seo_thin_taxonomies', array( 'post_tag' ) ) );
 }
 
 /**
@@ -124,14 +124,9 @@ function tala_seo_legacy_value( $post_id, $field ) {
 		$rank = get_post_meta( $post_id, 'rank_math_robots', true );
 		return ( is_array( $rank ) && in_array( 'noindex', $rank, true ) ) ? '1' : '';
 	}
-	foreach ( $keys[ $field ] ?? array() as $key ) {
-		$value = (string) get_post_meta( $post_id, $key, true );
-		// Template variables (%%title%%, %sitename%) can't be resolved here; skip them.
-		if ( '' !== $value && ! preg_match( '/%%?[a-z_]+%%?/i', $value ) ) {
-			return tala_seo_clean_text( $value );
-		}
-	}
-	return '';
+	return tala_seo_first_plain_value(
+		array_map( static fn( string $key ): mixed => get_post_meta( $post_id, $key, true ), $keys[ $field ] ?? array() )
+	);
 }
 
 /**
@@ -306,7 +301,7 @@ function tala_seo_author_profiles( $user_id ) {
 	foreach ( array_keys( tala_seo_social_fields() ) as $field ) {
 		$links[] = get_the_author_meta( $field, $user_id );
 	}
-	$links = array_filter( array_map( 'esc_url_raw', array_map( 'trim', $links ) ) );
+	$links = array_filter( array_map( esc_url_raw( ... ), array_map( trim( ... ), $links ) ) );
 	return array_values( array_unique( $links ) );
 }
 

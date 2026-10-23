@@ -110,16 +110,8 @@ function tala_seo_primary_category( $post_id ) {
 		return $chosen;
 	}
 	$categories = get_the_category( $post_id );
-	if ( ! $categories ) {
-		return null;
-	}
-	$default = (int) get_option( 'default_category' );
-	foreach ( $categories as $category ) {
-		if ( $category->term_id !== $default ) {
-			return $category;
-		}
-	}
-	return $categories[0];
+	$default    = (int) get_option( 'default_category' );
+	return array_find( $categories, static fn( $category ): bool => $category->term_id !== $default ) ?? array_first( $categories );
 }
 
 /**

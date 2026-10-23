@@ -82,7 +82,7 @@ function tala_seo_remember_move( $meta_type, $id, $old_url, $new_url ): void {
 	add_metadata( $meta_type, $id, TALA_SEO_OLD_PATH, $old );
 
 	// Oldest first (meta is read in the order it was added): drop what is over the limit.
-	$paths = array_map( 'strval', (array) get_metadata( $meta_type, $id, TALA_SEO_OLD_PATH, false ) );
+	$paths = array_map( strval( ... ), (array) get_metadata( $meta_type, $id, TALA_SEO_OLD_PATH, false ) );
 	foreach ( array_slice( $paths, 0, max( 0, count( $paths ) - TALA_SEO_OLD_PATHS_KEPT ) ) as $stale ) {
 		delete_metadata( $meta_type, $id, TALA_SEO_OLD_PATH, $stale );
 	}
@@ -240,19 +240,17 @@ function tala_seo_moved_target( $request, $candidates ) {
 		}
 	}
 
-	foreach ( $candidates as $candidate ) {
-		if ( ! isset( $moved[ $candidate ] ) || '' === $moved[ $candidate ]['url'] ) {
-			continue;
-		}
-		$rest   = ltrim( substr( $request, strlen( $candidate ) ), '/' );
-		$target = '' === $rest ? $moved[ $candidate ]['url'] : user_trailingslashit( trailingslashit( $moved[ $candidate ]['url'] ) . $rest );
-		// A child page below a moved parent must exist at its new address; otherwise it stays a 404.
-		if ( '' !== $rest && $moved[ $candidate ]['is_post'] && ! url_to_postid( $target ) ) {
-			return '';
-		}
-		return tala_seo_site_path( $target ) !== $request ? $target : '';
+	$candidate = array_find( $candidates, static fn( string $path ): bool => '' !== ( $moved[ $path ]['url'] ?? '' ) );
+	if ( null === $candidate ) {
+		return '';
 	}
-	return '';
+	$rest   = ltrim( substr( $request, strlen( $candidate ) ), '/' );
+	$target = '' === $rest ? $moved[ $candidate ]['url'] : user_trailingslashit( trailingslashit( $moved[ $candidate ]['url'] ) . $rest );
+	// A child page below a moved parent must exist at its new address; otherwise it stays a 404.
+	if ( '' !== $rest && $moved[ $candidate ]['is_post'] && ! url_to_postid( $target ) ) {
+		return '';
+	}
+	return tala_seo_site_path( $target ) !== $request ? $target : '';
 }
 
 add_action( 'template_redirect', 'tala_seo_redirect_post', 1 );

@@ -89,7 +89,7 @@ function tala_seo_rest_guard( $prepared, $request ) {
 	if ( is_wp_error( $prepared ) || str_contains( $request->get_route(), '/autosaves' ) ) {
 		return $prepared;
 	}
-	$id       = isset( $prepared->ID ) ? (int) $prepared->ID : 0;
+	$id       = (int) ( $prepared->ID ?? 0 );
 	$type     = $id ? get_post_type( $id ) : ( $prepared->post_type ?? '' );
 	$current  = $id ? get_post_status( $id ) : 'draft';
 	$target   = $prepared->post_status ?? $current;

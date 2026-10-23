@@ -198,16 +198,18 @@ add_filter( 'wp_sitemaps_posts_show_on_front_entry', 'tala_seo_sitemap_home_last
  * @return array<string, string>
  */
 function tala_seo_sitemap_home_lastmod( $entry ) {
-	$latest   = get_posts(
-		array(
-			'numberposts' => 1,
-			'orderby'     => 'modified',
-			'order'       => 'DESC',
-			'post_type'   => 'post',
-			'post_status' => 'publish',
+	$latest   = array_first(
+		get_posts(
+			array(
+				'numberposts' => 1,
+				'orderby'     => 'modified',
+				'order'       => 'DESC',
+				'post_type'   => 'post',
+				'post_status' => 'publish',
+			)
 		)
 	);
-	$modified = $latest ? get_post_modified_time( DATE_W3C, true, $latest[0] ) : false;
+	$modified = $latest ? get_post_modified_time( DATE_W3C, true, $latest ) : false;
 	if ( is_string( $modified ) ) {
 		$entry['lastmod'] = $modified;
 	}

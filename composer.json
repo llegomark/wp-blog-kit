@@ -3,6 +3,9 @@
 	"description": "Tala Blog block theme and Tala SEO plugin, with the WordPress development tools used to check them.",
 	"type": "project",
 	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=8.5"
+	},
 	"require-dev": {
 		"dealerdirect/phpcodesniffer-composer-installer": "^1.0",
 		"php-stubs/wordpress-stubs": "7.1.2 as 6.9.4",

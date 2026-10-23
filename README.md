@@ -9,7 +9,7 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 | `dev/` | Demo content and a WordPress Playground blueprint for local testing (not deployed). |
 | `build.sh` | Packages both as zips in `dist/`. |
 
-Both need WordPress 7.0 or newer and PHP 8.1 or newer. They follow the current WordPress release and carry no code for older versions.
+Both need WordPress 7.0 or newer and PHP 8.5 or newer. They follow the current WordPress and PHP releases and carry no code for older versions.
 
 ## What Tala SEO does
 

@@ -81,12 +81,7 @@ add_filter( 'should_load_remote_block_patterns', '__return_false' );
 
 // Inline all block CSS rather than only the first 20 KB (core's default budget), so a first visit
 // renders without waiting for any stylesheet request.
-add_filter(
-	'styles_inline_size_limit',
-	static function () {
-		return 60000;
-	}
-);
+add_filter( 'styles_inline_size_limit', static fn(): int => 60000 );
 
 add_action( 'wp_enqueue_scripts', 'tala_blog_styles', 20 );
 
@@ -125,13 +120,12 @@ add_action( 'wp_head', 'tala_blog_theme_color', 2 );
  * (the "base" palette colour and settings.custom.dark.base), the same values the CSS uses.
  */
 function tala_blog_theme_color(): void {
-	$light = '';
-	foreach ( (array) wp_get_global_settings( array( 'color', 'palette', 'theme' ) ) as $color ) {
-		if ( isset( $color['slug'], $color['color'] ) && 'base' === $color['slug'] ) {
-			$light = (string) $color['color'];
-		}
-	}
-	$dark = wp_get_global_settings( array( 'custom', 'dark', 'base' ) );
+	$base  = array_find(
+		(array) wp_get_global_settings( array( 'color', 'palette', 'theme' ) ),
+		static fn( $color ): bool => 'base' === ( $color['slug'] ?? '' )
+	);
+	$light = (string) ( $base['color'] ?? '' );
+	$dark  = wp_get_global_settings( array( 'custom', 'dark', 'base' ) );
 	foreach ( array(
 		'light' => $light,
 		'dark'  => is_string( $dark ) ? $dark : '',

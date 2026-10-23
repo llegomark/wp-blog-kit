@@ -173,13 +173,11 @@ function tala_seo_legacy_user_value( $user_id, $field ) {
  * @return string
  */
 function tala_seo_first_plain_value( $candidates ) {
-	foreach ( $candidates as $value ) {
-		$value = is_scalar( $value ) ? (string) $value : '';
-		if ( '' !== trim( $value ) && ! preg_match( '/%%?[a-z_]+%%?/i', $value ) ) {
-			return tala_seo_clean_text( $value );
-		}
-	}
-	return '';
+	$plain = array_find(
+		$candidates,
+		static fn( mixed $value ): bool => is_scalar( $value ) && '' !== trim( (string) $value ) && ! preg_match( '/%%?[a-z_]+%%?/i', (string) $value )
+	);
+	return null === $plain ? '' : tala_seo_clean_text( (string) $plain );
 }
 
 /**

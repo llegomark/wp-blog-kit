@@ -233,7 +233,7 @@ add_action( 'user_profile_update_errors', 'tala_seo_author_field_errors', 10, 3 
  * @param stdClass $user   User data.
  */
 function tala_seo_author_field_errors( $errors, $update, $user ): void {
-	$user_id = isset( $user->ID ) ? (int) $user->ID : 0;
+	$user_id = (int) ( $user->ID ?? 0 );
 	if ( ! $update || ! tala_seo_author_form_verified( $user_id ) ) {
 		return;
 	}

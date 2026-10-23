@@ -1,7 +1,7 @@
 === Tala Blog ===
 Requires at least: 7.0
 Tested up to: 7.1
-Requires PHP: 8.1
+Requires PHP: 8.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -33,6 +33,9 @@ As many as Settings → Reading → "Blog pages show at most" says (10 by defaul
 In Appearance → Editor → Navigation. Until you make a menu, the header lists the site's pages (child pages left out), and WordPress saves that list as a menu called "Navigation" that you can edit. On phones the same menu opens from the menu button; its full-screen view is the "Menu overlay" template part in Appearance → Editor → Patterns.
 
 == Changelog ==
+
+= 1.4.0 =
+* Changed: requires PHP 8.5 or newer, the version the servers run. The theme's PHP uses current language features (array_find(), arrow functions); nothing changes in how it looks or works.
 
 = 1.3.0 =
 * New: the header shows the site's menu (a Navigation block named "Primary"), or the site's pages until there is one, as a single list for screen readers. On phones it folds behind a menu button and opens full screen in the page's colours, light or dark, with the site title and a close button. That screen is the "Menu overlay" template part.

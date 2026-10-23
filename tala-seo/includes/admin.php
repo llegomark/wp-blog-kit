@@ -377,7 +377,7 @@ add_action( 'admin_post_tala_seo_pretty_permalinks', 'tala_seo_pretty_permalinks
  * "Post name" in Settings → Permalinks would. Links in the old form keep working: WordPress
  * forwards ?p=123 to the post's new address.
  */
-function tala_seo_pretty_permalinks(): void {
+function tala_seo_pretty_permalinks(): never {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( esc_html__( 'Sorry, you are not allowed to change the permalinks.', 'tala-seo' ), '', array( 'response' => 403 ) );
 	}
@@ -416,7 +416,7 @@ function tala_seo_permalinks_notice(): void {
 		return;
 	}
 	$counts = wp_count_posts( 'post' );
-	$posts  = isset( $counts->publish ) ? (int) $counts->publish : 0;
+	$posts  = (int) ( $counts->publish ?? 0 );
 	if ( $posts < 1 ) {
 		return;
 	}

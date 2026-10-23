@@ -15,7 +15,7 @@ class Tala_SEO_CLI {
 	/**
 	 * Readable names of the copied fields.
 	 */
-	private const FIELD_NAMES = array(
+	private const array FIELD_NAMES = array(
 		TALA_SEO_TITLE            => 'SEO title',
 		TALA_SEO_DESCRIPTION      => 'meta description',
 		TALA_SEO_CANONICAL        => 'canonical',
@@ -31,14 +31,14 @@ class Tala_SEO_CLI {
 	 *
 	 * @var bool
 	 */
-	private $dry = false;
+	private bool $dry = false;
 
 	/**
 	 * Values copied so far, by "type:meta_key".
 	 *
 	 * @var array<string, int>
 	 */
-	private $copied = array();
+	private array $copied = array();
 
 	/**
 	 * Lists published posts and pages that are missing what the publish check requires.
@@ -59,7 +59,7 @@ class Tala_SEO_CLI {
 	 * @param string[]              $args       Positional arguments.
 	 * @param array<string, string> $assoc_args Options.
 	 */
-	public function audit( $args, $assoc_args ): void {
+	public function audit( array $args, array $assoc_args ): void {
 		$rows = array();
 		foreach ( $this->post_ids( 'publish' ) as $id ) {
 			$problems = tala_seo_publish_problems(
@@ -99,7 +99,7 @@ class Tala_SEO_CLI {
 	 * @param string[]              $args       Positional arguments.
 	 * @param array<string, string> $assoc_args Options.
 	 */
-	public function import( $args, $assoc_args ): void {
+	public function import( array $args, array $assoc_args ): void {
 		$this->dry    = ! empty( $assoc_args['dry-run'] );
 		$this->copied = array();
 
@@ -171,7 +171,7 @@ class Tala_SEO_CLI {
 	 * @param string $key   Meta key.
 	 * @param string $value Value from the other plugin ('' = nothing to copy).
 	 */
-	private function copy( $type, $id, $key, $value ): void {
+	private function copy( string $type, int $id, string $key, string $value ): void {
 		// The raw value: get_metadata() would return a registered default (0) for unset fields.
 		if ( '' === $value || ! empty( get_metadata_raw( $type, $id, $key, true ) ) ) {
 			return;
@@ -192,7 +192,7 @@ class Tala_SEO_CLI {
 	 * @param int $post_id Post ID.
 	 * @return string
 	 */
-	private function legacy_redirect( $post_id ) {
+	private function legacy_redirect( int $post_id ): string {
 		// The SEO Framework keeps it under the plain "redirect" key, which other plugins may use too:
 		// only trusted when The SEO Framework ran on this site (it keeps its settings when deleted).
 		if ( false !== get_option( 'autodescription-site-settings' ) ) {
@@ -216,7 +216,7 @@ class Tala_SEO_CLI {
 	 * @param string $status Post status.
 	 * @return int[]
 	 */
-	private function post_ids( $status ) {
+	private function post_ids( string $status ): array {
 		return get_posts(
 			array(
 				'post_type'      => tala_seo_post_types(),
@@ -230,4 +230,4 @@ class Tala_SEO_CLI {
 	}
 }
 
-WP_CLI::add_command( 'tala-seo', 'Tala_SEO_CLI' );
+WP_CLI::add_command( 'tala-seo', Tala_SEO_CLI::class );
