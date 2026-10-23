@@ -3,7 +3,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.8.1
+Stable tag: 1.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,6 +22,9 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **Head tags:** `<title>` as "Title | Site name" (the name only once when a page is named like the site), meta description, self-referencing canonical on every indexable page (paginated archives included), noindex for search results, 404s, date archives, empty categories and tag pages with too few posts, Open Graph and Twitter card tags with a 1200 × 630 share image (the 1.91:1 shape of link previews on Facebook, LinkedIn, X and messaging apps), and a `fediverse:creator` tag that credits the author when an article is shared on Mastodon.
 * **Feeds and sitemaps** send `X-Robots-Tag: noindex, follow`, so they never show up in search results themselves (search engines still read them).
 * **Structured data (JSON-LD):** WebSite and Organization (with description) on the home page, BlogPosting on posts (image in 16:9, 4:3 and 1:1), ProfilePage on author pages, BreadcrumbList matching the visible Breadcrumbs block.
+* **Videos:** each YouTube video in an Embed block is described as a VideoObject (title, thumbnail, player address, the caption as its description). The title and thumbnail are fetched from YouTube once, when the post is saved. Google also needs the date the video was published, which YouTube doesn't share this way: enter it in the SEO panel, where each video gets a date field.
+* **Event block:** when, where, tickets and organizer, shown as a card and described as an Event the way Google's event results ask: start and end with the UTC offset (or the date alone for an all-day event), the venue's address, status (cancelled, postponed, rescheduled), price and ticket page, and the featured image. One per post, as Google supports pages about a single event.
+* **FAQ and How-to:** two Group blocks in the inserter, made of core blocks: an FAQ with a Details block (opens on click) for each question, and a how-to guide with a heading, an introduction and a numbered list of steps. They are described as FAQPage and HowTo. Google no longer shows these as rich results; the markup is valid schema.org that other search engines and AI assistants can read, and it only repeats what the page shows. Without the plugin they are ordinary blocks.
 * **Sitemap:** WordPress's own `/wp-sitemap.xml` with accurate `lastmod`, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, or hidden author pages. It exists only while search engines may index the site.
 * **robots.txt:** points to the sitemap; blocks nothing else, and AI crawlers are welcome.
 * **Redirects:** a page, category or tag whose address changes (new slug or parent) sends visitors and search engines from the old address to the new one (301). WordPress does this for posts only. Children move with their parent. A post can also send its visitors to another address on purpose (301), for example after two guides are merged.
@@ -55,11 +58,24 @@ Run `wp tala-seo import --dry-run` to see what would be copied, then `wp tala-se
 
 At least 1200 × 675 px. Tala SEO crops each one to 1200 × 630 for link previews (Facebook, LinkedIn, X, WhatsApp and the like show that 1.91:1 shape) and to 16:9, 4:3 and 1:1 for Google's article results. Keep the subject away from the edges so every crop shows it. The default share image in Settings → SEO is shown as it is, so make that one 1200 × 630.
 
-= Why no FAQ or HowTo markup? =
+= Does Google still show FAQ and HowTo results? =
 
-Google retired those rich results. The plugin only outputs structured data Google still uses.
+No. Google stopped showing HowTo results in 2023 and FAQ results in May 2026. The FAQ and How-to blocks still describe their content as FAQPage and HowTo: valid schema.org that other search engines and AI assistants can read. The questions and steps on the page matter most, for readers and for every search engine. Structured data for content that isn't on the page is against Google's guidelines, so the markup comes only from what the blocks show (and nothing from a password-protected post until its content is shown).
+
+= Why doesn't the Event block show online events? =
+
+Google's event results only cover events at a physical place that the public can book. An online-only event can still be described in the post; it just doesn't get Event markup without a street address or town.
+
+= Where does the video's publish date come from? =
+
+From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title and thumbnail, but not the date. Open the SEO panel, find the video under "Videos" and enter the date shown under it on YouTube. Until then the video has no VideoObject markup, since Google requires the date.
 
 == Changelog ==
+
+= 1.9.0 =
+* New: YouTube videos in Embed blocks are described as VideoObject. Title and thumbnail come from YouTube's oEmbed when the post is saved (never while a page is served); the publish date, which Google requires, is entered per video in the SEO panel, and the pre-publish checklist mentions videos without one.
+* New: the Event block, a card with when, where, tickets and organizer, described as an Event following Google's event guidelines (UTC offset or date-only for all-day events, a place with an address, one event per post).
+* New: FAQ and How-to in the block inserter, Group blocks of core blocks (Details, numbered list) described as FAQPage and HowTo for search engines and AI assistants. Google no longer shows these rich results; the markup only repeats what the page shows.
 
 = 1.8.1 =
 * Fixed: parent categories whose posts are all in subcategories are in the sitemap, as their pages may be indexed.

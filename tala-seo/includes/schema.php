@@ -6,7 +6,9 @@
  *   timezone, and the author as a Person with name and url.
  * - Author archives: ProfilePage whose mainEntity is the Person.
  * - Breadcrumbs: BreadcrumbList matching the visible breadcrumb trail (two items or more).
- * Not used on purpose: FAQPage, HowTo, SearchAction (Google retired those rich results).
+ * - Posts and pages: VideoObject, Event, FAQPage and HowTo for what the content shows
+ *   (content-schema.php, event.php).
+ * Not used on purpose: SearchAction (Google retired the sitelinks search box).
  *
  * @package TalaSEO
  */
@@ -58,6 +60,9 @@ function tala_seo_schema_nodes() {
 		$nodes[] = tala_seo_article_node( $queried );
 	} elseif ( is_author() ) {
 		$nodes[] = tala_seo_profile_page_node( get_queried_object_id() );
+	}
+	if ( is_singular( tala_seo_post_types() ) && $queried instanceof WP_Post ) {
+		array_push( $nodes, ...tala_seo_content_nodes( $queried ) );
 	}
 
 	$breadcrumbs = tala_seo_breadcrumb_node();

@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "wp-block-development": {
+      "source": "WordPress/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/wp-block-development/SKILL.md",
+      "computedHash": "4592e2b8922bb2330d620550b6434fb1992908ab04cb24de2f704166d5012aa9"
+    },
     "wp-block-themes": {
       "source": "WordPress/agent-skills",
       "sourceType": "github",

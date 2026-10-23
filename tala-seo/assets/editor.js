@@ -1,7 +1,7 @@
 /**
  * Tala SEO in the block editor: the "SEO" panel (search preview, title and meta description with
- * length meters, primary category, minor edit, noindex, canonical, redirect) and a checklist in the
- * pre-publish sidebar.
+ * length meters, primary category, minor edit, noindex, canonical, redirect, YouTube video dates)
+ * and a checklist in the pre-publish sidebar.
  * Publishing is enforced on the server; this only explains what is missing.
  *
  * @param {Object} wp  WordPress's script globals.
@@ -131,6 +131,33 @@
 		return count;
 	}
 
+	// A YouTube video's address, as content-schema.php reads it (tala_seo_youtube_id()).
+	const YOUTUBE = /^https?:\/\/(?:(?:www\.|m\.)?youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|shorts\/|live\/|embed\/)|youtu\.be\/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])/i;
+
+	/**
+	 * The YouTube videos in Embed blocks, each once, as "ID address" lines (a string, so the
+	 * editor's state stays comparable).
+	 *
+	 * @param {Object[]} blocks Blocks.
+	 * @param {Object}   seen   Video IDs found so far.
+	 * @return {string[]} Lines.
+	 */
+	function youtubeVideos( blocks, seen = {} ) {
+		const found = [];
+		blocks.forEach( function( block ) {
+			const url = block.name === 'core/embed' ? String( block.attributes.url || '' ).trim() : '';
+			const match = YOUTUBE.exec( url );
+			if ( match && ! seen[ match[ 1 ] ] ) {
+				seen[ match[ 1 ] ] = true;
+				found.push( match[ 1 ] + ' ' + url );
+			}
+			if ( block.innerBlocks && block.innerBlocks.length ) {
+				found.push( ...youtubeVideos( block.innerBlocks, seen ) );
+			}
+		} );
+		return found;
+	}
+
 	function useSeo() {
 		const state = useSelect( function( select ) {
 			const editor = select( 'core/editor' );
@@ -148,6 +175,7 @@
 				hasCategories: cfg.primaryTypes.indexOf( editor.getCurrentPostType() ) !== -1,
 				author: authorId ? core.getEntityRecord( 'root', 'user', authorId, { context: 'view' } ) : null,
 				imagesWithoutAlt: countImagesWithoutAlt( select( 'core/block-editor' ).getBlocks() ),
+				videos: youtubeVideos( select( 'core/block-editor' ).getBlocks() ).join( '\n' ),
 			};
 		}, [] );
 		const [ meta, setMeta ] = useEntityProp( 'postType', state.postType, 'meta' );
@@ -241,6 +269,20 @@
 			);
 		}
 		advice.push( { ok: s.imagesWithoutAlt === 0, label: altLabel } );
+		const videos = videoList( s );
+		if ( videos.length ) {
+			const undated = videos.filter( ( video ) => ! video.date ).length;
+			advice.push( {
+				ok: undated === 0,
+				label: undated
+					? sprintf(
+						/* translators: %d: number of videos. */
+						_n( '%d YouTube video has no publish date, so it gets no video markup', '%d YouTube videos have no publish date, so they get no video markup', undated, 'tala-seo' ),
+						undated,
+					)
+					: __( 'Every YouTube video has its publish date', 'tala-seo' ),
+			} );
+		}
 		if ( s.author ) {
 			const bio = String( s.author.description || '' ).trim();
 			advice.push( {
@@ -251,6 +293,74 @@
 			} );
 		}
 		return { required, advice };
+	}
+
+	/**
+	 * The post's YouTube videos with the publish dates entered for them.
+	 *
+	 * @param {Object} s The editor state from useSeo().
+	 * @return {{id: string, url: string, date: string}[]} Videos.
+	 */
+	function videoList( s ) {
+		const dates = s.meta[ KEYS.videoDates ] || {};
+		return s.videos
+			? s.videos.split( '\n' ).map( function( line ) {
+				const [ id, url ] = line.split( ' ' );
+				return { id, url, date: dates[ id ] || '' };
+			} )
+			: [];
+	}
+
+	/*
+	 * One date field per video. The title comes from the embed preview the editor already
+	 * fetched; the ID stands in until it has.
+	 */
+	function VideoDate( props ) {
+		const title = useSelect(
+			function( select ) {
+				const preview = select( 'core' ).getEmbedPreview( props.video.url );
+				return preview && preview.title ? String( preview.title ) : '';
+			},
+			[ props.video.url ],
+		);
+		return el( TextControl, {
+			__nextHasNoMarginBottom: true,
+			__next40pxDefaultSize: true,
+			type: 'date',
+			/* translators: %s: video title. */
+			label: sprintf( __( 'Published on YouTube: %s', 'tala-seo' ), title ? decodeEntities( title ) : props.video.id ),
+			value: props.video.date,
+			onChange: props.onChange,
+		} );
+	}
+
+	function VideoDates( props ) {
+		const s = props.seo;
+		const videos = videoList( s );
+		if ( ! videos.length ) {
+			return null;
+		}
+		return el(
+			Fragment,
+			null,
+			el( 'p', { className: 'tala-seo-checklist__title' }, __( 'Videos', 'tala-seo' ) ),
+			el(
+				'p',
+				{ className: 'tala-seo-videos__help' },
+				__( 'Google needs the date each video first appeared on YouTube (shown under it there). Videos without it get no video markup.', 'tala-seo' ),
+			),
+			videos.map( function( video ) {
+				return el( VideoDate, {
+					key: video.id,
+					video,
+					onChange( value ) {
+						const dates = Object.assign( {}, s.meta[ KEYS.videoDates ] || {} );
+						dates[ video.id ] = value;
+						s.set( KEYS.videoDates, dates );
+					},
+				} );
+			} ),
+		);
 	}
 
 	const CHECK_MARKS = { ok: '✓', missing: '✕', advice: '!' };
@@ -462,6 +572,7 @@
 					s.set( KEYS.redirect, value );
 				},
 			} ),
+			el( VideoDates, { seo: s } ),
 			el( Checks, { seo: s } ),
 		);
 	}

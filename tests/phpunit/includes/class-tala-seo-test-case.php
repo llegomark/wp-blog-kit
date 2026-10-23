@@ -28,6 +28,15 @@ abstract class Tala_SEO_Test_Case extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The plugin's post meta is registered, as on a real site. (The framework unregisters every meta
+	 * key after each test, so only the first test would otherwise see it.)
+	 */
+	public function set_up(): void {
+		parent::set_up();
+		tala_seo_register_meta();
+	}
+
+	/**
 	 * Deletes the shared image and its files.
 	 */
 	public static function wpTearDownAfterClass(): void {
@@ -139,6 +148,17 @@ abstract class Tala_SEO_Test_Case extends WP_UnitTestCase {
 			$nodes[ (string) $node['@type'] ] = $node;
 		}
 		return $nodes;
+	}
+
+	/**
+	 * Every structured data node of one @type on the current page (a post can have several videos
+	 * or how-to guides).
+	 *
+	 * @param string $type Type.
+	 * @return array<int, array<string, mixed>>
+	 */
+	protected function nodes( string $type ): array {
+		return array_values( array_filter( tala_seo_schema_nodes(), static fn( $node ) => $type === $node['@type'] ) );
 	}
 
 	/**

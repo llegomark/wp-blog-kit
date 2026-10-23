@@ -29,7 +29,10 @@ Both need WordPress 7.0 or newer and PHP 8.5 or newer. They follow the current W
   - posts: BlogPosting, with the image in 16:9, 4:3 and 1:1 crops and dates with timezone
   - author pages: ProfilePage
   - breadcrumbs: BreadcrumbList matching the visible trail
-  - FAQ, HowTo and SearchAction are deliberately left out; Google retired those rich results.
+  - videos: VideoObject for each YouTube video in an Embed block. The title and thumbnail come from YouTube when the post is saved; the date the video was published, which Google requires and YouTube's oEmbed doesn't give, is entered in the SEO panel.
+  - events: the **Event** block shows when, where, tickets and organizer as a card and describes the same as an Event (start with the UTC offset, or the date alone for all-day events; a place with an address; one event per post, as Google asks).
+  - FAQ and How-to: Group blocks from the inserter, built from core blocks (Details for each question, a numbered list for the steps), described as FAQPage and HowTo. Google no longer shows these as rich results (HowTo since 2023, FAQ since May 2026); the markup is still valid schema.org for other search engines and AI assistants, and it only repeats what the page shows.
+  - SearchAction is left out on purpose: Google retired the sitelinks search box.
 - **Sitemap:** WordPress's own `/wp-sitemap.xml`, with accurate `lastmod`, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, hidden author pages or post formats. Like WordPress, it exists only while search engines may index the site.
 - **robots.txt:** points to the sitemap and blocks nothing else. AI crawlers are welcome.
 - **Redirects:** when a page, category or tag gets a new address (slug or parent), the old address answers with a 301 to the new one, children and paginated archives included. WordPress does this for posts only. A post can also redirect on purpose (SEO panel → Redirect to).
@@ -40,7 +43,7 @@ Both need WordPress 7.0 or newer and PHP 8.5 or newer. They follow the current W
 - **WP-CLI:**
   - `wp tala-seo audit` lists published posts that are missing something.
   - `wp tala-seo import` copies titles, descriptions, canonicals, noindex, primary categories and redirects from Yoast SEO, Rank Math, The SEO Framework or SEOPress, for posts, categories, tags and authors.
-  - Post meta keys for agents: `_tala_seo_description`, `_tala_seo_title`, `_tala_seo_noindex`, `_tala_seo_canonical`, `_tala_seo_redirect`, `_tala_seo_primary_category`.
+  - Post meta keys for agents: `_tala_seo_description`, `_tala_seo_title`, `_tala_seo_noindex`, `_tala_seo_canonical`, `_tala_seo_redirect`, `_tala_seo_primary_category`, `_tala_seo_video_dates` (YouTube video ID => `YYYY-MM-DD`).
 
 ## Using it on a new site
 
@@ -83,8 +86,8 @@ dev/serve.sh                  # http://127.0.0.1:8080 (admin login: ~/Sites/blog
 | `npm run lint:js` | ESLint with WordPress's JavaScript coding standards (`@wordpress/eslint-plugin`, `eslint.config.mjs`), text domains included; `lint:js:fix` fixes what it can |
 | `npm run lint:theme` | `bin/validate-theme.mjs`: `theme.json` and `block.json` against WordPress's schemas for the "Requires at least" version, pattern headers, block markup in templates, parts and patterns, and no hard-coded text in templates and parts |
 | `npm run lint` | the three above, plus `composer lint` |
-| `composer test` | PHPUnit integration tests (`tests/phpunit/`) on WordPress's own test framework: Tala SEO's head tags, structured data, sitemap, redirects, publish check, admin forms, import and share images, and Tala Blog's block filters, patterns and template parts |
-| `npm run test:e2e` | browser tests (`tests/e2e/`, Playwright) on the local site: every kind of page, the phone menu frame by frame, layout shifts, the logo, axe in light and dark mode on phone and desktop, and the block editor's validation of the theme |
+| `composer test` | PHPUnit integration tests (`tests/phpunit/`) on WordPress's own test framework: Tala SEO's head tags, structured data (videos, events, FAQ and how-to included), sitemap, redirects, publish check, admin forms, import and share images, and Tala Blog's block filters, patterns and template parts |
+| `npm run test:e2e` | browser tests (`tests/e2e/`, Playwright) on the local site: every kind of page, the phone menu frame by frame, layout shifts, the logo, axe in light and dark mode on phone and desktop, the block editor's validation of the theme, and Tala SEO's FAQ, How-to and Event blocks and video dates in the editor and on the page |
 
 A pre-commit hook (husky and lint-staged, set up by `npm ci`) runs the linters on the staged files of each commit.
 

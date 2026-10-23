@@ -1,0 +1,52 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "tala-seo/event",
+	"version": "1.0.0",
+	"title": "Event",
+	"category": "widgets",
+	"icon": "calendar-alt",
+	"description": "When and where an event takes place, with tickets and organizer, shown as a card and described for Google's event results. One per post.",
+	"keywords": [ "event", "date", "venue", "tickets", "schedule" ],
+	"textdomain": "tala-seo",
+	"attributes": {
+		"name": { "type": "string", "default": "" },
+		"level": { "type": "integer", "default": 2 },
+		"startDate": { "type": "string", "default": "" },
+		"startTime": { "type": "string", "default": "" },
+		"endDate": { "type": "string", "default": "" },
+		"endTime": { "type": "string", "default": "" },
+		"status": {
+			"type": "string",
+			"enum": [ "EventScheduled", "EventCancelled", "EventPostponed", "EventRescheduled" ],
+			"default": "EventScheduled"
+		},
+		"previousStartDate": { "type": "string", "default": "" },
+		"place": { "type": "string", "default": "" },
+		"streetAddress": { "type": "string", "default": "" },
+		"addressLocality": { "type": "string", "default": "" },
+		"addressRegion": { "type": "string", "default": "" },
+		"postalCode": { "type": "string", "default": "" },
+		"addressCountry": { "type": "string", "default": "" },
+		"price": { "type": "string", "default": "" },
+		"priceCurrency": { "type": "string", "default": "" },
+		"availability": {
+			"type": "string",
+			"enum": [ "", "InStock", "SoldOut", "PreOrder" ],
+			"default": ""
+		},
+		"ticketUrl": { "type": "string", "default": "" },
+		"organizer": { "type": "string", "default": "" },
+		"organizerUrl": { "type": "string", "default": "" },
+		"description": { "type": "string", "default": "" }
+	},
+	"supports": {
+		"html": false,
+		"multiple": false,
+		"color": { "text": true, "link": true, "background": false },
+		"spacing": { "margin": true },
+		"typography": { "fontSize": true }
+	},
+	"editorScript": "file:./index.js",
+	"style": "file:./style.css"
+}

@@ -28,15 +28,18 @@ npm run test:e2e                  # browser tests on the local site: pages, menu
 
 A change in behaviour comes with a test in `tests/phpunit/` or `tests/e2e/` that fails without it
 (check that it does). The tests cover the pages, the JSON-LD (BlogPosting, BreadcrumbList,
-ProfilePage, WebSite and Organization on the home page only), the publish check and the editor's
-validation of the templates. Then, on the local site (http://127.0.0.1:8080):
+ProfilePage, WebSite and Organization on the home page only, VideoObject, Event, FAQPage, HowTo),
+the publish check, the editor's validation of the templates, and the plugin's blocks in the editor. Then, on the local site (http://127.0.0.1:8080):
 - `wp-content/debug.log` stays clean
 - for visible changes: Lighthouse on a mobile article page (Accessibility, Best Practices, SEO)
 
 ## Rules that come from decisions, not taste
 
-- SEO output follows Google Search Central. Never add FAQPage, HowTo or SearchAction markup
-  (Google retired them), and never use a placeholder author image.
+- SEO output follows Google Search Central, and never uses a placeholder author image. Never add
+  SearchAction markup (Google retired the sitelinks search box). FAQPage and HowTo are the one
+  exception to "only what Google shows": Google retired those rich results, but the markup stays
+  for other search engines and AI assistants, built only from content the page shows (the FAQ and
+  How-to groups). Don't add other retired types, such as Course info, without asking.
 - Don't block AI crawlers (robots.txt or anything else).
 - No build step, no web fonts, no jQuery. Keep the theme's CSS inlined (`assets/theme.css`). Node and npm
   are for the linters only; nothing they install ships in the theme or plugin.

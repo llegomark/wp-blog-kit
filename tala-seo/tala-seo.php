@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name:       Tala SEO
- * Description:       Lean SEO for blogs: titles, meta descriptions, canonicals, Open Graph, JSON-LD structured data, visible breadcrumbs, sitemap and robots.txt tuning, and a publish check that blocks posts without a meta description or featured image.
- * Version:           1.8.1
+ * Description:       Lean SEO for blogs: titles, meta descriptions, canonicals, Open Graph, JSON-LD structured data (articles, YouTube videos, events, FAQ and how-to), visible breadcrumbs, sitemap and robots.txt tuning, and a publish check that blocks posts without a meta description or featured image.
+ * Version:           1.9.0
  * Requires at least: 7.0
  * Requires PHP:      8.5
  * Author:            Mark Anthony Llego
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const TALA_SEO_VERSION = '1.8.1';
+const TALA_SEO_VERSION = '1.9.0';
 const TALA_SEO_FILE    = __FILE__;
 
 // Post meta keys. The leading underscore hides them from the Custom Fields box.
@@ -36,10 +36,17 @@ const TALA_SEO_SHARE_CROP_TRIED = '_tala_seo_share_crop_tried';
 // Post and term meta: addresses a page or term archive had before it moved (see redirects.php).
 const TALA_SEO_OLD_PATH = '_tala_seo_old_path';
 
+// Post meta for embedded YouTube videos (see content-schema.php): the date each was published on
+// YouTube, as the author enters it, and the title and thumbnail fetched from YouTube on save.
+const TALA_SEO_VIDEO_DATES = '_tala_seo_video_dates';
+const TALA_SEO_VIDEOS      = '_tala_seo_videos';
+
 require __DIR__ . '/includes/helpers.php';
 require __DIR__ . '/includes/terms.php';
 require __DIR__ . '/includes/head.php';
 require __DIR__ . '/includes/schema.php';
+require __DIR__ . '/includes/content-schema.php';
+require __DIR__ . '/includes/event.php';
 require __DIR__ . '/includes/breadcrumbs.php';
 require __DIR__ . '/includes/sitemap.php';
 require __DIR__ . '/includes/publish-guard.php';
@@ -150,6 +157,30 @@ function tala_seo_register_meta(): void {
 				'default'           => '',
 				'show_in_rest'      => true,
 				'sanitize_callback' => 'tala_seo_sanitize_redirect',
+				'auth_callback'     => $can_edit,
+			)
+		);
+		register_post_meta(
+			$type,
+			TALA_SEO_VIDEO_DATES,
+			array(
+				'type'              => 'object',
+				'single'            => true,
+				'default'           => array(),
+				'show_in_rest'      => array(
+					'schema' => array(
+						'type'                 => 'object',
+						// Video ID => date ('2026-03-14'), or '' while the author hasn't entered it.
+						'patternProperties'    => array(
+							TALA_SEO_YOUTUBE_ID_PATTERN => array(
+								'type'    => 'string',
+								'pattern' => '^(\\d{4}-\\d{2}-\\d{2})?$',
+							),
+						),
+						'additionalProperties' => false,
+					),
+				),
+				'sanitize_callback' => 'tala_seo_sanitize_video_dates',
 				'auth_callback'     => $can_edit,
 			)
 		);

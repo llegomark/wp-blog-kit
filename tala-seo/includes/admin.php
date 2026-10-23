@@ -41,6 +41,7 @@ function tala_seo_editor_assets(): void {
 			'minorEdit'   => TALA_SEO_MINOR_EDIT,
 			'redirect'    => TALA_SEO_REDIRECT,
 			'primary'     => TALA_SEO_PRIMARY_CATEGORY,
+			'videoDates'  => TALA_SEO_VIDEO_DATES,
 		),
 		'primaryTypes'    => $category_types,
 		'requirements'    => $requirements,
