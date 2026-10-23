@@ -2,6 +2,7 @@
 
 :root {
 	color-scheme: light dark;
+	scrollbar-gutter: stable; /* room for the scrollbar on short pages too, so pages don't jump sideways */
 }
 
 /* Dark mode follows the reader's system setting; its colours live in theme.json (settings.custom.dark). */
@@ -72,6 +73,18 @@ a {
 header.wp-block-template-part,
 footer.wp-block-template-part {
 	margin-block-start: 0;
+}
+
+/* Short pages: the footer sits at the bottom of the window, not halfway up it. svh is the window
+   height with a phone's address bar showing, so it stays the same while the reader scrolls. */
+.wp-site-blocks {
+	display: flex;
+	flex-direction: column;
+	min-height: calc(100svh - var(--wp-admin--admin-bar--height, 0px));
+}
+
+.wp-site-blocks > main {
+	flex-grow: 1;
 }
 
 .tala-header {
@@ -293,6 +306,11 @@ footer.wp-block-template-part {
 
 .tala-comments {
 	margin-block-start: var(--wp--preset--spacing--50);
+}
+
+/* The comment form ends at its button; the paragraph margin under it would add to the footer's space. */
+.wp-block-post-comments-form .form-submit {
+	margin-block-end: 0;
 }
 
 .tala-comment {

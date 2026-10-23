@@ -34,6 +34,10 @@ In Appearance → Editor → Navigation. Until you make a menu, the header lists
 
 == Changelog ==
 
+= 1.4.2 =
+* Fixed: pages no longer jump sideways when going from a long page to a short one (a 404, a search with few results, a short page). Short pages keep the same room for the scrollbar as long ones.
+* Fixed: on short pages the footer sits at the bottom of the window instead of halfway up it.
+
 = 1.4.1 =
 * Fixed: search results and 404 pages show one search form, at the top, instead of a second one in the footer that repeated the search words. They use the new "Footer without search" template part; the site title and tagline row is one pattern shared by both footers. Search or 404 templates customized in the Site Editor keep the old footer until their customizations are cleared.
 
