@@ -119,15 +119,36 @@ function header( source, name ) {
 
 /**
  * Replaces PHP with a placeholder of the same number of lines, so the markup around it can be
- * parsed and line numbers stay right. The placeholder holds letters, like the text PHP prints.
+ * parsed and line numbers stay right. The placeholder holds letters, like the text PHP prints; where
+ * PHP prints a whole JSON value in block attributes (tala_blog_block_text()), it is a JSON string.
  *
  * @param {string} source PHP file contents.
  * @return {string} The markup.
  */
 function withoutPhp( source ) {
-	return source.replace( /<\?php[\s\S]*?(?:\?>|$)/g, ( php ) =>
-		'php' + '\n'.repeat( php.split( '\n' ).length - 1 ),
-	);
+	return source.replace( /<\?php[\s\S]*?(?:\?>|$)/g, ( php, offset ) => {
+		const placeholder = /:\s*$/.test( source.slice( 0, offset ) ) ? '"php"' : 'php';
+		return placeholder + '\n'.repeat( php.split( '\n' ).length - 1 );
+	} );
+}
+
+/**
+ * Reports translated text printed inside a JSON string of block attributes ("label":"<?php ...").
+ * esc_attr() and its kin make text HTML-safe, but the block parser reads JSON: a translation with a
+ * backslash or a line break would break the block. tala_blog_block_text() prints a JSON string.
+ *
+ * @param {string} file   Path relative to the repository.
+ * @param {string} source PHP file contents.
+ */
+function validateAttributeText( file, source ) {
+	for ( const match of source.matchAll( /":\s*"<\?php/g ) ) {
+		report(
+			file,
+			lineAt( source, match.index ),
+			'pattern-attribute-text',
+			'Translated text inside block attributes should come from tala_blog_block_text(), which prints it as JSON.',
+		);
+	}
 }
 
 /**
@@ -393,7 +414,9 @@ for ( const file of [ ...list( `${ THEME }/templates`, '.html' ), ...list( `${ T
 	validateNoText( file, markup );
 }
 for ( const file of list( `${ THEME }/patterns`, '.php' ) ) {
-	validateBlocks( file, withoutPhp( read( file ) ), patternSlugs, partSlugs );
+	const source = read( file );
+	validateAttributeText( file, source );
+	validateBlocks( file, withoutPhp( source ), patternSlugs, partSlugs );
 }
 
 for ( const { file, line, rule, message } of problems ) {

@@ -18,6 +18,37 @@ function tala_blog_setup(): void {
 	add_editor_style( 'assets/theme.css' );
 }
 
+/**
+ * A translated string for a block attribute in a pattern: a JSON string, quotes included. Core's
+ * serialize_block_attributes() escapes it as the block editor does, so a translation with a quote,
+ * backslash, line break or "--" can't break the block markup (esc_attr() only makes text HTML-safe,
+ * and the block parser reads JSON).
+ *
+ * @param string $text Translated text.
+ * @return string The text as a JSON string, for example "Search".
+ */
+function tala_blog_block_text( $text ) {
+	return substr( serialize_block_attributes( array( 't' => (string) $text ) ), 5, -1 );
+}
+
+add_filter( 'block_type_metadata', 'tala_blog_search_aria_label' );
+
+/**
+ * Lets the Search block take a name. Each Search block is a search landmark, and the search results
+ * and 404 pages have two (the page's and the footer's): landmarks of the same kind need different
+ * names, which the patterns set. The block has no "ariaLabel" support of its own.
+ *
+ * @param array<string, mixed> $metadata Block type metadata.
+ * @return array<string, mixed>
+ */
+function tala_blog_search_aria_label( $metadata ) {
+	if ( isset( $metadata['name'] ) && 'core/search' === $metadata['name'] ) {
+		$metadata['supports']              = (array) ( $metadata['supports'] ?? array() );
+		$metadata['supports']['ariaLabel'] = true;
+	}
+	return $metadata;
+}
+
 // Don't fetch pattern directory patterns into the editor.
 add_filter( 'should_load_remote_block_patterns', '__return_false' );
 

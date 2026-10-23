@@ -10,7 +10,7 @@
  */
 
 ?>
-<!-- wp:query {"queryId":1,"query":{"inherit":true},"className":"tala-list"} -->
+<!-- wp:query {"query":{"inherit":true},"className":"tala-list"} -->
 <div class="wp-block-query tala-list"><!-- wp:post-template -->
 <!-- wp:group {"className":"tala-list-item","layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"top"}} -->
 <div class="wp-block-group tala-list-item"><!-- wp:group {"className":"tala-list-text","layout":{"type":"default"}} -->
@@ -26,11 +26,11 @@
 <!-- /wp:post-template -->
 
 <!-- wp:query-pagination {"layout":{"type":"flex","justifyContent":"space-between"}} -->
-<!-- wp:query-pagination-previous {"label":"<?php echo esc_attr__( 'Newer articles', 'tala-blog' ); ?>"} /-->
+<!-- wp:query-pagination-previous {"label":<?php echo tala_blog_block_text( __( 'Newer articles', 'tala-blog' ) ); ?>} /-->
 
 <!-- wp:query-pagination-numbers /-->
 
-<!-- wp:query-pagination-next {"label":"<?php echo esc_attr__( 'Older articles', 'tala-blog' ); ?>"} /-->
+<!-- wp:query-pagination-next {"label":<?php echo tala_blog_block_text( __( 'Older articles', 'tala-blog' ) ); ?>} /-->
 <!-- /wp:query-pagination -->
 
 <!-- wp:query-no-results -->

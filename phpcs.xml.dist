@@ -34,6 +34,16 @@
 		</properties>
 	</rule>
 
+	<!-- tala_blog_block_text() escapes text for block markup (JSON, via core's
+	     serialize_block_attributes()); the patterns echo its output into block comments. -->
+	<rule ref="WordPress.Security.EscapeOutput">
+		<properties>
+			<property name="customEscapingFunctions" type="array">
+				<element value="tala_blog_block_text"/>
+			</property>
+		</properties>
+	</rule>
+
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
 			<property name="prefixes" type="array">

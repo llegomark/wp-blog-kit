@@ -5,19 +5,19 @@ Requires PHP: 8.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-A minimal, fast blog theme for long reads on phones, with a pad-paper look and an automatic dark mode.
+A minimal, fast blog theme for long reads on phones: near-black text on a near-white page, and an automatic dark mode.
 
 == Description ==
 
 Tala Blog is a block theme for blogs that are mostly read on phones.
 
-* Pad-paper look in light mode (white sheet, ruled lines, red margin line) and a chalkboard look in dark mode, chosen automatically from the reader's device setting.
+* A quiet reading page: near-black text on a near-white page, a 640 px column, fine dotted link underlines and hairline dividers. Dark mode is the same look inverted, chosen automatically from the reader's device setting.
 * System fonts only: nothing to download, and the theme's CSS is inlined, so a page needs no stylesheet requests.
 * Article pages: breadcrumbs, "Published" and "Updated" dates, featured image, "Filed under" categories and tags, an author box with biography, links to the previous and next articles, and comments with their dates.
 * Article lists (home page, archives, search results): title, summary, date and a thumbnail of the featured image, with numbered pages.
-* Accessible: one H1 per page, labelled landmarks, a skip link, visible keyboard focus, and text contrast of at least 6:1 in both colour schemes.
+* Accessible: one H1 per page, uniquely named landmarks (two search forms on a page get different names), a skip link, visible keyboard focus, text contrast of at least 6:1 and form fields of at least 3:1 in both colour schemes, and long words that wrap instead of widening the page when zoomed.
 * Prints just the article, with its dates and author, in black on white.
-* Translation-ready: every text in the templates comes from translatable patterns (text domain tala-blog).
+* Translation-ready: every text in the templates comes from translatable patterns (text domain tala-blog), and translated block settings are escaped as JSON, so no translation can break a block.
 
 Pairs with the Tala SEO plugin, which provides the breadcrumbs block and the structured data. Without the plugin, the breadcrumbs are simply left out.
 
@@ -32,6 +32,13 @@ As many as Settings → Reading → "Blog pages show at most" says (10 by defaul
 The header lists the site's pages. For a hand-made menu, replace the page list with a Navigation block in Appearance → Editor → Patterns → Header.
 
 == Changelog ==
+
+= 1.2.0 =
+* Changed: a minimalist look. Light mode is near-black text (#3f3f3f) on a near-white page (#fcfcfc), with black for emphasis; dark mode is the same, inverted (#e3e3e3 on #121212). The pad-paper margin line and the chalkboard colours are gone, and the palette colours are named by their role.
+* Changed: a 640 px reading column, line height 1.6, semibold headings on a calmer scale, fine dotted link underlines in the text colour, quotes and code in soft boxes, and table header rows and stripes that suit both colour schemes.
+* New: the two search forms on search results and 404 pages are named differently ("Articles", "Site"), and the header menu is named "Primary".
+* New: form fields keep at least 3:1 contrast; long words and web addresses wrap instead of widening the page; fewer lonely last words in headings and paragraphs; links to a section leave room above it; a short crossfade between pages, unless the reader prefers less motion.
+* Fixed: translated text in block settings is escaped as JSON, so a translation with a quote or backslash can't break a block.
 
 = 1.1.2 =
 * Changed: the stylesheet follows WordPress's CSS coding standards, now checked by Stylelint. Nothing changes in how the theme looks.

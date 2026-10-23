@@ -1,10 +1,10 @@
-/* Tala Blog. Light: pad paper (white, ballpen blue, ruled lines, red margin). Dark: chalkboard. */
+/* Tala Blog: a quiet reading page. Light: near-white page, near-black text. Dark: the same, inverted. */
 
 :root {
 	color-scheme: light dark;
 }
 
-/* Dark mode: the chalkboard palette lives in theme.json (settings.custom.dark). */
+/* Dark mode follows the reader's system setting; its colours live in theme.json (settings.custom.dark). */
 @media (prefers-color-scheme: dark) {
 
 	:root {
@@ -13,13 +13,33 @@
 		--wp--preset--color--muted: var(--wp--custom--dark--muted);
 		--wp--preset--color--accent: var(--wp--custom--dark--accent);
 		--wp--preset--color--rule: var(--wp--custom--dark--rule);
-		--wp--preset--color--margin: var(--wp--custom--dark--margin);
+		--wp--preset--color--wash: var(--wp--custom--dark--wash);
 	}
 }
 
+/* Page to page: a short crossfade where the browser supports it, unless the reader asks for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+
+	@view-transition {
+		navigation: auto;
+	}
+}
+
+/* Long words and web addresses wrap instead of widening the page when it's zoomed (WCAG reflow). */
+body {
+	overflow-wrap: break-word;
+}
+
+/* Fewer lonely last words, where the browser supports it. */
+:where(h1, h2, h3, h4, h5, h6, p, blockquote, figcaption, caption) {
+	text-wrap: pretty;
+}
+
+/* Links: a fine dotted underline in the text colour; full black (white in dark mode) on hover. */
 a {
+	text-decoration-style: dotted;
 	text-decoration-thickness: 1px;
-	text-underline-offset: 0.18em;
+	text-underline-offset: 0.15em;
 }
 
 :where(a, button, input, select, textarea, summary):focus-visible {
@@ -27,7 +47,32 @@ a {
 	outline-offset: 2px;
 }
 
-/* Header and footer */
+/* A jump to #comments or a heading leaves a little room above the target. */
+:target {
+	scroll-margin-block-start: var(--wp--preset--spacing--40);
+}
+
+/* Form fields: borders and placeholders keep at least 3:1 against the page (WCAG 1.4.11). */
+.wp-block-search__input,
+.wp-block-post-comments-form input:not([type="submit"]):not([type="checkbox"]),
+.wp-block-post-comments-form textarea {
+	border: 1px solid var(--wp--preset--color--muted);
+	border-radius: 5px;
+	background-color: var(--wp--preset--color--base);
+	color: var(--wp--preset--color--contrast);
+}
+
+.wp-block-search__input::placeholder {
+	color: var(--wp--preset--color--muted);
+	opacity: 1;
+}
+
+/* Header and footer: their own padding sets the space around them, not the page's block gap. */
+
+header.wp-block-template-part,
+footer.wp-block-template-part {
+	margin-block-start: 0;
+}
 
 .tala-header {
 	padding-block: var(--wp--preset--spacing--30);
@@ -57,6 +102,7 @@ a {
 
 .tala-nav a:hover,
 .tala-header .wp-block-navigation a:hover {
+	color: var(--wp--preset--color--accent);
 	text-decoration: underline;
 }
 
@@ -76,27 +122,7 @@ a {
 	padding-block: var(--wp--preset--spacing--20) 0;
 }
 
-/* The article sheet: a red margin line down the left, like Filipino pad paper. */
-
-.tala-paper {
-	position: relative;
-}
-
-.tala-paper::before {
-	content: "";
-	position: absolute;
-	inset-block: 0;
-	inset-inline-start: -0.875rem;
-	width: 2px;
-	background: var(--wp--preset--color--margin);
-}
-
-@media (min-width: 48em) {
-
-	.tala-paper::before {
-		inset-inline-start: -1.75rem;
-	}
-}
+/* The article */
 
 .tala-paper > .wp-block-post-title {
 	margin-block-start: var(--wp--preset--spacing--20);
@@ -140,13 +166,32 @@ a {
 	margin-block-start: 0.35em;
 }
 
+/* Inline code wraps anywhere; preformatted text keeps its lines and scrolls sideways instead. */
+.wp-block-post-content :where(code) {
+	overflow-wrap: anywhere;
+}
+
+:where(pre) {
+	overflow-x: auto;
+}
+
+/* Tables: hairlines in the line colour and a washed header row, in both colour schemes. */
 .wp-block-post-content :where(table) td,
 .wp-block-post-content :where(table) th {
 	border-color: var(--wp--preset--color--rule);
 }
 
-.wp-block-post-content :where(pre, code) {
-	overflow-wrap: anywhere;
+.wp-block-table thead {
+	border-bottom: 1px solid var(--wp--preset--color--rule);
+	background-color: var(--wp--preset--color--wash);
+}
+
+.wp-block-table.is-style-stripes tbody tr:nth-child(odd) {
+	background-color: var(--wp--preset--color--wash);
+}
+
+.wp-block-table.is-style-stripes {
+	border-bottom-color: var(--wp--preset--color--rule);
 }
 
 /* Author box under the article */
@@ -175,7 +220,7 @@ a {
 
 .tala-author .wp-block-post-author__name {
 	margin: 0;
-	font-weight: 700;
+	font-weight: 600;
 }
 
 .tala-author .wp-block-post-author__bio {
@@ -229,7 +274,7 @@ a {
 }
 
 .tala-comment-meta .wp-block-comment-author-name {
-	font-weight: 700;
+	font-weight: 600;
 }
 
 .tala-comment-meta .wp-block-comment-date,
@@ -237,7 +282,7 @@ a {
 	color: var(--wp--preset--color--muted);
 }
 
-/* Post lists: one entry per ruled line */
+/* Post lists: one entry per line, divided by hairlines */
 
 .tala-intro {
 	padding-block-end: var(--wp--preset--spacing--20);
@@ -284,7 +329,7 @@ a {
 }
 
 .tala-list-thumb img {
-	border-radius: 3px;
+	border-radius: 5px;
 }
 
 @media (min-width: 40em) {
@@ -307,6 +352,7 @@ a {
 }
 
 .tala-list .wp-block-post:hover .wp-block-post-title a {
+	color: var(--wp--preset--color--accent);
 	text-decoration: underline;
 }
 
@@ -329,6 +375,7 @@ a {
 		--wp--preset--color--muted: #333;
 		--wp--preset--color--accent: #000;
 		--wp--preset--color--rule: #999;
+		--wp--preset--color--wash: #f2f2f2;
 	}
 
 	body {
@@ -348,10 +395,6 @@ a {
 
 	.tala-main {
 		padding: 0;
-	}
-
-	.tala-paper::before {
-		display: none;
 	}
 
 	.tala-paper .wp-block-post-featured-image {
