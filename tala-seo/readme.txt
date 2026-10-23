@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.11.0
+Stable tag: 1.11.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,7 +38,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 
 == Installation ==
 
-1. Upload the plugin zip in Plugins → Add New → Upload Plugin, or run `wp plugin install tala-seo.zip --activate`.
+1. Download the zip of the latest version from https://github.com/llegomark/wp-blog-kit/releases (under Assets), then upload it in Plugins → Add New Plugin → Upload Plugin, or run `wp plugin install tala-seo-<version>.zip --activate`.
 2. Open Settings → SEO and work through the setup checklist.
 3. On a site that already has images, run `wp media regenerate --only-missing` once to create the image crops (again after updating to 1.6.0, for the share crop). Without it, Tala SEO makes an older image's share crop in the background the first time a page with that image is served.
 
@@ -93,6 +93,9 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.11.1 =
+* Readme: installing from the GitHub releases.
 
 = 1.11.0 =
 * Changed: breadcrumb structured data (BreadcrumbList) is output only on pages that show the Breadcrumbs block, so with a theme that doesn't show breadcrumbs there is no markup for a trail readers can't see. With a block theme it is in the page's structured data as before; a trail shown later in the page (a classic theme's content or widgets) gets its own script at the end of the page.

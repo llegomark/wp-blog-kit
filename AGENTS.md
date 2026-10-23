@@ -59,7 +59,9 @@ the publish check, the editor's validation of the templates, and the plugin's bl
 - Keep `Update URI: false` in the theme and plugin headers. The plugin is private.
 - Use the text domains `tala-seo` and `tala-blog`, and the prefixes `tala_seo_` and `tala_blog_`.
 - When you change the plugin or theme version, bump `Version:`, `Stable tag:` (in readme.txt)
-  and the changelog, then run `./build.sh`. Add an upgrade notice (under 300 characters) when
+  and the changelog, then run `./build.sh`. Once the push passes the checks, `release.yml` publishes
+  the new version as a GitHub release (the zip, its SHA-256, a build attestation, the changelog entry
+  as notes). Never move or reuse a release tag: a released version is fixed; release a new one. Add an upgrade notice (under 300 characters) when
   updating needs the site owner to do something or know something.
 - The plugin readme follows WordPress.org's readme standard, checked by `npm run lint:readme`.
   Contributors are WordPress.org usernames (`edventuredev`); there is no donate link, by decision.

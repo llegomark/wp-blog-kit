@@ -47,6 +47,12 @@ Each works on its own: the theme without the plugin, and the plugin with any the
   - `wp tala-seo import` copies titles, descriptions, canonicals, noindex, primary categories and redirects from Yoast SEO, Rank Math, The SEO Framework or SEOPress, for posts, categories, tags and authors.
   - Post meta keys for agents: `_tala_seo_description`, `_tala_seo_title`, `_tala_seo_noindex`, `_tala_seo_canonical`, `_tala_seo_redirect`, `_tala_seo_primary_category`, `_tala_seo_video_dates` (YouTube video ID => `YYYY-MM-DD`).
 
+## Download
+
+Each version of the theme and the plugin is published as a [GitHub release](https://github.com/llegomark/wp-blog-kit/releases): `tala-blog-1.6.0`, `tala-seo-1.11.0` and so on. Download the zip under **Assets** (not "Source code", which is the whole repository) and upload it in WordPress: Appearance → Themes → Add New Theme → Upload Theme, or Plugins → Add New Plugin → Upload Plugin. Each zip comes with its SHA-256 and a build attestation (`gh attestation verify <zip> --repo llegomark/wp-blog-kit`).
+
+Releases are made by `.github/workflows/release.yml`: when a push to `main` raises a `Version:` and the checks pass on that commit, it builds the zip with `build.sh` and publishes it, with the changelog entry from the readme as the notes (`bin/release-notes.mjs`). A version is released once; pushes that don't change a version publish nothing.
+
 ## Using it on a new site
 
 ```bash

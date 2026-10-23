@@ -26,6 +26,12 @@ Tala Blog is a block theme for blogs that are mostly read on phones.
 
 Pairs with the Tala SEO plugin, which provides the breadcrumbs block and the structured data. Without the plugin, the breadcrumbs are simply left out, and the theme works on its own.
 
+== Installation ==
+
+1. Download the zip of the latest version from https://github.com/llegomark/wp-blog-kit/releases (under Assets).
+2. In Appearance → Themes → Add New Theme → Upload Theme, choose the zip, install it and activate it.
+3. Optional: the Tala SEO plugin, from the same page, adds breadcrumbs and structured data.
+
 == Frequently Asked Questions ==
 
 = How many articles does a page show? =
@@ -41,6 +47,9 @@ In Appearance → Editor → Navigation. Until you make a menu, the header lists
 In Appearance → Editor → Patterns → Header, select the logo placeholder beside the site title and choose an image. It appears 28 px wide in the header and in the phone menu. A square or round image works best. The logo isn't a link and screen readers skip it, because the site title beside it already names the site and links to the home page.
 
 == Changelog ==
+
+= 1.6.1 =
+* Readme: installing from the GitHub releases.
 
 = 1.6.0 =
 * New: classic content from the classic editor looks right: images aligned left, right or centred with text around them, captions and [gallery] grids, video players and wide images that fit a phone, and plain tables and quotes styled like their blocks.

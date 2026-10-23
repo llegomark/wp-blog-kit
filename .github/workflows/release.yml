@@ -1,0 +1,134 @@
+# Publishes the theme and the plugin as GitHub releases, each version once.
+#
+# When a push to main raises the Version of Tala SEO or Tala Blog, and the Checks workflow passes on
+# that commit, this builds the zip with build.sh (the same zip a site installs) and creates a release
+# named after it, tala-seo-1.11.0 or tala-blog-1.6.0, tagged on that commit. The release holds:
+#   - the zip, to download and install (Plugins or Appearance → Themes → Upload);
+#   - its SHA-256, to check the download;
+#   - a build attestation (GitHub's signed record that this workflow built the zip from that commit):
+#     `gh attestation verify <zip> --repo <owner>/<repo>`;
+#   - the version's changelog entry and upgrade notice from readme.txt as its notes (bin/release-notes.mjs).
+# A version that already has a release is left alone, so pushes that don't change a version publish
+# nothing. Started by hand (Actions → Release → Run workflow), it publishes main's versions that have no
+# release yet, if the checks passed on main's last commit.
+name: Release
+
+on:
+  workflow_run:
+    workflows: [Checks]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One at a time, never cancelled half-way.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish new versions
+    # After a successful Checks run for a push to this repository's main (not a pull request, not a
+    # fork, not the weekly run), or by hand.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # tags and releases
+      id-token: write # signs the build attestation
+      attestations: write # stores it
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Check out the commit the checks passed on
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
+          persist-credentials: false
+
+      - name: Make sure the checks passed on this commit
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          conclusion=$(gh run list --workflow checks.yml --commit "$SHA" --event push --limit 1 --json conclusion --jq '.[0].conclusion // ""')
+          if [ "$conclusion" != success ]; then
+            echo "::error::The Checks workflow hasn't passed on $SHA (${conclusion:-no run}); nothing is published."
+            exit 1
+          fi
+
+      - name: Find the versions without a release
+        id: new
+        run: |
+          tags=()
+          for product in tala-seo tala-blog; do
+            case $product in
+              tala-seo) header=tala-seo/tala-seo.php ;;
+              tala-blog) header=tala-blog/style.css ;;
+            esac
+            version=$(grep -m1 -E '^\s*\*?\s*Version:' "$header" | sed -E 's/.*Version:\s*//; s/\s+$//')
+            if ! [[ $version =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
+              echo "::error file=$header::Version \"$version\" isn't a version number like 1.2.3."
+              exit 1
+            fi
+            if gh release view "$product-$version" > /dev/null 2>&1; then
+              echo "$product $version already has a release."
+            else
+              echo "$product $version is new."
+              tags+=("$product-$version")
+            fi
+          done
+          echo "tags=${tags[*]}" >> "$GITHUB_OUTPUT"
+          {
+            echo 'zips<<EOF'
+            for tag in "${tags[@]}"; do echo "dist/$tag.zip"; done
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node (the version in .nvmrc)
+        if: steps.new.outputs.tags != ''
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Build the zips (build.sh) and their checksums
+        if: steps.new.outputs.tags != ''
+        env:
+          TAGS: ${{ steps.new.outputs.tags }}
+        run: |
+          ./build.sh
+          cd dist
+          for tag in $TAGS; do
+            sha256sum "$tag.zip" > "$tag.zip.sha256"
+            cat "$tag.zip.sha256"
+          done
+
+      - name: Attest the zips' build provenance
+        if: steps.new.outputs.tags != ''
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ steps.new.outputs.zips }}
+
+      - name: Publish the releases
+        if: steps.new.outputs.tags != ''
+        env:
+          TAGS: ${{ steps.new.outputs.tags }}
+        run: |
+          for tag in $TAGS; do
+            product=${tag%-*}
+            version=${tag##*-}
+            case $product in
+              tala-seo) title="Tala SEO $version" ;;
+              tala-blog) title="Tala Blog $version" ;;
+            esac
+            node bin/release-notes.mjs "$product" "$(cut -d' ' -f1 "dist/$tag.zip.sha256")" > "$RUNNER_TEMP/notes.md"
+            gh release create "$tag" "dist/$tag.zip" "dist/$tag.zip.sha256" \
+              --target "$SHA" --title "$title" --notes-file "$RUNNER_TEMP/notes.md"
+            echo "Published $title: https://github.com/$GH_REPO/releases/tag/$tag"
+          done
