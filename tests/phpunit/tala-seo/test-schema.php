@@ -329,5 +329,16 @@ class Test_Tala_SEO_Schema extends Tala_SEO_Test_Case {
 		$this->go_to( get_permalink( $post ) );
 		do_blocks( '<!-- wp:tala-seo/breadcrumbs {"metadata":{"blockVisibility":false}} /-->' );
 		$this->assertArrayNotHasKey( 'BreadcrumbList', $this->schema() );
+
+		// Hidden by a block around it, however deep: WordPress still renders the trail, then drops it.
+		$inside_hidden = '<!-- wp:group {"metadata":{"blockVisibility":false}} --><div class="wp-block-group"><!-- wp:group --><div class="wp-block-group"><!-- wp:tala-seo/breadcrumbs /--></div><!-- /wp:group --></div><!-- /wp:group -->';
+		$this->go_to( get_permalink( $post ) );
+		$this->assertSame( '', trim( do_blocks( $inside_hidden ) ) );
+		$this->assertArrayNotHasKey( 'BreadcrumbList', $this->schema(), 'A trail inside a hidden group is not shown' );
+
+		// A trail shown elsewhere on the page still counts.
+		$this->go_to( get_permalink( $post ) );
+		do_blocks( $inside_hidden . '<!-- wp:tala-seo/breadcrumbs /-->' );
+		$this->assertArrayHasKey( 'BreadcrumbList', $this->schema() );
 	}
 }

@@ -206,6 +206,25 @@ function tala_seo_permalink_category( $category, $cats, $post ) {
 	return tala_seo_chosen_primary_category( $post->ID ) ?? $category;
 }
 
+add_filter( 'render_block_context', 'tala_seo_hidden_block_context', 10, 2 );
+
+/**
+ * Tells the blocks inside a block hidden with block visibility (hidden everywhere) that they are
+ * hidden too. WordPress renders such a block and its contents and only then drops the output, so
+ * a Breadcrumbs block inside a hidden Group would otherwise count as shown. The flag travels down
+ * through the context every block passes to the blocks inside it, however deep.
+ *
+ * @param array<string, mixed> $context      Block context.
+ * @param array<string, mixed> $parsed_block Parsed block.
+ * @return array<string, mixed>
+ */
+function tala_seo_hidden_block_context( $context, $parsed_block ) {
+	if ( false === ( $parsed_block['attrs']['metadata']['blockVisibility'] ?? null ) ) {
+		$context['tala-seo/hidden'] = true;
+	}
+	return $context;
+}
+
 add_action( 'init', 'tala_seo_register_breadcrumbs_block' );
 
 /**
@@ -228,10 +247,11 @@ function tala_seo_register_breadcrumbs_block(): void {
  * @return string
  */
 function tala_seo_render_breadcrumbs( $attributes = array(), $content = '', $block = null ) {
-	// Hidden with block visibility: WordPress drops the output after this runs, so show no trail
-	// here either, and the page gets no BreadcrumbList for it.
-	$visibility = $block instanceof WP_Block ? ( $block->parsed_block['attrs']['metadata']['blockVisibility'] ?? null ) : null;
-	if ( false === $visibility ) {
+	// Hidden with block visibility, itself or by a block around it (tala_seo_hidden_block_context()):
+	// WordPress drops the output after this runs, so show no trail here either, and the page gets
+	// no BreadcrumbList for it.
+	if ( $block instanceof WP_Block
+		&& ( false === ( $block->parsed_block['attrs']['metadata']['blockVisibility'] ?? null ) || ! empty( $block->context['tala-seo/hidden'] ) ) ) {
 		return '';
 	}
 	// In the editor (block preview over REST) show an example trail.

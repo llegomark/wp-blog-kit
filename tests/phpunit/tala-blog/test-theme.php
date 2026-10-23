@@ -598,6 +598,43 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * Global styles a site administrator saved can hold a palette entry that isn't a list, or a
+	 * colour that isn't text (a multisite administrator's styles are saved as written). The theme
+	 * colour and the dark-colour lookup take them in their stride; a page never fails over them.
+	 */
+	public function test_damaged_palette_is_harmless(): void {
+		$damaged = array(
+			'version'  => 3,
+			'settings' => array(
+				'color' => array(
+					'palette' => array(
+						'theme' => array(
+							array(
+								'slug'  => 'base',
+								'color' => array( '#fcfcfc' ),
+							),
+							'contrast',
+							array( 'slug' => 'accent' ),
+						),
+					),
+				),
+			),
+		);
+		$result  = tala_blog_preset_dark_colors( new WP_Theme_JSON_Data( $damaged, 'custom' ) );
+		$this->assertInstanceOf( WP_Theme_JSON_Data::class, $result );
+		$this->assertArrayNotHasKey( 'custom', $result->get_data()['settings'], 'No preset matches a damaged palette' );
+
+		$inject = static fn( $theme_json ) => $theme_json->update_with( $damaged );
+		add_filter( 'wp_theme_json_data_user', $inject );
+		WP_Theme_JSON_Resolver::clean_cached_data();
+		$meta = get_echo( 'tala_blog_theme_color' );
+		remove_filter( 'wp_theme_json_data_user', $inject );
+		WP_Theme_JSON_Resolver::clean_cached_data();
+		$this->assertStringNotContainsString( 'prefers-color-scheme: light', $meta, 'No light colour to announce' );
+		$this->assertStringContainsString( 'content="#121212" media="(prefers-color-scheme: dark)"', $meta, "The theme's own dark colour" );
+	}
+
+	/**
 	 * The theme's style variations: three colour presets and two typography presets.
 	 */
 	public function test_style_variations_are_offered(): void {

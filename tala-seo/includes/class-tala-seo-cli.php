@@ -212,32 +212,38 @@ class Tala_SEO_CLI {
 	 * Temporary SEOPress redirects (302, 307) and ones that apply to logged-in visitors only are
 	 * left out: Tala SEO's redirect is permanent and applies to everyone.
 	 *
+	 * Either plugin's redirect field is set by whoever edits the post, a contributor's draft
+	 * included, and reviewers may never have seen it (The SEO Framework's is the plain "redirect"
+	 * key, which can also be added as a custom field): a redirect goes live only if the post's
+	 * author could set one on the published post themselves.
+	 *
 	 * @param int $post_id Post ID.
 	 * @return string
 	 */
 	private function legacy_redirect( int $post_id ): string {
-		// The SEO Framework keeps it under the plain "redirect" key, which other plugins may use too:
-		// only trusted when The SEO Framework ran on this site (it keeps its settings when deleted).
-		// Anyone editing the post can also add that key as a custom field, unseen by reviewers, so it
-		// goes live only if the post's author could set a redirect on the published post.
+		$target = '';
+		// The plain "redirect" key, which other plugins may use too, is read only when The SEO
+		// Framework ran on this site (it keeps its settings when deleted).
 		if ( false !== get_option( 'autodescription-site-settings' ) ) {
-			$tsf = tala_seo_sanitize_redirect( get_post_meta( $post_id, 'redirect', true ) );
-			if ( '' !== $tsf ) {
-				$type   = get_post_type_object( (string) get_post_type( $post_id ) );
-				$author = (int) get_post_field( 'post_author', $post_id );
-				if ( $type && user_can( $author, $type->cap->edit_published_posts ) ) {
-					return $tsf;
-				}
-				WP_CLI::warning( sprintf( 'Post %d: left out the redirect to %s (its author can\'t edit published posts, so nobody may have reviewed it).', $post_id, $tsf ) );
-			}
+			$target = tala_seo_sanitize_redirect( get_post_meta( $post_id, 'redirect', true ) );
 		}
 		$type = (string) get_post_meta( $post_id, '_seopress_redirections_type', true );
-		if ( 'yes' !== get_post_meta( $post_id, '_seopress_redirections_enabled', true )
-			|| 'only_logged_in' === get_post_meta( $post_id, '_seopress_redirections_logged_status', true )
-			|| ! in_array( $type, array( '', '301' ), true ) ) {
+		if ( '' === $target
+			&& 'yes' === get_post_meta( $post_id, '_seopress_redirections_enabled', true )
+			&& 'only_logged_in' !== get_post_meta( $post_id, '_seopress_redirections_logged_status', true )
+			&& in_array( $type, array( '', '301' ), true ) ) {
+			$target = tala_seo_sanitize_redirect( get_post_meta( $post_id, '_seopress_redirections_value', true ) );
+		}
+		if ( '' === $target ) {
 			return '';
 		}
-		return tala_seo_sanitize_redirect( get_post_meta( $post_id, '_seopress_redirections_value', true ) );
+		$post_type = get_post_type_object( (string) get_post_type( $post_id ) );
+		$author    = (int) get_post_field( 'post_author', $post_id );
+		if ( $post_type && user_can( $author, $post_type->cap->edit_published_posts ) ) {
+			return $target;
+		}
+		WP_CLI::warning( sprintf( 'Post %d: left out the redirect to %s (its author can\'t edit published posts, so nobody may have reviewed it).', $post_id, $target ) );
+		return '';
 	}
 
 	/**

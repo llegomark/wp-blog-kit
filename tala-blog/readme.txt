@@ -53,6 +53,9 @@ In Appearance → Editor → Styles → Browse styles. Under "Color variations",
 
 == Changelog ==
 
+= 1.8.1 =
+* Fixed: a palette entry saved in the site's styles that isn't a colour (which a multisite administrator's styles can hold, saved as written) no longer stops every page of the site with an error; the theme colour and the dark colours just leave it out.
+
 = 1.8.0 =
 * New: "Keep reading" right after the article: up to three recent articles from the same categories (title, date and thumbnail, like the article list), then the older and newer articles as two cards that are tap targets in full, with arrows. The author box follows it. The links were small text below the author box before, and were labelled "Previous" and "Next", which read backwards; they now say "Older article" and "Newer article", as the article lists do.
 * Changed: a Group block that is a navigation landmark is left out when it holds no link, whatever text it has (it kept text before): "Keep reading" disappears on a site's only article, heading and all. Single templates customized in the Site Editor keep their old markup until their customizations are cleared.

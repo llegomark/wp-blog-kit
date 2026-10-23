@@ -136,7 +136,9 @@ function tala_seo_rest_check( $prepared, $request ) {
 	}
 
 	if ( $touches_description ) {
-		$description = (string) $meta[ TALA_SEO_DESCRIPTION ];
+		// Only text counts: WordPress saves the post before it rejects meta of another type (a
+		// number, a list), so a publish checked against "123" would go live with nothing stored.
+		$description = is_string( $meta[ TALA_SEO_DESCRIPTION ] ) ? $meta[ TALA_SEO_DESCRIPTION ] : '';
 		if ( '' === trim( $description ) && $id ) {
 			$description = tala_seo_legacy_value( $id, 'description' ); // Migrated description still counts.
 		}
@@ -204,7 +206,8 @@ function tala_seo_guard_insert( $data, $postarr ) {
 		return $data;
 	}
 
-	$description = (string) ( $postarr['meta_input'][ TALA_SEO_DESCRIPTION ] ?? ( $id ? tala_seo_post_description( $id ) : '' ) );
+	$given       = $postarr['meta_input'][ TALA_SEO_DESCRIPTION ] ?? null;
+	$description = null === $given ? ( $id ? tala_seo_post_description( $id ) : '' ) : tala_seo_scalar( $given );
 	$thumbnail   = (int) ( $postarr['_thumbnail_id'] ?? ( $id ? get_post_thumbnail_id( $id ) : 0 ) );
 	$problems    = tala_seo_publish_problems( $data['post_type'], $description, $thumbnail );
 	if ( ! $problems ) {

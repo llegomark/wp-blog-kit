@@ -238,11 +238,12 @@ add_action( 'wp_head', 'tala_blog_theme_color', 2 );
  * values the CSS uses.
  */
 function tala_blog_theme_color(): void {
+	// Saved global styles can hold anything a site administrator wrote: only text is a colour.
 	$base  = array_find(
 		(array) wp_get_global_settings( array( 'color', 'palette', 'theme' ) ),
-		static fn( $color ): bool => 'base' === ( $color['slug'] ?? '' )
+		static fn( $color ): bool => is_array( $color ) && 'base' === ( $color['slug'] ?? '' )
 	);
-	$light = (string) ( $base['color'] ?? '' );
+	$light = is_string( $base['color'] ?? null ) ? $base['color'] : '';
 	$dark  = wp_get_global_settings( array( 'custom', 'color', 'dark', 'base' ) );
 	foreach ( array(
 		'light' => $light,
@@ -272,8 +273,15 @@ function tala_blog_preset_dark_colors( $theme_json ) {
 	if ( isset( $site['settings']['custom']['color']['dark'] ) || ! is_array( $palette ) ) {
 		return $theme_json;
 	}
+	// Saved global styles can hold anything a site administrator wrote: an entry that isn't a
+	// list, or a colour that isn't text, is no colour (and must never reach strtolower()).
 	$colors = static function ( array $entries ): array {
-		$by_slug = array_map( 'strtolower', wp_list_pluck( $entries, 'color', 'slug' ) );
+		$by_slug = array();
+		foreach ( $entries as $entry ) {
+			if ( is_array( $entry ) && is_string( $entry['slug'] ?? null ) && is_string( $entry['color'] ?? null ) ) {
+				$by_slug[ $entry['slug'] ] = strtolower( $entry['color'] );
+			}
+		}
 		ksort( $by_slug );
 		return $by_slug;
 	};

@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.15.0
+Stable tag: 1.15.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -93,6 +93,11 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.15.1 =
+* Security: the publish check counts only text as a meta description. WordPress saves a post before it rejects meta of another type (a number, a list), so a publish checked against such a value went live with no description stored. A description made of spaces, no-break spaces included, is empty too.
+* Security: a Breadcrumbs block inside a block hidden with block visibility adds no BreadcrumbList, as the hidden block itself already didn't.
+* Security: `wp tala-seo import` applies the same trust gate to SEOPress redirects as to The SEO Framework's: a redirect goes live only if the post's author could set one on the published post.
 
 = 1.15.0 =
 * The page source shows what the plugin wrote: its meta tags and JSON-LD sit between a comment naming Tala SEO, its version and https://edventure.com.ph, and a closing comment. The "tala_seo_head_comment" filter leaves both out.

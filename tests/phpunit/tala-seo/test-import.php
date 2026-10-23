@@ -144,10 +144,29 @@ class Test_Tala_SEO_Import extends Tala_SEO_Test_Case {
 				'meta_input'  => array( 'redirect' => 'https://example.org/author/' ),
 			)
 		);
+		$seopress    = static fn( string $target ): array => array(
+			'_seopress_redirections_enabled' => 'yes',
+			'_seopress_redirections_type'    => '301',
+			'_seopress_redirections_value'   => $target,
+		);
+		$planted     = self::factory()->post->create(
+			array(
+				'post_author' => $contributor,
+				'meta_input'  => $seopress( 'https://example.org/planted/' ),
+			)
+		);
+		$reviewed    = self::factory()->post->create(
+			array(
+				'post_author' => $author,
+				'meta_input'  => $seopress( 'https://example.org/reviewed/' ),
+			)
+		);
 
 		$this->import();
 		$this->assertSame( '', get_post_meta( $theirs, TALA_SEO_REDIRECT, true ), 'Not from a contributor' );
 		$this->assertSame( 'https://example.org/author/', get_post_meta( $own, TALA_SEO_REDIRECT, true ) );
+		$this->assertSame( '', get_post_meta( $planted, TALA_SEO_REDIRECT, true ), "SEOPress's field on a contributor's post: the same gate" );
+		$this->assertSame( 'https://example.org/reviewed/', get_post_meta( $reviewed, TALA_SEO_REDIRECT, true ) );
 		$printed = implode( "\n", array_column( WP_CLI::$messages, 1 ) );
 		$this->assertStringContainsString( "Post $theirs", $printed );
 		$this->assertStringContainsString( 'https://example.org/contributor/', $printed, 'The skipped target is named.' );

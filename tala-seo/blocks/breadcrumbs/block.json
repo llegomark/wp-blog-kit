@@ -9,6 +9,7 @@
 	"description": "Shows where this page sits in the site: Home › Category › Post. Matches the breadcrumb structured data Google reads.",
 	"keywords": [ "breadcrumb", "navigation", "seo" ],
 	"textdomain": "tala-seo",
+	"usesContext": [ "tala-seo/hidden" ],
 	"supports": {
 		"html": false,
 		"color": { "text": true, "link": true, "background": false },

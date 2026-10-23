@@ -105,7 +105,9 @@ function tala_seo_sanitize_line( $value ) {
 function tala_seo_clean_text( $text, $words = 0 ) {
 	$text = wp_strip_all_tags( strip_shortcodes( (string) $text ), true );
 	$text = html_entity_decode( $text, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
-	$text = trim( (string) preg_replace( '/\s+/u', ' ', $text ) );
+	// Every kind of space, the no-break space (&nbsp;) included, which \s alone leaves: a
+	// description made of those is empty, not text.
+	$text = trim( (string) preg_replace( '/[\s\p{Z}]+/u', ' ', $text ) );
 	if ( $words > 0 ) {
 		$text = wp_trim_words( $text, $words, '…' );
 	}

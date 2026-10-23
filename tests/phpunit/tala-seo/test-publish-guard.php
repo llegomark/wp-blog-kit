@@ -201,4 +201,34 @@ class Test_Tala_SEO_Publish_Guard extends Tala_SEO_Test_Case {
 		$this->rest( 'POST', '/wp/v2/posts/' . $post, array( 'content' => 'A real update.' ) );
 		$this->assertNotSame( '2026-01-01 08:00:00', get_post( $post )->post_modified_gmt );
 	}
+
+	/**
+	 * A description that isn't text (a number, a list) is no description: WordPress saves the post
+	 * before it rejects such meta, so the check must refuse the publish itself, or the post would go
+	 * live with no description stored. Nor is one made of spaces, no-break spaces included.
+	 */
+	public function test_rest_publish_needs_a_text_description(): void {
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		wp_set_current_user( $author );
+		$draft = self::factory()->post->create(
+			array(
+				'post_status'   => 'draft',
+				'post_author'   => $author,
+				'_thumbnail_id' => self::$image_id,
+			)
+		);
+		foreach ( array( 123, array( 'A description.' ), true, "\u{00A0} \u{2003}", '&nbsp;' ) as $value ) {
+			$response = $this->rest(
+				'POST',
+				'/wp/v2/posts/' . $draft,
+				array(
+					'status' => 'publish',
+					'meta'   => array( TALA_SEO_DESCRIPTION => $value ),
+				)
+			);
+			$this->assertSame( 400, $response->get_status(), wp_json_encode( $value ) );
+			$this->assertSame( 'tala_seo_not_ready', $response->get_data()['code'], wp_json_encode( $value ) );
+			$this->assertSame( 'draft', get_post_status( $draft ), 'Still a draft: ' . wp_json_encode( $value ) );
+		}
+	}
 }
