@@ -19,7 +19,10 @@
 
 defined( 'ABSPATH' ) || exit;
 
-add_action( 'wp_head', 'tala_seo_print_schema', 3 );
+// Right after the meta tags (head.php, the same priority, registered first), so the comment that
+// closes the plugin's output can follow the JSON-LD.
+add_action( 'wp_head', 'tala_seo_print_schema', 1 );
+add_action( 'wp_head', 'tala_seo_print_head_end', 1 );
 
 /**
  * Prints the JSON-LD graph for the current page.

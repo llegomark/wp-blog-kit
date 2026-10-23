@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.14.0
+Stable tag: 1.15.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,7 +20,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **SEO column** in the Posts, Pages, Categories and Tags lists: what each item has and still needs at a glance. Every status pairs a symbol with a word, so it never depends on colour.
 * **Primary category:** choose which category leads the breadcrumbs (and the address, when the permalink contains %category%) for posts filed under several.
 * **Categories, tags and authors** get their own SEO title, meta description and "hide from search engines" switch.
-* **Head tags:** `<title>` as "Title | Site name" (the name only once when a page is named like the site), meta description, self-referencing canonical on every indexable page (paginated archives included), noindex for search results, 404s, date archives, empty categories and tag pages with too few posts, Open Graph and Twitter card tags with a 1200 × 630 share image (the 1.91:1 shape of link previews on Facebook, LinkedIn, X and messaging apps), and a `fediverse:creator` tag that credits the author when an article is shared on Mastodon.
+* **Head tags:** wrapped in a comment that names the plugin, its version and https://edventure.com.ph, so the page source shows what Tala SEO wrote. `<title>` as "Title | Site name" (the name only once when a page is named like the site), meta description, self-referencing canonical on every indexable page (paginated archives included), noindex for search results, 404s, date archives, empty categories and tag pages with too few posts, Open Graph and Twitter card tags with a 1200 × 630 share image (the 1.91:1 shape of link previews on Facebook, LinkedIn, X and messaging apps), and a `fediverse:creator` tag that credits the author when an article is shared on Mastodon.
 * **Feeds and sitemaps** send `X-Robots-Tag: noindex, follow`, so they never show up in search results themselves (search engines still read them).
 * **Structured data (JSON-LD):** WebSite and Organization (with description) on the home page, BlogPosting on posts (image in 16:9, 4:3 and 1:1), ProfilePage on author pages, BreadcrumbList matching the visible Breadcrumbs block, on pages that show it.
 * **Videos:** each YouTube video in an Embed block is described as a VideoObject (title, thumbnail, player address, the caption as its description). The title and thumbnail are fetched from YouTube once, when the post is saved. Google also needs the date the video was published, which YouTube doesn't share this way: enter it in the SEO panel, where each video gets a date field.
@@ -93,6 +93,9 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.15.0 =
+* The page source shows what the plugin wrote: its meta tags and JSON-LD sit between a comment naming Tala SEO, its version and https://edventure.com.ph, and a closing comment. The "tala_seo_head_comment" filter leaves both out.
 
 = 1.14.0 =
 * A static front page and the page that lists the posts (Settings → Reading) now use their own SEO title, meta description and "hide from search engines" switch, as the SEO panel on those pages shows. Without a description of their own they use the home page description.

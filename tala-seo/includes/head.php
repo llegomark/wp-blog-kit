@@ -246,10 +246,39 @@ function tala_seo_noindex_headers(): void {
 add_action( 'wp_head', 'tala_seo_print_head', 1 );
 
 /**
- * Prints the meta description, canonical link and Open Graph tags.
+ * The HTML comments that open and close what Tala SEO prints in <head>, so anyone viewing the source
+ * sees which tags the plugin wrote: the meta tags first (tala_seo_print_head()), then the JSON-LD
+ * (schema.php), then the closing comment. Both are left out when the "tala_seo_head_comment"
+ * filter returns false.
+ *
+ * @param string $which 'open' or 'close'.
+ * @return string The comment, or '' when it is switched off.
+ */
+function tala_seo_head_comment( string $which ): string {
+	if ( ! apply_filters( 'tala_seo_head_comment', true ) ) {
+		return '';
+	}
+	if ( 'close' === $which ) {
+		return '<!-- / Tala SEO plugin. -->';
+	}
+	return '<!-- This site is optimized with the Tala SEO plugin v' . TALA_SEO_VERSION . ' - https://edventure.com.ph -->';
+}
+
+/**
+ * Prints the closing comment, after the JSON-LD.
+ */
+function tala_seo_print_head_end(): void {
+	$comment = tala_seo_head_comment( 'close' );
+	if ( '' !== $comment ) {
+		echo $comment . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- a fixed comment.
+	}
+}
+
+/**
+ * Prints the opening comment, then the meta description, canonical link and Open Graph tags.
  */
 function tala_seo_print_head(): void {
-	$tags = array();
+	$tags = array_filter( array( tala_seo_head_comment( 'open' ) ) );
 	// Search engines look for their verification tag on the home page (first page) only.
 	if ( is_front_page() && ! is_paged() ) {
 		$codes = tala_seo_settings()['verify'];

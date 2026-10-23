@@ -328,6 +328,31 @@ class Test_Tala_SEO_Head extends Tala_SEO_Test_Case {
 
 
 	/**
+	 * Everything the plugin prints in <head> sits between a comment naming the plugin, its version
+	 * and its home page, and a closing comment, as a reader of the page source expects; a filter
+	 * leaves both out.
+	 */
+	public function test_head_comments(): void {
+		$post = $this->publish_post();
+		$this->go_to( get_permalink( $post ) );
+		$head  = get_echo( 'wp_head' );
+		$open  = '<!-- This site is optimized with the Tala SEO plugin v' . TALA_SEO_VERSION . ' - https://edventure.com.ph -->';
+		$close = '<!-- / Tala SEO plugin. -->';
+		$this->assertStringContainsString( $open, $head );
+		$this->assertStringContainsString( $close, $head );
+		$inside = substr( $head, (int) strpos( $head, $open ), (int) strpos( $head, $close ) - (int) strpos( $head, $open ) );
+		$this->assertStringContainsString( '<meta name="description"', $inside );
+		$this->assertStringContainsString( '<link rel="canonical"', $inside );
+		$this->assertStringContainsString( '"BlogPosting"', $inside, 'The JSON-LD is inside too' );
+		$this->assertStringContainsString( '<meta name=\'robots\'', substr( $head, 0, (int) strpos( $head, $open ) ), "WordPress's robots tag is not the plugin's" );
+
+		add_filter( 'tala_seo_head_comment', '__return_false' );
+		$head = get_echo( 'wp_head' );
+		$this->assertStringNotContainsString( 'Tala SEO', $head );
+		$this->assertStringContainsString( '<meta name="description"', $head, 'The tags stay' );
+	}
+
+	/**
 	 * A static front page and the page that lists the posts (Settings → Reading) use their own SEO
 	 * title, description and "hide" switch, as the SEO panel on those pages promises; without a
 	 * description of their own they fall back to the home page description.
