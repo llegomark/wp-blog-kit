@@ -472,4 +472,54 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 		$this->assertSame( array( 'https://www.facebook.com/guronotes' ), $settings['same_as'] );
 		$this->assertSame( '', $settings['verify']['google'] );
 	}
+
+	/**
+	 * Settings → SEO offers the title separators, and keeps only those.
+	 */
+	public function test_separator_setting(): void {
+		$this->assertSame( '-', tala_seo_sanitize_settings( array( 'separator' => '-' ) )['separator'] );
+		$this->assertSame( '•', tala_seo_sanitize_settings( array( 'separator' => '&bull;' ) )['separator'] );
+		$this->assertSame( '|', tala_seo_sanitize_settings( array( 'separator' => '"><script>' ) )['separator'] );
+		$this->assertSame( '|', tala_seo_sanitize_settings( array() )['separator'] );
+
+		update_option( 'tala_seo', array( 'separator' => '–' ) );
+		$field = get_echo( 'tala_seo_field_separator' );
+		$this->assertSame( count( tala_seo_separators() ), substr_count( $field, '<option ' ) );
+		$this->assertMatchesRegularExpression( '#<option value="–"\s+selected=\'selected\'>Article title – #', $field );
+	}
+
+	/**
+	 * The checklist asks to turn off attachment pages while they are on, and its button does it
+	 * for administrators only, with a valid nonce.
+	 */
+	public function test_attachment_pages_switch(): void {
+		update_option( 'wp_attachment_pages_enabled', '1' );
+		$check = array_values( array_filter( tala_seo_readiness(), static fn( $item ) => 'attachment_pages' === ( $item['action'] ?? '' ) ) );
+		$this->assertCount( 1, $check );
+		$this->assertFalse( $check[0]['ok'] );
+		$this->assertStringContainsString( 'value="tala_seo_attachment_pages"', get_echo( 'tala_seo_settings_page' ) );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
+		try {
+			tala_seo_attachment_pages();
+		} catch ( WPDieException $e ) {
+			$this->assertStringContainsString( 'not allowed to change this setting', $e->getMessage() );
+		}
+		$this->assertSame( '1', get_option( 'wp_attachment_pages_enabled' ), 'Editors are refused.' );
+
+		wp_set_current_user( $this->admin );
+		try {
+			tala_seo_attachment_pages();
+		} catch ( WPDieException $e ) {
+			$this->assertStringContainsString( 'The link you followed has expired.', $e->getMessage() );
+		}
+		$this->assertSame( '1', get_option( 'wp_attachment_pages_enabled' ), 'No nonce, no change.' );
+
+		$_REQUEST['_wpnonce'] = wp_create_nonce( 'tala_seo_attachment_pages' );
+		$redirect             = $this->redirect_of( 'tala_seo_attachment_pages' );
+		$this->assertSame( admin_url( 'options-general.php?page=tala-seo&settings-updated=true' ), $redirect?->location );
+		$this->assertSame( '0', get_option( 'wp_attachment_pages_enabled' ) );
+		$ok = array_values( array_filter( tala_seo_readiness(), static fn( $item ) => str_starts_with( $item['text'], 'Attachment pages are off' ) ) );
+		$this->assertTrue( $ok[0]['ok'] ?? false );
+	}
 }

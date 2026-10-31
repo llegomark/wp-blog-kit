@@ -80,7 +80,7 @@ function tala_seo_post_column( $column, $post_id ): void {
 	}
 
 	$title = tala_seo_post_title( $post_id );
-	$title = ( '' !== $title ? $title : tala_seo_clean_text( get_the_title( $post_id ) ) ) . ' | ' . tala_seo_site_name();
+	$title = ( '' !== $title ? $title : tala_seo_clean_text( get_the_title( $post_id ) ) ) . ' ' . tala_seo_settings()['separator'] . ' ' . tala_seo_site_name();
 	if ( mb_strlen( $title ) > 70 ) {
 		$items[] = array( 'warn', __( 'Long title', 'tala-seo' ), __( 'the title may be cut short in Google; the SEO panel measures it', 'tala-seo' ) );
 	}

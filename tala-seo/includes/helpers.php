@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Plugin settings (Settings → SEO), with defaults.
  *
- * @return array{publisher_type:string,publisher_name:string,same_as:string[],home_description:string,default_image:int,tag_min_posts:int,verify:array<string,string>}
+ * @return array{publisher_type:string,publisher_name:string,same_as:string[],home_description:string,default_image:int,tag_min_posts:int,verify:array<string,string>,separator:string}
  */
 function tala_seo_settings() {
 	$saved       = get_option( 'tala_seo', array() );
@@ -29,7 +29,30 @@ function tala_seo_settings() {
 		'default_image'    => (int) ( $saved['default_image'] ?? 0 ),
 		'tag_min_posts'    => min( 100, max( 0, (int) ( $saved['tag_min_posts'] ?? 2 ) ) ),
 		'verify'           => $codes,
+		'separator'        => tala_seo_sanitize_separator( $saved['separator'] ?? '|' ),
 	);
+}
+
+/**
+ * The characters a title may use between its own words and the site name ("Title | Site").
+ * Google recommends a separator such as a hyphen, a colon or a vertical bar.
+ *
+ * @return string[]
+ */
+function tala_seo_separators() {
+	return array( '|', '-', '–', '—', ':', '·', '•' );
+}
+
+/**
+ * A title separator from the list (an HTML entity such as &bull; counts as its character), else
+ * the vertical bar.
+ *
+ * @param mixed $value Value entered or stored.
+ * @return string
+ */
+function tala_seo_sanitize_separator( $value ) {
+	$value = is_string( $value ) ? trim( html_entity_decode( $value, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) ) : '';
+	return in_array( $value, tala_seo_separators(), true ) ? $value : '|';
 }
 
 /**
@@ -487,6 +510,7 @@ function tala_seo_sanitize_settings( $input ) {
 		'default_image'    => absint( $input['default_image'] ?? 0 ),
 		'tag_min_posts'    => min( 100, absint( $input['tag_min_posts'] ?? 2 ) ),
 		'verify'           => $verify,
+		'separator'        => tala_seo_sanitize_separator( $input['separator'] ?? '|' ),
 	);
 }
 
@@ -553,4 +577,99 @@ function tala_seo_sanitize_verification( $value, $service ) {
 		add_settings_error( 'tala_seo', $code, sprintf( $problem, $expected['label'] ) . ' ' . __( 'The code saved before was kept.', 'tala-seo' ) );
 	}
 	return tala_seo_settings()['verify'][ $service ] ?? '';
+}
+
+/**
+ * A title without the site name another SEO plugin put at its end or start ("Lesson plans | Site"
+ * becomes "Lesson plans"), as Tala SEO adds the site name itself. A separator left alone at either
+ * end, where an empty variable such as a page number stood, goes too.
+ *
+ * @param string $title Title.
+ * @return string
+ */
+function tala_seo_strip_site_name( $title ) {
+	$title = trim( (string) preg_replace( '/\s+/u', ' ', (string) $title ) );
+	$site  = tala_seo_site_name();
+	$seps  = '[|\-–—:·•~«»<>*\/]';
+	if ( '' !== $site && 0 !== strcasecmp( $title, $site ) ) {
+		$name  = preg_quote( $site, '/' );
+		$title = (string) preg_replace( array( '/\s*' . $seps . '\s*' . $name . '$/iu', '/^' . $name . '\s*' . $seps . '\s*/iu' ), '', $title );
+	}
+	return trim( (string) preg_replace( '/^' . $seps . '\s+|\s+' . $seps . '$/u', '', $title ) );
+}
+
+/**
+ * The first paragraphs of a post's own text, as plain text: headings, images, tables, embeds and
+ * the like left out, and so are lines too short to describe anything ("Download:").
+ *
+ * @param WP_Post $post Post.
+ * @return string[]
+ */
+function tala_seo_opening_paragraphs( $post ) {
+	$parts = array();
+	$add   = static function ( string $html ) use ( &$parts ): void {
+		$text  = tala_seo_clean_text( $html );
+		$words = preg_split( '/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY );
+		// A label or a link on its own ("Download:", "Source: DepEd") doesn't describe the post, and
+		// text that isn't valid UTF-8 (no words) is left out too.
+		if ( is_array( $words ) && count( $words ) >= 4 ) {
+			$parts[] = $text;
+		}
+	};
+	$walk  = static function ( array $blocks ) use ( &$walk, &$parts, $add ): void {
+		foreach ( $blocks as $block ) {
+			if ( count( $parts ) >= 8 ) {
+				return;
+			}
+			$name = $block['blockName'] ?? null;
+			if ( null === $name ) {
+				// Classic content: its paragraphs, as WordPress shows them.
+				$paragraphs = preg_split( '#</p>#i', wpautop( (string) ( $block['innerHTML'] ?? '' ) ) );
+				foreach ( is_array( $paragraphs ) ? $paragraphs : array() as $paragraph ) {
+					if ( ! preg_match( '#<(?:h[1-6]|table|figure|ul|ol|iframe)\b#i', $paragraph ) ) {
+						$add( $paragraph );
+					}
+				}
+			} elseif ( in_array( $name, array( 'core/paragraph', 'core/verse' ), true ) ) {
+				$add( (string) ( $block['innerHTML'] ?? '' ) );
+			} elseif ( in_array( $name, array( 'core/group', 'core/columns', 'core/column', 'core/quote', 'core/cover', 'core/media-text' ), true ) ) {
+				$walk( $block['innerBlocks'] ?? array() );
+			}
+		}
+	};
+	$walk( parse_blocks( (string) $post->post_content ) );
+	return $parts;
+}
+
+/**
+ * The opening of a post's own text, for a meta description written from it: its first paragraphs
+ * (tala_seo_opening_paragraphs()), cut after the last whole sentence that fits in the length, or
+ * else after the last whole word, with an ellipsis.
+ *
+ * @param WP_Post  $post  Post.
+ * @param int      $limit Most characters.
+ * @param string[] $skip  Paragraphs to pass over, such as an introduction many posts share; when
+ *                        nothing else is left, they are used after all.
+ * @return string '' when the post has no paragraph to start from.
+ */
+function tala_seo_opening_text( $post, $limit = 155, $skip = array() ) {
+	$parts = tala_seo_opening_paragraphs( $post );
+	$own   = array_values( array_diff( $parts, $skip ) );
+	$text  = trim( implode( ' ', $own ? $own : $parts ) );
+	if ( mb_strlen( $text ) <= $limit ) {
+		return $text;
+	}
+	$cut = mb_substr( $text, 0, $limit + 1 );
+	// The last sentence end that leaves a useful length, but not the dot of "No. 13" or "s. 2017".
+	if ( preg_match_all( '/[.!?](?=\s)/u', $cut, $ends, PREG_OFFSET_CAPTURE ) ) {
+		foreach ( array_reverse( $ends[0] ) as $end ) {
+			$before = substr( $cut, 0, $end[1] );
+			if ( mb_strlen( $before ) >= 70 && ! preg_match( '/(?:^|\s)(?:no|nos|s|sec|art|vol|p|pp|dr|mr|mrs|ms|st|sr|jr|vs|etc|inc|co|e\.g|i\.e)$/i', $before ) ) {
+				return $before . $end[0];
+			}
+		}
+	}
+	$cut   = mb_substr( $text, 0, $limit - 1 );
+	$space = mb_strrpos( $cut, ' ' );
+	return rtrim( false !== $space ? mb_substr( $cut, 0, $space ) : $cut, ' ,;:–—-' ) . '…';
 }

@@ -23,12 +23,13 @@ class Test_Tala_SEO_Import extends Tala_SEO_Test_Case {
 	/**
 	 * Runs `wp tala-seo import`.
 	 *
-	 * @param bool $dry_run Whether to pass --dry-run.
+	 * @param bool                  $dry_run Whether to pass --dry-run.
+	 * @param array<string, string> $options Other options, such as from.
 	 * @return string The success message.
 	 */
-	private function import( bool $dry_run = false ): string {
+	private function import( bool $dry_run = false, array $options = array() ): string {
 		WP_CLI::reset();
-		( new Tala_SEO_CLI() )->import( array(), $dry_run ? array( 'dry-run' => true ) : array() );
+		( new Tala_SEO_CLI() )->import( array(), array_merge( $options, $dry_run ? array( 'dry-run' => true ) : array() ) );
 		$success = array_values( array_filter( WP_CLI::$messages, static fn( $message ) => 'success' === $message[0] ) );
 		return $success[0][1] ?? '';
 	}
@@ -281,5 +282,234 @@ class Test_Tala_SEO_Import extends Tala_SEO_Test_Case {
 		WP_CLI::reset();
 		( new Tala_SEO_CLI() )->audit( array(), array() );
 		$this->assertSame( '=SUM(1) x y', WP_CLI::$tables[0]['items'][0]['title'], 'A table is not a spreadsheet.' );
+	}
+
+	/**
+	 * The messages the last command printed at a level.
+	 *
+	 * @param string $level warning, log, success.
+	 * @return string[]
+	 */
+	private function said( string $level ): array {
+		return array_column( array_values( array_filter( WP_CLI::$messages, static fn( $message ) => $level === $message[0] ) ), 1 );
+	}
+
+	/**
+	 * Yoast SEO's site-wide settings fill Settings → SEO (only what is still at its default), turn
+	 * off attachment pages it redirected, and hide the tag pages it hid as a rule, except one let in
+	 * on purpose.
+	 */
+	public function test_yoast_site_settings(): void {
+		update_option(
+			'wpseo_titles',
+			array(
+				'separator'            => 'sc-dash',
+				'metadesc-home-wpseo'  => 'Practical guides for teachers, by teachers.',
+				'company_or_person'    => 'company',
+				'company_name'         => 'Guro Notes Inc.',
+				'disable-attachment'   => true,
+				'noindex-tax-category' => false,
+				'noindex-tax-post_tag' => true,
+				'noindex-author-wpseo' => false,
+			)
+		);
+		update_option(
+			'wpseo_social',
+			array(
+				'facebook_site'     => 'https://www.facebook.com/guronotes/',
+				'twitter_site'      => 'guronotes',
+				'other_social_urls' => array( 'https://www.youtube.com/@guronotes', 'not a url' ),
+				'og_default_image'  => set_url_scheme( (string) wp_get_attachment_url( self::$image_id ), 'http' ),
+			)
+		);
+		update_option(
+			'wpseo',
+			array(
+				'googleverify' => 'gWDk0KEWEAEKs4V5uaDNe2Hmb5TboTz8zJNXLoS1AtY',
+				'msverify'     => '509AC9662108B4BE62203A99F67F9CC9',
+			)
+		);
+		update_option( 'wp_attachment_pages_enabled', '1' );
+		$hidden_tag = self::factory()->tag->create();
+		$open_tag   = self::factory()->tag->create();
+		$category   = self::factory()->category->create();
+		update_option( 'wpseo_taxonomy_meta', array( 'post_tag' => array( $open_tag => array( 'wpseo_noindex' => 'index' ) ) ) );
+		$this->set_setting( 'home_description', 'Our own words.' );
+
+		$this->assertSame( 'Dry run, nothing changed. Would copy 7 value(s).', $this->import( true ), 'Six settings and one tag.' );
+		$this->assertSame( '|', tala_seo_settings()['separator'] );
+		$this->assertSame( '1', get_option( 'wp_attachment_pages_enabled' ) );
+
+		$this->import();
+		$settings = tala_seo_settings();
+		$this->assertSame( '-', $settings['separator'] );
+		$this->assertSame( 'Our own words.', $settings['home_description'], 'A value of Tala SEO\'s own stays.' );
+		$this->assertSame( 'organization', $settings['publisher_type'] );
+		$this->assertSame( 'Guro Notes Inc.', $settings['publisher_name'] );
+		$this->assertSame( array( 'https://www.facebook.com/guronotes/', 'https://x.com/guronotes', 'https://www.youtube.com/@guronotes' ), $settings['same_as'] );
+		$this->assertSame( self::$image_id, $settings['default_image'], 'Found from its address, whatever its scheme.' );
+		$this->assertSame( 'gWDk0KEWEAEKs4V5uaDNe2Hmb5TboTz8zJNXLoS1AtY', $settings['verify']['google'] );
+		$this->assertSame( '509AC9662108B4BE62203A99F67F9CC9', $settings['verify']['bing'] );
+		$this->assertSame( '0', get_option( 'wp_attachment_pages_enabled' ) );
+		$this->assertSame( '1', get_term_meta( $hidden_tag, TALA_SEO_NOINDEX, true ) );
+		$this->assertFalse( metadata_exists( 'term', $open_tag, TALA_SEO_NOINDEX ), 'A tag Yoast SEO let in stays in.' );
+		$this->assertFalse( metadata_exists( 'term', $category, TALA_SEO_NOINDEX ), 'Categories were indexed.' );
+
+		$this->set_setting( 'separator', ':' );
+		$this->assertStringContainsString( 'Copied 0 value(s)', $this->import(), 'Nothing new the second time.' );
+		$this->assertSame( ':', tala_seo_settings()['separator'], 'And nothing overwritten.' );
+	}
+
+	/**
+	 * With settings from both Yoast SEO and Rank Math and neither active, the site-wide settings
+	 * wait for --from; with --from=rank-math, Rank Math's settings and its post values come first.
+	 */
+	public function test_rank_math_site_settings(): void {
+		update_option( 'wpseo_titles', array( 'separator' => 'sc-dash' ) );
+		update_option(
+			'rank-math-options-titles',
+			array(
+				'title_separator'            => '&bull;',
+				'homepage_description'       => 'Free downloadable resources for teachers.',
+				'knowledgegraph_type'        => 'company',
+				'knowledgegraph_name'        => 'tala test blog',
+				'social_url_facebook'        => 'https://www.facebook.com/talatest/',
+				'social_additional_profiles' => "https://www.youtube.com/@talatest\nhttps://www.tiktok.com/@talatest",
+				'tax_category_robots'        => array( 'noindex' ),
+				'tax_category_custom_robots' => 'on',
+				'tax_post_tag_robots'        => array( 'noindex' ),
+				'tax_post_tag_custom_robots' => 'off',
+				'disable_author_archives'    => 'on',
+			)
+		);
+		update_option( 'rank-math-options-general', array( 'attachment_redirect_urls' => 'on' ) );
+		update_option( 'wp_attachment_pages_enabled', '1' );
+		$category = self::factory()->category->create();
+		$tag      = self::factory()->tag->create();
+		$author   = self::factory()->user->create( array( 'role' => 'author' ) );
+		$post     = $this->publish_post(
+			array(
+				'post_author' => $author,
+				'meta_input'  => array(
+					'_yoast_wpseo_metadesc' => 'An old Yoast SEO description.',
+					'rank_math_description' => 'The description Rank Math showed.',
+				),
+			)
+		);
+		delete_post_meta( $post, TALA_SEO_DESCRIPTION );
+
+		$this->import( true );
+		$this->assertStringContainsString( '--from=yoast or --from=rank-math', implode( ' ', $this->said( 'warning' ) ) );
+
+		$this->import( false, array( 'from' => 'rank-math' ) );
+		$settings = tala_seo_settings();
+		$this->assertSame( '•', $settings['separator'] );
+		$this->assertSame( 'Free downloadable resources for teachers.', $settings['home_description'] );
+		$this->assertSame( '', $settings['publisher_name'], 'The site\'s own name, in other letters, is the default.' );
+		$this->assertSame( array( 'https://www.facebook.com/talatest/', 'https://www.youtube.com/@talatest', 'https://www.tiktok.com/@talatest' ), $settings['same_as'] );
+		$this->assertSame( '0', get_option( 'wp_attachment_pages_enabled' ) );
+		$this->assertSame( '1', get_term_meta( $category, TALA_SEO_NOINDEX, true ), 'Categories were hidden as a rule.' );
+		$this->assertFalse( metadata_exists( 'term', $tag, TALA_SEO_NOINDEX ), 'Tags followed the site\'s robots setting.' );
+		$this->assertSame( '1', get_user_meta( $author, TALA_SEO_NOINDEX, true ), 'Author pages were switched off.' );
+		$this->assertSame( 'The description Rank Math showed.', get_post_meta( $post, TALA_SEO_DESCRIPTION, true ) );
+	}
+
+	/**
+	 * Titles made with variables are filled in, and the site name the plugin added comes off; a
+	 * title that is just the post's own, or has a variable without a value here, isn't copied.
+	 */
+	public function test_titles_with_variables(): void {
+		$titles = array(
+			'%%title%% %%page%% %%sep%% %%sitename%%' => '',
+			'Updated DepEd Order No. 13, s. 2017 %%sep%% %%sitename%%' => 'Updated DepEd Order No. 13, s. 2017',
+			'%title% for grade 6 %sep% %sitename%'    => 'Planning a lesson for grade 6',
+			'Lesson plans | Tala Test Blog'           => 'Lesson plans',
+			'Tala Test Blog: lesson plans'            => 'lesson plans',
+			'%%cf_grade%% lesson plans'               => '',
+		);
+		$posts  = array();
+		foreach ( array_keys( $titles ) as $title ) {
+			$posts[ $title ] = $this->legacy_post( array( str_contains( $title, '%%' ) || ! str_contains( $title, '%' ) ? '_yoast_wpseo_title' : 'rank_math_title' => $title ) );
+			wp_update_post(
+				array(
+					'ID'         => $posts[ $title ],
+					'post_title' => 'Planning a lesson',
+				)
+			);
+		}
+		$excerpt = $this->legacy_post( array( '_yoast_wpseo_metadesc' => '%%excerpt%%' ) );
+		wp_update_post(
+			array(
+				'ID'           => $excerpt,
+				'post_excerpt' => 'A short summary.',
+			)
+		);
+		update_option( 'blogname', 'Tala Test Blog' );
+
+		$this->import();
+		foreach ( $titles as $title => $expected ) {
+			$this->assertSame( $expected, (string) get_post_meta( $posts[ $title ], TALA_SEO_TITLE, true ), $title );
+		}
+		$this->assertSame( 'A short summary.', get_post_meta( $excerpt, TALA_SEO_DESCRIPTION, true ) );
+	}
+
+	/**
+	 * `wp tala-seo describe` writes the missing descriptions from the opening paragraphs: whole
+	 * sentences that fit, else whole words with an ellipsis (an abbreviation's dot isn't a sentence
+	 * end); posts with a description or a password are left alone.
+	 */
+	public function test_describe(): void {
+		$paragraph = static fn( string $text ): string => '<!-- wp:paragraph --><p>' . $text . '</p><!-- /wp:paragraph -->';
+		$sentences = $this->publish_post(
+			array(
+				'post_content' => '<!-- wp:heading --><h2 class="wp-block-heading">Before you start</h2><!-- /wp:heading -->'
+					. $paragraph( 'Download:' )
+					. $paragraph( 'This module was designed and written with you in mind. It helps you create rhythmic patterns in music class. The scope of this module permits it to be used in many learning situations.' ),
+			)
+		);
+		$abbrev    = $this->publish_post(
+			array(
+				'post_content' => $paragraph( 'The guidelines in this order cover the conduct of school activities as set in DepEd Order No. 13, s. 2017 and all the orders that came after it, for every school.' ),
+			)
+		);
+		$short     = $this->publish_post(
+			array(
+				'post_content' => '<!-- wp:group --><div class="wp-block-group">' . $paragraph( 'A short note about lesson plans for new teachers.' ) . '</div><!-- /wp:group -->',
+			)
+		);
+		$intro     = 'This Self-Learning Module was prepared so that you can continue your studies at home.';
+		$modules   = array();
+		foreach ( array( 'fractions', 'decimals', 'ratios' ) as $topic ) {
+			$modules[ $topic ] = $this->publish_post( array( 'post_content' => $paragraph( $intro ) . $paragraph( "In this module you will learn to work with $topic in everyday problems." ) ) );
+		}
+		$described = $this->publish_post( array( 'post_content' => $paragraph( 'Some text that is long enough to describe the post well.' ) ) );
+		$locked    = $this->publish_post(
+			array(
+				'post_content'  => $paragraph( 'Members only: the full lesson plan for the week, with worksheets.' ),
+				'post_password' => 'secret',
+			)
+		);
+
+		// Published as the publish check asks, then left without a description, as older posts are.
+		foreach ( array_merge( array( $sentences, $abbrev, $short, $locked ), array_values( $modules ) ) as $id ) {
+			delete_post_meta( $id, TALA_SEO_DESCRIPTION );
+		}
+
+		WP_CLI::reset();
+		( new Tala_SEO_CLI() )->describe( array(), array( 'dry-run' => true ) );
+		$this->assertSame( array( 'Dry run, nothing changed. Would write 6 description(s).' ), $this->said( 'success' ) );
+		$this->assertSame( '', get_post_meta( $sentences, TALA_SEO_DESCRIPTION, true ) );
+
+		WP_CLI::reset();
+		( new Tala_SEO_CLI() )->describe( array(), array() );
+		$this->assertSame( 'This module was designed and written with you in mind. It helps you create rhythmic patterns in music class.', get_post_meta( $sentences, TALA_SEO_DESCRIPTION, true ) );
+		$cut = (string) get_post_meta( $abbrev, TALA_SEO_DESCRIPTION, true );
+		$this->assertStringStartsWith( 'The guidelines in this order cover the conduct of school activities as set in DepEd Order No. 13, s. 2017', $cut, 'Not cut at the dot of "No." or "s.".' );
+		$this->assertStringEndsWith( '…', $cut );
+		$this->assertLessThanOrEqual( 155, mb_strlen( $cut ) );
+		$this->assertSame( 'A short note about lesson plans for new teachers.', get_post_meta( $short, TALA_SEO_DESCRIPTION, true ) );
+		$this->assertSame( 'In this module you will learn to work with decimals in everyday problems.', get_post_meta( $modules['decimals'], TALA_SEO_DESCRIPTION, true ), 'The introduction three posts share is passed over.' );
+		$this->assertSame( 'A test description.', get_post_meta( $described, TALA_SEO_DESCRIPTION, true ) );
+		$this->assertSame( '', get_post_meta( $locked, TALA_SEO_DESCRIPTION, true ) );
 	}
 }

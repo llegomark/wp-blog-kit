@@ -268,6 +268,31 @@ function tala_seo_moved_target( $request, $candidates ) {
 	return tala_seo_site_path( $target ) !== $request ? $target : '';
 }
 
+add_action( 'template_redirect', 'tala_seo_redirect_old_sitemaps', 8 );
+
+/**
+ * Another SEO plugin's sitemap addresses (Yoast SEO's and Rank Math's sitemap_index.xml and
+ * post-sitemap.xml, page-sitemap2.xml and the like, sitemap.xml) go to WordPress's sitemap index
+ * (301), so search engines that still ask for them find the site's pages. Only when they would
+ * otherwise be "not found", and only while WordPress publishes its sitemap.
+ */
+function tala_seo_redirect_old_sitemaps(): void {
+	global $wp;
+	if ( ! is_404() || ! ( $wp instanceof WP ) ) {
+		return;
+	}
+	$path = trim( (string) $wp->request, '/' );
+	if ( str_starts_with( $path, 'wp-sitemap' )
+		|| ! preg_match( '/^(?:sitemap_index|sitemap|sitemaps|[a-z0-9_]+(?:-[a-z0-9_]+)*-sitemap\d*)\.xml$/i', $path ) ) {
+		return;
+	}
+	if ( ! wp_sitemaps_get_server()->sitemaps_enabled() ) {
+		return;
+	}
+	wp_safe_redirect( (string) get_sitemap_url( 'index' ), 301, 'Tala SEO' );
+	exit;
+}
+
 add_action( 'template_redirect', 'tala_seo_redirect_post', 1 );
 
 /**

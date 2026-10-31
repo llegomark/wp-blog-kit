@@ -20,7 +20,7 @@ Each works on its own: the theme without the plugins, and each plugin with any t
 - **SEO column** in the Posts, Pages, Categories and Tags lists: description, image, hidden, redirect and more at a glance. Symbols and words carry the meaning, so it doesn't rely on colour.
 - **Categories, tags and author pages** get their own SEO title, meta description and "hide from search engines" switch.
 - **In `<head>`:**
-  - `<title>` as "Title | Site name"
+  - `<title>` as "Title | Site name", with the separator chosen in Settings → SEO
   - meta description
   - self-referencing canonical (each page of an archive is its own canonical)
   - noindex for search results, 404s, date archives, empty categories and tag pages with fewer posts than the minimum in Settings → SEO (2 by default)
@@ -36,16 +36,17 @@ Each works on its own: the theme without the plugins, and each plugin with any t
   - courses: the **Course** block shows a course's description, provider (the site by default), level, format, time, instructor and cost as a card and describes it as a Course for Google's course list (English searches): a post with one course is its detail page, a category or other list whose posts are all courses (three or more) gets the ItemList that makes it their summary page, and a post with several courses lists them by their cards' anchors. The level, format, time, instructor and cost were Google's Course info result, retired in June 2025; they stay as schema.org for other search engines and AI assistants.
   - FAQ and How-to: Group blocks from the inserter, built from core blocks (Details for each question, a numbered list for the steps), described as FAQPage and HowTo. Google no longer shows these as rich results (HowTo since 2023, FAQ since May 2026); the markup is still valid schema.org for other search engines and AI assistants, and it only repeats what the page shows.
   - SearchAction is left out on purpose: Google retired the sitelinks search box.
-- **Sitemap:** WordPress's own `/wp-sitemap.xml`, with accurate `lastmod`, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, hidden author pages or post formats. Like WordPress, it exists only while search engines may index the site.
+- **Sitemap:** WordPress's own `/wp-sitemap.xml` (where Yoast SEO's and Rank Math's sitemap addresses now lead), with accurate `lastmod`, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, hidden author pages or post formats. Like WordPress, it exists only while search engines may index the site.
 - **robots.txt:** points to the sitemap and blocks nothing else. AI crawlers are welcome.
 - **Redirects:** when a page, category or tag gets a new address (slug or parent), the old address answers with a 301 to the new one, children and paginated archives included. WordPress does this for posts only. A post can also redirect on purpose (SEO panel → Redirect to).
 - **Permalinks:** a one-click switch from plain URLs (`?p=123`) to post-name URLs in the setup checklist, and a warning on Settings → Permalinks before a change gives every published post a new address. Nothing changes without the admin pressing the button.
 - **Hidden-site warning:** while Settings → Reading discourages search engines, every admin screen and the pre-publish checklist say so.
 - **Authors:** a real author photo (no Gravatar request), social profile links (TikTok and Mastodon included) that feed the Person markup, and a Fediverse handle.
-- **Settings → SEO:** who runs the site, official profiles, home description, default share image, the minimum posts for an indexable tag page, and Google Search Console, Bing Webmaster Tools and Meta (Facebook) verification codes (for the HTML-tag method; a DNS record needs nothing), and a setup checklist (search engine visibility, site icon, logo, tagline, permalinks, author bios).
+- **Settings → SEO:** the title separator (`|` by default; a hyphen stays a hyphen), who runs the site, official profiles, home description, default share image, the minimum posts for an indexable tag page, and Google Search Console, Bing Webmaster Tools and Meta (Facebook) verification codes (for the HTML-tag method; a DNS record needs nothing), and a setup checklist (search engine visibility, permalinks, attachment pages, site icon, logo, tagline, author bios), with one-click switches for post-name URLs and for turning off attachment pages.
 - **WP-CLI:**
   - `wp tala-seo audit` lists published posts that are missing something.
-  - `wp tala-seo import` copies titles, descriptions, canonicals, noindex, primary categories and redirects from Yoast SEO, Rank Math, The SEO Framework or SEOPress, for posts, categories, tags and authors.
+  - `wp tala-seo import` copies titles, descriptions, canonicals, noindex, primary categories and redirects from Yoast SEO, Rank Math, The SEO Framework or SEOPress, for posts, categories, tags and authors, with titles made of variables filled in and the site name they added taken off; from Yoast SEO or Rank Math also the site-wide settings (title separator, home description, site owner, profiles, share image, verification), attachment pages off if they were redirected, and the category, tag and author pages hidden as a rule (`--from=yoast|rank-math` when both left settings).
+  - `wp tala-seo describe` writes the missing meta descriptions once, from each post's opening paragraphs (a whole sentence that fits; an introduction three or more posts share is passed over).
   - Post meta keys for agents: `_tala_seo_description`, `_tala_seo_title`, `_tala_seo_noindex`, `_tala_seo_canonical`, `_tala_seo_redirect`, `_tala_seo_primary_category`, `_tala_seo_video_dates` (YouTube video ID => `YYYY-MM-DD`).
 
 ## What Tala Ads does

@@ -1,6 +1,7 @@
 <?php
 /**
- * WP-CLI commands: find posts that aren't SEO-ready, and import data from another SEO plugin.
+ * WP-CLI commands: find posts that aren't SEO-ready, import data from another SEO plugin, and write
+ * missing meta descriptions from the posts' opening text.
  *
  * @package TalaSEO
  */
@@ -24,7 +25,35 @@ class Tala_SEO_CLI {
 		TALA_SEO_PRIMARY_CATEGORY => 'primary category',
 		'tala_seo_fediverse'      => 'Fediverse handle',
 		'tala_fediverse_url'      => 'Fediverse profile',
+		'separator'               => 'title separator',
+		'home_description'        => 'home page description',
+		'publisher_type'          => 'site owner type',
+		'publisher_name'          => 'site owner name',
+		'same_as'                 => 'official profiles',
+		'default_image'           => 'default share image',
+		'verify'                  => 'verification codes',
+		'attachment_pages'        => 'attachment pages off',
 	);
+
+	/**
+	 * Yoast SEO's title separators, by the name it stores, that Tala SEO offers too.
+	 */
+	private const array YOAST_SEPARATORS = array(
+		'sc-pipe'   => '|',
+		'sc-dash'   => '-',
+		'sc-ndash'  => '–',
+		'sc-mdash'  => '—',
+		'sc-colon'  => ':',
+		'sc-middot' => '·',
+		'sc-bull'   => '•',
+	);
+
+	/**
+	 * The plugin whose settings and values the import reads first: yoast, rank-math or ''.
+	 *
+	 * @var string
+	 */
+	private string $source = '';
 
 	/**
 	 * Whether this is a dry run.
@@ -97,10 +126,23 @@ class Tala_SEO_CLI {
 	 * Copies SEO data from Yoast SEO, Rank Math, The SEO Framework or SEOPress: titles, meta
 	 * descriptions, canonicals, noindex, primary categories and permanent redirects of posts and
 	 * pages; titles, descriptions and noindex of categories, tags and author pages; and authors'
-	 * Fediverse handles. Existing Tala SEO values are never overwritten, and running it twice
-	 * copies nothing new.
+	 * Fediverse handles. Titles and descriptions made with the other plugin's variables
+	 * (%%title%% %%sep%% %%sitename%%) are filled in, and the site name it added is taken off, as
+	 * Tala SEO adds it.
+	 *
+	 * From Yoast SEO or Rank Math it also copies the site-wide settings into Settings → SEO (title
+	 * separator, home page description, site owner, official profiles, default share image,
+	 * verification codes), turns off attachment pages if the plugin redirected them, and hides from
+	 * search engines each category, tag or author page that the plugin hid as a rule, so the same
+	 * pages stay in and out of search results.
+	 *
+	 * Existing Tala SEO values are never overwritten, and running it twice copies nothing new.
 	 *
 	 * ## OPTIONS
+	 *
+	 * [--from=<plugin>]
+	 * : Whose settings and values come first when both Yoast SEO and Rank Math left some: yoast or
+	 * rank-math. By default, the one that is active, or the only one that left settings.
 	 *
 	 * [--dry-run]
 	 * : Count what would be copied without changing anything.
@@ -108,7 +150,7 @@ class Tala_SEO_CLI {
 	 * ## EXAMPLES
 	 *
 	 *     wp tala-seo import --dry-run
-	 *     wp tala-seo import
+	 *     wp tala-seo import --from=rank-math
 	 *
 	 * @param string[]              $args       Positional arguments.
 	 * @param array<string, string> $assoc_args Options.
@@ -116,13 +158,14 @@ class Tala_SEO_CLI {
 	public function import( array $args, array $assoc_args ): void {
 		$this->dry    = ! empty( $assoc_args['dry-run'] );
 		$this->copied = array();
+		$this->source = $this->settings_source( (string) ( $assoc_args['from'] ?? '' ) );
 
 		foreach ( $this->post_ids( 'any' ) as $id ) {
 			foreach ( array(
 				'title'       => TALA_SEO_TITLE,
 				'description' => TALA_SEO_DESCRIPTION,
 			) as $field => $key ) {
-				$this->copy( 'post', $id, $key, tala_seo_legacy_value( $id, $field ) );
+				$this->copy( 'post', $id, $key, $this->legacy_text( $id, $field ) );
 			}
 			$canonical = tala_seo_sanitize_url( tala_seo_legacy_value( $id, 'canonical' ) );
 			if ( $this->copy( 'post', $id, TALA_SEO_CANONICAL, $canonical ) ) {
@@ -168,6 +211,10 @@ class Tala_SEO_CLI {
 			}
 		}
 
+		if ( '' !== $this->source ) {
+			$this->import_settings();
+		}
+
 		$rows = array();
 		foreach ( $this->copied as $what => $count ) {
 			list( $type, $key ) = explode( ':', $what, 2 );
@@ -204,6 +251,376 @@ class Tala_SEO_CLI {
 			update_metadata( $type, $id, $key, $value );
 		}
 		return true;
+	}
+
+	/**
+	 * Whose settings to import: the plugin named with --from, else the active one of Yoast SEO and
+	 * Rank Math, else the only one that left settings; '' when there are none to import, or when
+	 * both left settings and none is active (then --from decides).
+	 *
+	 * @param string $from yoast, rank-math or ''.
+	 * @return string
+	 */
+	private function settings_source( string $from ): string {
+		$has = array(
+			'yoast'     => is_array( get_option( 'wpseo_titles' ) ),
+			'rank-math' => is_array( get_option( 'rank-math-options-titles' ) ),
+		);
+		if ( '' !== $from ) {
+			if ( ! isset( $has[ $from ] ) ) {
+				WP_CLI::error( '--from takes yoast or rank-math.' );
+			}
+			if ( ! $has[ $from ] ) {
+				WP_CLI::warning( sprintf( 'No %s settings on this site: only post, term and author values are imported.', $from ) );
+				return '';
+			}
+			return $from;
+		}
+		$active = array_map( static fn( string $file ): string => dirname( $file ), (array) get_option( 'active_plugins', array() ) );
+		if ( $has['rank-math'] && in_array( 'seo-by-rank-math', $active, true ) ) {
+			return 'rank-math';
+		}
+		if ( $has['yoast'] && array_intersect( array( 'wordpress-seo', 'wordpress-seo-premium' ), $active ) ) {
+			return 'yoast';
+		}
+		if ( $has['yoast'] && $has['rank-math'] ) {
+			WP_CLI::warning( 'Both Yoast SEO and Rank Math left settings here, and neither is active: the site-wide settings were left alone. Run the import again with --from=yoast or --from=rank-math.' );
+			return '';
+		}
+		return $has['yoast'] ? 'yoast' : ( $has['rank-math'] ? 'rank-math' : '' );
+	}
+
+	/**
+	 * A post's title or description from another plugin, the import's source first, with that
+	 * plugin's variables filled in; a title also loses the site name the plugin added. '' when
+	 * there is none, when a variable can't be filled in, or when the title is just the post's own.
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $field   title or description.
+	 * @return string
+	 */
+	private function legacy_text( int $post_id, string $field ): string {
+		$keys = 'title' === $field
+			? array( '_yoast_wpseo_title', 'rank_math_title', '_genesis_title', '_seopress_titles_title' )
+			: array( '_yoast_wpseo_metadesc', 'rank_math_description', '_genesis_description', '_seopress_titles_desc' );
+		if ( 'rank-math' === $this->source ) {
+			$keys = array( $keys[1], $keys[0], $keys[2], $keys[3] );
+		}
+		foreach ( $keys as $key ) {
+			$raw = get_post_meta( $post_id, $key, true );
+			if ( is_string( $raw ) && '' !== trim( $raw ) ) {
+				$text = $this->fill_variables( $raw, $post_id );
+				if ( 'title' === $field ) {
+					$text = tala_seo_strip_site_name( $text );
+					if ( 0 === strcasecmp( $text, tala_seo_clean_text( get_the_title( $post_id ) ) ) ) {
+						return '';
+					}
+				}
+				return $text;
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * Fills in the variables of Yoast SEO (%%title%%), Rank Math (%title%), The SEO Framework and
+	 * SEOPress in a post's title or description. '' when one is left that has no value here.
+	 *
+	 * @param string $text    Text with variables.
+	 * @param int    $post_id Post ID.
+	 * @return string
+	 */
+	private function fill_variables( string $text, int $post_id ): string {
+		$post     = get_post( $post_id );
+		$title    = tala_seo_clean_text( get_the_title( $post_id ) );
+		$category = tala_seo_chosen_primary_category( $post_id );
+		if ( ! $category ) {
+			$first    = get_the_category( $post_id );
+			$category = $first ? $first[0] : null;
+		}
+		$excerpt = $post && has_excerpt( $post ) ? tala_seo_clean_text( $post->post_excerpt ) : '';
+		$values  = array(
+			'title'            => $title,
+			'post_title'       => $title,
+			'sitename'         => tala_seo_site_name(),
+			'sitetitle'        => tala_seo_site_name(),
+			'sitedesc'         => tala_seo_clean_text( get_bloginfo( 'description' ) ),
+			'tagline'          => tala_seo_clean_text( get_bloginfo( 'description' ) ),
+			'sep'              => tala_seo_settings()['separator'],
+			'page'             => '',
+			'pagenumber'       => '',
+			'pagetotal'        => '',
+			'category'         => $category ? $category->name : '',
+			'primary_category' => $category ? $category->name : '',
+			'excerpt'          => $excerpt,
+			'excerpt_only'     => $excerpt,
+			'post_excerpt'     => $excerpt,
+			'currentyear'      => wp_date( 'Y' ),
+			'date'             => $post ? (string) get_the_date( '', $post ) : '',
+		);
+		$unknown = false;
+		$text    = (string) preg_replace_callback(
+			'/%%([a-z0-9_]+)%%|%([a-z0-9_]+)%/i',
+			static function ( array $variable ) use ( $values, &$unknown ): string {
+				$key = strtolower( '' !== $variable[1] ? $variable[1] : $variable[2] );
+				if ( array_key_exists( $key, $values ) ) {
+					return (string) $values[ $key ];
+				}
+				$unknown = true;
+				return $variable[0];
+			},
+			$text
+		);
+		return $unknown ? '' : tala_seo_clean_text( $text );
+	}
+
+	/**
+	 * Copies the site-wide settings of the import's source into Settings → SEO (only the ones still
+	 * at their defaults), turns off attachment pages if the plugin redirected them, and gives each
+	 * category, tag or author page the plugin hid as a rule Tala SEO's own "hide" switch.
+	 */
+	private function import_settings(): void {
+		$yoast    = 'yoast' === $this->source;
+		$titles   = (array) get_option( $yoast ? 'wpseo_titles' : 'rank-math-options-titles', array() );
+		$social   = (array) get_option( 'wpseo_social', array() );
+		$general  = (array) get_option( $yoast ? 'wpseo' : 'rank-math-options-general', array() );
+		$current  = tala_seo_settings();
+		$stored   = get_option( 'tala_seo', array() );
+		$stored   = is_array( $stored ) ? $stored : array();
+		$settings = array();
+		WP_CLI::log( sprintf( 'Site-wide settings from %s.', $yoast ? 'Yoast SEO' : 'Rank Math' ) );
+
+		$separator = $yoast ? ( self::YOAST_SEPARATORS[ (string) ( $titles['separator'] ?? '' ) ] ?? '' ) : html_entity_decode( (string) ( $titles['title_separator'] ?? '' ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		$separator = trim( $separator );
+		if ( '|' === $current['separator'] && in_array( $separator, tala_seo_separators(), true ) && '|' !== $separator ) {
+			$settings['separator'] = $separator;
+		}
+
+		$description = (string) ( $yoast ? ( $titles['metadesc-home-wpseo'] ?? '' ) : ( $titles['homepage_description'] ?? '' ) );
+		if ( '' === $current['home_description'] && '' !== trim( $description ) && ! preg_match( '/%%?[a-z_]+%%?/i', $description ) ) {
+			$settings['home_description'] = tala_seo_clean_text( $description );
+		}
+
+		$type = (string) ( $yoast ? ( $titles['company_or_person'] ?? '' ) : ( $titles['knowledgegraph_type'] ?? '' ) );
+		if ( 'person' === $type && ! isset( $stored['publisher_type'] ) ) {
+			$settings['publisher_type'] = 'person';
+		}
+		$name = tala_seo_clean_text( (string) ( $yoast ? ( $titles['company_name'] ?? '' ) : ( $titles['knowledgegraph_name'] ?? '' ) ) );
+		if ( 'person' !== $type && '' === $current['publisher_name'] && '' !== $name && 0 !== strcasecmp( $name, tala_seo_site_name() ) ) {
+			$settings['publisher_name'] = $name;
+		}
+
+		$profiles = $yoast
+			? array_merge( array( $social['facebook_site'] ?? '', $this->x_profile( $social['twitter_site'] ?? '' ) ), (array) ( $social['other_social_urls'] ?? array() ) )
+			: array_merge( array( $titles['social_url_facebook'] ?? '', $this->x_profile( $titles['twitter_author_names'] ?? '' ) ), (array) preg_split( '/\R/', (string) ( $titles['social_additional_profiles'] ?? '' ) ) );
+		$profiles = array_values( array_unique( array_filter( array_map( 'tala_seo_sanitize_url', $profiles ) ) ) );
+		if ( ! $current['same_as'] && $profiles ) {
+			$settings['same_as'] = $profiles;
+		}
+
+		$image_id  = (int) ( $yoast ? ( $social['og_default_image_id'] ?? 0 ) : ( $titles['open_graph_image_id'] ?? 0 ) );
+		$image_url = (string) ( $yoast ? ( $social['og_default_image'] ?? '' ) : ( $titles['open_graph_image'] ?? '' ) );
+		if ( ! $image_id && '' !== $image_url ) {
+			$image_id = attachment_url_to_postid( set_url_scheme( $image_url ) );
+		}
+		if ( ! $current['default_image'] && $image_id && wp_attachment_is_image( $image_id ) ) {
+			$settings['default_image'] = $image_id;
+		}
+
+		$codes  = array(
+			'google' => (string) ( $yoast ? ( $general['googleverify'] ?? '' ) : ( $general['google_verify'] ?? '' ) ),
+			'bing'   => (string) ( $yoast ? ( $general['msverify'] ?? '' ) : ( $general['bing_verify'] ?? '' ) ),
+		);
+		$verify = $current['verify'];
+		foreach ( $codes as $service => $code ) {
+			$code = tala_seo_sanitize_verification( $code, $service );
+			if ( '' === $verify[ $service ] && '' !== $code ) {
+				$verify[ $service ] = $code;
+				$settings['verify'] = $verify;
+			}
+		}
+
+		foreach ( array_keys( $settings ) as $key ) {
+			$this->copied[ 'site:' . $key ] = 1;
+		}
+		if ( $settings && ! $this->dry ) {
+			update_option( 'tala_seo', array_merge( $current, $settings ) );
+		}
+
+		$redirected = $yoast ? ! empty( $titles['disable-attachment'] ) : 'on' === ( $general['attachment_redirect_urls'] ?? '' );
+		if ( $redirected && get_option( 'wp_attachment_pages_enabled' ) ) {
+			$this->copied['site:attachment_pages'] = 1;
+			if ( ! $this->dry ) {
+				update_option( 'wp_attachment_pages_enabled', '0' );
+			}
+		}
+
+		$this->hide_archives( $titles );
+	}
+
+	/**
+	 * Category, tag and author pages the import's source kept out of search engines as a rule get
+	 * Tala SEO's own "hide" switch, one by one, unless the plugin let that page in on purpose.
+	 *
+	 * @param array<string, mixed> $titles The plugin's title settings (wpseo_titles or rank-math-options-titles).
+	 */
+	private function hide_archives( array $titles ): void {
+		$yoast       = 'yoast' === $this->source;
+		$rule        = static function ( string $key ) use ( $titles ): bool {
+			return 'on' === ( $titles[ $key . '_custom_robots' ] ?? '' ) && in_array( 'noindex', (array) ( $titles[ $key . '_robots' ] ?? array() ), true );
+		};
+		$hidden      = array(
+			'category' => $yoast ? ! empty( $titles['noindex-tax-category'] ) : $rule( 'tax_category' ),
+			'post_tag' => $yoast ? ! empty( $titles['noindex-tax-post_tag'] ) : $rule( 'tax_post_tag' ),
+		);
+		$yoast_terms = get_option( 'wpseo_taxonomy_meta' );
+		foreach ( array_keys( array_filter( $hidden ) ) as $taxonomy ) {
+			$terms = get_terms(
+				array(
+					'taxonomy'   => $taxonomy,
+					'hide_empty' => false,
+				)
+			);
+			foreach ( is_array( $terms ) ? $terms : array() as $term ) {
+				$own = $yoast
+					? ( is_array( $yoast_terms ) ? ( $yoast_terms[ $taxonomy ][ $term->term_id ]['wpseo_noindex'] ?? '' ) : '' )
+					: ( in_array( 'index', (array) get_term_meta( $term->term_id, 'rank_math_robots', true ), true ) ? 'index' : '' );
+				if ( 'index' !== $own ) {
+					$this->copy( 'term', $term->term_id, TALA_SEO_NOINDEX, '1' );
+				}
+			}
+		}
+		$authors = $yoast
+			? ! empty( $titles['noindex-author-wpseo'] ) || ! empty( $titles['disable-author'] )
+			: $rule( 'author' ) || 'on' === ( $titles['disable_author_archives'] ?? '' );
+		if ( $authors ) {
+			foreach ( get_users(
+				array(
+					'has_published_posts' => true,
+					'fields'              => 'ID',
+				)
+			) as $user_id ) {
+				$this->copy( 'user', (int) $user_id, TALA_SEO_NOINDEX, '1' );
+			}
+		}
+	}
+
+	/**
+	 * An X (Twitter) profile address from a username or an address, or ''.
+	 *
+	 * @param mixed $value Username (with or without @) or address.
+	 * @return string
+	 */
+	private function x_profile( $value ): string {
+		$value = trim( is_string( $value ) ? $value : '' );
+		if ( '' === $value || str_contains( $value, '/' ) ) {
+			return $value;
+		}
+		$handle = ltrim( $value, '@' );
+		return preg_match( '/^[A-Za-z0-9_]{1,15}$/', $handle ) ? 'https://x.com/' . $handle : '';
+	}
+
+	/**
+	 * Writes a meta description for each published post that has none, from the opening of its own
+	 * text: its first paragraphs, cut after the last whole sentence that fits (else after a whole
+	 * word, with an ellipsis), as Rank Math's automatic descriptions are, but written once, so they
+	 * can be edited. A paragraph three or more of these posts start with (a template's introduction)
+	 * is passed over, so their descriptions start with what is their own. Posts with a description
+	 * (Tala SEO's or another plugin's) and password-protected posts are left alone.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--post_type=<types>]
+	 * : Post types, separated by commas.
+	 * ---
+	 * default: post
+	 * ---
+	 *
+	 * [--length=<characters>]
+	 * : The most characters a description may have.
+	 * ---
+	 * default: 155
+	 * ---
+	 *
+	 * [--dry-run]
+	 * : Show some of the descriptions and count them, without saving any.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp tala-seo describe --dry-run
+	 *     wp tala-seo describe --post_type=post,page
+	 *
+	 * @param string[]              $args       Positional arguments.
+	 * @param array<string, string> $assoc_args Options.
+	 */
+	public function describe( array $args, array $assoc_args ): void {
+		$dry    = ! empty( $assoc_args['dry-run'] );
+		$types  = array_values( array_intersect( array_map( 'trim', explode( ',', (string) ( $assoc_args['post_type'] ?? 'post' ) ) ), tala_seo_post_types() ) );
+		$length = max( 50, min( 300, (int) ( $assoc_args['length'] ?? 155 ) ) );
+		if ( ! $types ) {
+			WP_CLI::error( 'No post type with SEO fields given.' );
+		}
+		$ids = get_posts(
+			array(
+				'post_type'      => $types,
+				'post_status'    => 'publish',
+				'has_password'   => false,
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+			)
+		);
+		// Which paragraphs these posts share: a template's introduction describes none of them.
+		$posts  = array();
+		$shared = array();
+		foreach ( $ids as $id ) {
+			$post = get_post( $id );
+			if ( $post && '' === tala_seo_post_description( $id ) ) {
+				$posts[] = $post;
+				foreach ( array_unique( tala_seo_opening_paragraphs( $post ) ) as $paragraph ) {
+					$shared[ $paragraph ] = ( $shared[ $paragraph ] ?? 0 ) + 1;
+				}
+			}
+		}
+		$skip    = array_map( 'strval', array_keys( array_filter( $shared, static fn( int $count ): bool => $count >= 3 ) ) );
+		$written = 0;
+		$empty   = 0;
+		$samples = array();
+		$same    = array();
+		foreach ( $posts as $post ) {
+			$id   = $post->ID;
+			$text = tala_seo_opening_text( $post, $length, $skip );
+			if ( '' === $text ) {
+				++$empty;
+				continue;
+			}
+			$same[ $text ] = ( $same[ $text ] ?? 0 ) + 1;
+			if ( count( $samples ) < 5 ) {
+				$samples[] = array(
+					'ID'          => $id,
+					'description' => $text,
+				);
+			}
+			if ( ! $dry ) {
+				update_post_meta( $id, TALA_SEO_DESCRIPTION, $text );
+			}
+			++$written;
+		}
+		if ( $samples ) {
+			WP_CLI\Utils\format_items( 'table', $samples, array( 'ID', 'description' ) );
+		}
+		if ( $skip ) {
+			WP_CLI::log( sprintf( '%d paragraph(s) that three or more posts start with were passed over.', count( $skip ) ) );
+		}
+		$shared = array_sum( array_filter( $same, static fn( int $count ): bool => $count > 1 ) );
+		if ( $shared ) {
+			WP_CLI::warning( sprintf( '%d post(s) have only text other posts share, so their descriptions repeat: rewrite those first.', $shared ) );
+		}
+		if ( $empty ) {
+			WP_CLI::warning( sprintf( '%d post(s) have no paragraph to start from: write their descriptions by hand (wp tala-seo audit lists them).', $empty ) );
+		}
+		WP_CLI::success( sprintf( '%s %d description(s).', $dry ? 'Dry run, nothing changed. Would write' : 'Wrote', $written ) );
 	}
 
 	/**

@@ -46,7 +46,7 @@ function tala_seo_editor_assets(): void {
 		'primaryTypes'    => $category_types,
 		'requirements'    => $requirements,
 		'siteName'        => tala_seo_site_name(),
-		'separator'       => '|',
+		'separator'       => tala_seo_settings()['separator'],
 		'defaultCategory' => (int) get_option( 'default_category' ),
 		'sitePublic'      => (bool) get_option( 'blog_public' ),
 	);
@@ -88,6 +88,20 @@ function tala_seo_readiness() {
 	// The one-click switch, only where the web server can serve readable URLs at all.
 	if ( ! $pretty && got_url_rewrite() ) {
 		$check['action'] = 'pretty_permalinks';
+	}
+	$checks[] = $check;
+
+	// Sites made before WordPress 6.4 still have a page for every upload; newer ones don't.
+	$attachments = ! get_option( 'wp_attachment_pages_enabled' );
+	$check       = array(
+		'ok'   => $attachments,
+		'text' => $attachments
+			? __( 'Attachment pages are off: the address of an uploaded image leads to the image itself.', 'tala-seo' )
+			: __( 'Turn off attachment pages: every uploaded image has a thin page of its own that search engines may index. WordPress then sends those addresses to the image itself (301), as Yoast SEO and Rank Math do.', 'tala-seo' ),
+		'link' => admin_url( 'options-general.php?page=tala-seo' ),
+	);
+	if ( ! $attachments ) {
+		$check['action'] = 'attachment_pages';
 	}
 	$checks[] = $check;
 
@@ -153,6 +167,9 @@ function tala_seo_settings_fields(): void {
 	add_settings_field( 'tala_seo_publisher_type', __( 'Who runs this site', 'tala-seo' ), 'tala_seo_field_publisher_type', 'tala-seo', 'tala_seo_publisher' );
 	add_settings_field( 'tala_seo_publisher_name', __( 'Name', 'tala-seo' ), 'tala_seo_field_publisher_name', 'tala-seo', 'tala_seo_publisher', array( 'label_for' => 'tala-seo-publisher-name' ) );
 	add_settings_field( 'tala_seo_same_as', __( 'Official profiles', 'tala-seo' ), 'tala_seo_field_same_as', 'tala-seo', 'tala_seo_publisher', array( 'label_for' => 'tala-seo-same-as' ) );
+
+	add_settings_section( 'tala_seo_titles', __( 'Titles', 'tala-seo' ), '__return_null', 'tala-seo' );
+	add_settings_field( 'tala_seo_separator', __( 'Separator', 'tala-seo' ), 'tala_seo_field_separator', 'tala-seo', 'tala_seo_titles', array( 'label_for' => 'tala-seo-separator' ) );
 
 	add_settings_section( 'tala_seo_sharing', __( 'Home page and sharing', 'tala-seo' ), '__return_null', 'tala-seo' );
 	add_settings_field( 'tala_seo_home_description', __( 'Home page description', 'tala-seo' ), 'tala_seo_field_home_description', 'tala-seo', 'tala_seo_sharing', array( 'label_for' => 'tala-seo-home-description' ) );
@@ -268,6 +285,33 @@ function tala_seo_field_default_image(): void {
 }
 
 /**
+ * Field: the character between a page's title and the site name.
+ */
+function tala_seo_field_separator(): void {
+	$current = tala_seo_settings()['separator'];
+	$names   = array(
+		'|' => __( 'vertical bar', 'tala-seo' ),
+		'-' => __( 'hyphen', 'tala-seo' ),
+		'–' => __( 'en dash', 'tala-seo' ),
+		'—' => __( 'em dash', 'tala-seo' ),
+		':' => __( 'colon', 'tala-seo' ),
+		'·' => __( 'middle dot', 'tala-seo' ),
+		'•' => __( 'bullet', 'tala-seo' ),
+	);
+	echo '<select id="tala-seo-separator" name="tala_seo[separator]" aria-describedby="tala-seo-separator-help">';
+	foreach ( tala_seo_separators() as $separator ) {
+		printf(
+			'<option value="%1$s" %2$s>%3$s</option>',
+			esc_attr( $separator ),
+			selected( $current, $separator, false ),
+			/* translators: 1: an example page title, 2: the separator, 3: the site name, 4: the separator's name. */
+			esc_html( sprintf( __( '%1$s %2$s %3$s (%4$s)', 'tala-seo' ), __( 'Article title', 'tala-seo' ), $separator, tala_seo_site_name(), $names[ $separator ] ?? $separator ) )
+		);
+	}
+	echo '</select><p class="description" id="tala-seo-separator-help">' . esc_html__( 'Between the title of a page and the site name in search results and browser tabs.', 'tala-seo' ) . '</p>';
+}
+
+/**
  * Field: minimum number of posts before a tag page is shown to search engines.
  */
 function tala_seo_field_tag_min_posts(): void {
@@ -288,6 +332,10 @@ function tala_seo_settings_page(): void {
 	// get_sitemap_url() answers even while sitemaps are off, so ask the sitemap server first.
 	$server  = wp_sitemaps_get_server();
 	$sitemap = $server->sitemaps_enabled() ? (string) get_sitemap_url( 'index' ) : '';
+	$buttons = array(
+		'pretty_permalinks' => __( 'Switch to post-name URLs', 'tala-seo' ),
+		'attachment_pages'  => __( 'Turn off attachment pages', 'tala-seo' ),
+	);
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e( 'SEO', 'tala-seo' ); ?></h1>
@@ -298,11 +346,11 @@ function tala_seo_settings_page(): void {
 				<li>
 					<span aria-hidden="true" style="color:<?php echo esc_attr( $check['ok'] ? '#00a32a' : '#d63638' ); ?>"><?php echo $check['ok'] ? '✓' : '✕'; ?></span>
 					<?php echo esc_html( $check['text'] ); ?>
-					<?php if ( ! $check['ok'] && 'pretty_permalinks' === ( $check['action'] ?? '' ) ) : ?>
+					<?php if ( ! $check['ok'] && isset( $buttons[ $check['action'] ?? '' ] ) ) : ?>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
-							<input type="hidden" name="action" value="tala_seo_pretty_permalinks">
-							<?php wp_nonce_field( 'tala_seo_pretty_permalinks' ); ?>
-							<?php submit_button( __( 'Switch to post-name URLs', 'tala-seo' ), 'secondary small', 'submit', false ); ?>
+							<input type="hidden" name="action" value="<?php echo esc_attr( 'tala_seo_' . $check['action'] ); ?>">
+							<?php wp_nonce_field( 'tala_seo_' . $check['action'] ); ?>
+							<?php submit_button( $buttons[ $check['action'] ], 'secondary small', 'submit', false ); ?>
 						</form>
 					<?php elseif ( ! $check['ok'] ) : ?>
 						<a href="<?php echo esc_url( $check['link'] ); ?>"><?php esc_html_e( 'Fix', 'tala-seo' ); ?></a>
@@ -394,6 +442,25 @@ function tala_seo_pretty_permalinks(): never {
 		add_settings_error( 'tala_seo', 'tala_seo_permalinks', __( 'The permalinks were not changed: the site already has readable URLs, or the web server can\'t serve them.', 'tala-seo' ), 'warning' );
 	}
 	// The core way to show a message after a redirect (options-head.php reads it back).
+	set_transient( 'settings_errors', get_settings_errors(), 30 );
+	wp_safe_redirect( add_query_arg( 'settings-updated', 'true', admin_url( 'options-general.php?page=tala-seo' ) ) );
+	exit;
+}
+
+add_action( 'admin_post_tala_seo_attachment_pages', 'tala_seo_attachment_pages' );
+
+/**
+ * The checklist button: turns off attachment pages (WordPress's own setting, which sites made
+ * since WordPress 6.4 have off). WordPress then sends an attachment page's address to the file
+ * itself with a permanent redirect, so links to those pages keep working.
+ */
+function tala_seo_attachment_pages(): never {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Sorry, you are not allowed to change this setting.', 'tala-seo' ), '', array( 'response' => 403 ) );
+	}
+	check_admin_referer( 'tala_seo_attachment_pages' );
+	update_option( 'wp_attachment_pages_enabled', '0' );
+	add_settings_error( 'tala_seo', 'tala_seo_attachment_pages', __( 'Attachment pages are off: their addresses now lead to the files themselves.', 'tala-seo' ), 'success' );
 	set_transient( 'settings_errors', get_settings_errors(), 30 );
 	wp_safe_redirect( add_query_arg( 'settings-updated', 'true', admin_url( 'options-general.php?page=tala-seo' ) ) );
 	exit;

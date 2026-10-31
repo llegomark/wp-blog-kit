@@ -226,4 +226,25 @@ class Test_Tala_SEO_Redirects extends Tala_SEO_Test_Case {
 		wp_update_term( $second, 'category', array( 'slug' => 'tala-first' ) );
 		$this->assertNotContains( 'category/tala-first', get_term_meta( $first, TALA_SEO_OLD_PATH, false ) );
 	}
+
+	/**
+	 * Another SEO plugin's sitemap addresses go to WordPress's sitemap index, while it is published;
+	 * other .xml addresses stay "not found".
+	 */
+	public function test_old_sitemaps(): void {
+		update_option( 'blog_public', '1' );
+		foreach ( array( '/sitemap_index.xml', '/post-sitemap.xml', '/page-sitemap2.xml', '/category-sitemap.xml', '/local-sitemap.xml' ) as $path ) {
+			$this->go_to( home_url( $path ) );
+			$this->assertTrue( is_404(), $path );
+			$redirect = $this->redirect_of( 'tala_seo_redirect_old_sitemaps' );
+			$this->assertSame( home_url( '/wp-sitemap.xml' ), $redirect?->location, $path );
+			$this->assertSame( 301, $redirect?->status );
+		}
+		$this->go_to( home_url( '/lesson-plans.xml' ) );
+		$this->assertNull( $this->redirect_of( 'tala_seo_redirect_old_sitemaps' ) );
+
+		update_option( 'blog_public', '0' );
+		$this->go_to( home_url( '/sitemap_index.xml' ) );
+		$this->assertNull( $this->redirect_of( 'tala_seo_redirect_old_sitemaps' ), 'Not while the site is hidden: there is no sitemap.' );
+	}
 }

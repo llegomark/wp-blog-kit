@@ -407,4 +407,23 @@ class Test_Tala_SEO_Head extends Tala_SEO_Test_Case {
 		$this->assertSame( 'follow, max-image-preview:large, noindex', $this->robots(), 'The posts page can be hidden like any page.' );
 		$this->assertSame( get_permalink( $blog ), $this->canonical() );
 	}
+
+	/**
+	 * The separator between the title and the site name is a setting: an HTML entity counts as its
+	 * character, and anything not on the list is the vertical bar.
+	 */
+	public function test_title_separator(): void {
+		$post = $this->publish_post( array( 'post_title' => 'Planning a lesson' ) );
+		$this->set_setting( 'separator', '-' );
+		$this->go_to( get_permalink( $post ) );
+		$this->assertSame( 'Planning a lesson - Guro Notes', html_entity_decode( wp_get_document_title() ), 'A hyphen, not the en dash WordPress makes of " - ".' );
+
+		$this->set_setting( 'separator', '&bull;' );
+		$this->go_to( get_permalink( $post ) );
+		$this->assertSame( 'Planning a lesson • Guro Notes', wp_get_document_title() );
+
+		$this->set_setting( 'separator', '<b>' );
+		$this->go_to( get_permalink( $post ) );
+		$this->assertSame( 'Planning a lesson | Guro Notes', wp_get_document_title() );
+	}
 }

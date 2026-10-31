@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.15.1
+Stable tag: 1.16.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,21 +20,22 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **SEO column** in the Posts, Pages, Categories and Tags lists: what each item has and still needs at a glance. Every status pairs a symbol with a word, so it never depends on colour.
 * **Primary category:** choose which category leads the breadcrumbs (and the address, when the permalink contains %category%) for posts filed under several.
 * **Categories, tags and authors** get their own SEO title, meta description and "hide from search engines" switch.
-* **Head tags:** wrapped in a comment that names the plugin, its version and https://edventure.com.ph, so the page source shows what Tala SEO wrote. `<title>` as "Title | Site name" (the name only once when a page is named like the site), meta description, self-referencing canonical on every indexable page (paginated archives included), noindex for search results, 404s, date archives, empty categories and tag pages with too few posts, Open Graph and Twitter card tags with a 1200 × 630 share image (the 1.91:1 shape of link previews on Facebook, LinkedIn, X and messaging apps), and a `fediverse:creator` tag that credits the author when an article is shared on Mastodon.
+* **Head tags:** wrapped in a comment that names the plugin, its version and https://edventure.com.ph, so the page source shows what Tala SEO wrote. `<title>` as "Title | Site name", with the separator you choose (the name only once when a page is named like the site), meta description, self-referencing canonical on every indexable page (paginated archives included), noindex for search results, 404s, date archives, empty categories and tag pages with too few posts, Open Graph and Twitter card tags with a 1200 × 630 share image (the 1.91:1 shape of link previews on Facebook, LinkedIn, X and messaging apps), and a `fediverse:creator` tag that credits the author when an article is shared on Mastodon.
 * **Feeds and sitemaps** send `X-Robots-Tag: noindex, follow`, so they never show up in search results themselves (search engines still read them).
 * **Structured data (JSON-LD):** WebSite and Organization (with description) on the home page, BlogPosting on posts (image in 16:9, 4:3 and 1:1), ProfilePage on author pages, BreadcrumbList matching the visible Breadcrumbs block, on pages that show it.
 * **Videos:** each YouTube video in an Embed block is described as a VideoObject (title, thumbnail, player address, the caption as its description). The title and thumbnail are fetched from YouTube once, when the post is saved. Google also needs the date the video was published, which YouTube doesn't share this way: enter it in the SEO panel, where each video gets a date field.
 * **Event block:** when, where, tickets and organizer, shown as a card and described as an Event the way Google's event results ask: start and end with the UTC offset (or the date alone for an all-day event), the venue's address, status (cancelled, postponed, rescheduled), price and ticket page, and the featured image. One per post, as Google supports pages about a single event.
 * **Course block:** a course's description, provider (the site unless you name another), level, format (online, in person or both), time, instructor and cost with an enrollment link, shown as a card and described as a Course for Google's course list, a carousel in English searches. A post with one course is its detail page; a category (or other list of posts) whose posts are all courses, three or more, becomes their summary page; a post with several courses lists them itself. Google uses the name, description and provider; the other details were its Course info result, retired in 2025, and stay for other search engines and AI assistants.
 * **FAQ and How-to:** two Group blocks in the inserter, made of core blocks: an FAQ with a Details block (opens on click) for each question, and a how-to guide with a heading, an introduction and a numbered list of steps. They are described as FAQPage and HowTo. Google no longer shows these as rich results; the markup is valid schema.org that other search engines and AI assistants can read, and it only repeats what the page shows. Without the plugin they are ordinary blocks.
-* **Sitemap:** WordPress's own `/wp-sitemap.xml` with accurate `lastmod`, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, or hidden author pages. It exists only while search engines may index the site.
+* **Sitemap:** WordPress's own `/wp-sitemap.xml` with accurate `lastmod`, where the sitemap addresses of Yoast SEO and Rank Math (`sitemap_index.xml`, `post-sitemap.xml` and the like) now lead, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, or hidden author pages. It exists only while search engines may index the site.
 * **robots.txt:** points to the sitemap; blocks nothing else, and AI crawlers are welcome.
 * **Redirects:** a page, category or tag whose address changes (new slug or parent) sends visitors and search engines from the old address to the new one (301). WordPress does this for posts only. Children move with their parent. A post can also send its visitors to another address on purpose (301), for example after two guides are merged.
+* **Attachment pages:** the setup checklist turns off the thin page WordPress made for every uploaded image on sites older than WordPress 6.4, in one click; their addresses then lead to the files (301), as with Yoast SEO and Rank Math.
 * **Permalinks:** the setup checklist switches a site with plain URLs to post-name URLs in one click, and Settings → Permalinks warns before a structure change moves every published post. The plugin never changes the permalinks on its own.
 * **Hidden-site warning:** while "Discourage search engines" is on, every admin screen and the pre-publish checklist say so.
 * **Authors:** a real author photo (no Gravatar request), social profile links (TikTok and Mastodon included) for the author markup, and a Fediverse handle.
-* **Settings → SEO:** site owner, official profiles, home description (also the Organization description), default share image, the minimum number of posts for tag pages to be indexed (2 by default), Google Search Console, Bing Webmaster Tools and Meta (Facebook) verification codes, and a setup checklist.
-* **WP-CLI:** `wp tala-seo audit` lists published posts that are missing something; `wp tala-seo import` copies data from Yoast SEO, Rank Math, The SEO Framework or SEOPress.
+* **Settings → SEO:** the title separator (vertical bar, hyphen, dashes, colon, middle dot or bullet), site owner, official profiles, home description (also the Organization description), default share image, the minimum number of posts for tag pages to be indexed (2 by default), Google Search Console, Bing Webmaster Tools and Meta (Facebook) verification codes, and a setup checklist.
+* **WP-CLI:** `wp tala-seo audit` lists published posts that are missing something; `wp tala-seo import` copies data from Yoast SEO, Rank Math, The SEO Framework or SEOPress; `wp tala-seo describe` writes the missing meta descriptions from each post's opening text, once, for you to edit.
 
 == Installation ==
 
@@ -54,7 +55,7 @@ Create a draft, set the featured image with `wp media import <file> --post_id=<i
 
 = I'm switching from another SEO plugin. What carries over? =
 
-Run `wp tala-seo import --dry-run` to see what would be copied, then `wp tala-seo import`. Until then, titles, descriptions and noindex from Yoast SEO, Rank Math, The SEO Framework or SEOPress still apply to the pages themselves and keep hidden posts, categories and tags out of the sitemap, but the author settings only know Tala SEO's own values.
+Run `wp tala-seo import --dry-run` to see what would be copied, then `wp tala-seo import`. It copies each post's, category's, tag's and author's SEO title, description, canonical, noindex, primary category and permanent redirect, fills in titles made with the other plugin's variables (%%title%% %%sep%% %%sitename%%) and takes off the site name it added. From Yoast SEO or Rank Math it also copies the title separator, home page description, site owner, official profiles, default share image and verification codes, turns off attachment pages if the plugin redirected them, and hides the category, tag and author pages it hid as a rule. With settings from both, add `--from=yoast` or `--from=rank-math`. Rank Math wrote descriptions on the fly for posts without one; `wp tala-seo describe` writes them once, from the opening text, for you to edit. Until the import, titles, descriptions and noindex from Yoast SEO, Rank Math, The SEO Framework or SEOPress still apply to the pages themselves and keep hidden posts, categories and tags out of the sitemap, but the author settings only know Tala SEO's own values.
 
 = What size should featured images be? =
 
@@ -93,6 +94,13 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.16.0 =
+* New: the title separator is a setting (Settings → SEO → Titles): vertical bar, hyphen, en or em dash, colon, middle dot or bullet. A hyphen stays a hyphen; WordPress would make " - " an en dash.
+* New: `wp tala-seo describe` writes a meta description for each published post without one, from its opening paragraphs, cut after a whole sentence; an introduction three or more posts share is passed over.
+* New: the setup checklist turns off attachment pages in one click; their addresses lead to the files (301).
+* New: Yoast SEO's and Rank Math's sitemap addresses (sitemap_index.xml, post-sitemap.xml and the like) lead to WordPress's sitemap.
+* Import: titles and descriptions made with the other plugin's variables are filled in, and the site name it added is taken off; from Yoast SEO or Rank Math, the site-wide settings are copied too, attachment pages are turned off if it redirected them, and the category, tag and author pages it hid as a rule stay hidden. `--from` chooses when both left settings.
 
 = 1.15.1 =
 * Security: the publish check counts only text as a meta description. WordPress saves a post before it rejects meta of another type (a number, a list), so a publish checked against such a value went live with no description stored. A description made of spaces, no-break spaces included, is empty too.
@@ -210,6 +218,9 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 * First release.
 
 == Upgrade Notice ==
+
+= 1.16.0 =
+Title separator setting, attachment pages switch, and a fuller import from Yoast SEO and Rank Math. Coming from one? Run `wp tala-seo import --dry-run`, then `wp tala-seo import`, and `wp tala-seo describe` for posts without a description.
 
 = 1.13.0 =
 Hardening. Members who never published lose the profile markup on their empty author page. Subscribers and contributors no longer see a photo picker they couldn't use.

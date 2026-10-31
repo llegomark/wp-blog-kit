@@ -22,11 +22,15 @@ function tala_seo_clean_head(): void {
 }
 add_filter( 'the_generator', '__return_empty_string' );
 
-// Google: put the site name at the start or end, separated by a hyphen, colon or pipe.
+// Google: put the site name at the start or end, separated by a hyphen, colon or pipe. Which one
+// is a setting (Settings → SEO → Titles), the vertical bar unless chosen. WordPress turns " - " in a
+// title into an en dash; the hyphen goes in as its character reference, which it leaves alone and
+// browsers and search engines read as a hyphen.
 add_filter(
 	'document_title_separator',
 	static function () {
-		return '|';
+		$separator = tala_seo_settings()['separator'];
+		return '-' === $separator ? '&#45;' : $separator;
 	}
 );
 
