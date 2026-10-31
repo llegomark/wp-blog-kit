@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.16.0
+Stable tag: 1.16.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,7 +26,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **Videos:** each YouTube video in an Embed block is described as a VideoObject (title, thumbnail, player address, the caption as its description). The title and thumbnail are fetched from YouTube once, when the post is saved. Google also needs the date the video was published, which YouTube doesn't share this way: enter it in the SEO panel, where each video gets a date field.
 * **Event block:** when, where, tickets and organizer, shown as a card and described as an Event the way Google's event results ask: start and end with the UTC offset (or the date alone for an all-day event), the venue's address, status (cancelled, postponed, rescheduled), price and ticket page, and the featured image. One per post, as Google supports pages about a single event.
 * **Course block:** a course's description, provider (the site unless you name another), level, format (online, in person or both), time, instructor and cost with an enrollment link, shown as a card and described as a Course for Google's course list, a carousel in English searches. A post with one course is its detail page; a category (or other list of posts) whose posts are all courses, three or more, becomes their summary page; a post with several courses lists them itself. Google uses the name, description and provider; the other details were its Course info result, retired in 2025, and stay for other search engines and AI assistants.
-* **FAQ and How-to:** two Group blocks in the inserter, made of core blocks: an FAQ with a Details block (opens on click) for each question, and a how-to guide with a heading, an introduction and a numbered list of steps. They are described as FAQPage and HowTo. Google no longer shows these as rich results; the markup is valid schema.org that other search engines and AI assistants can read, and it only repeats what the page shows. Without the plugin they are ordinary blocks.
+* **FAQ and How-to:** two Group blocks in the inserter, made of core blocks: an FAQ with a Details block (opens on click) for each question, and a how-to guide with a heading, an introduction and a numbered list of steps (a post's only how-to guide may leave the heading out: it is then named after the post). They are described as FAQPage and HowTo. Google no longer shows these as rich results; the markup is valid schema.org that other search engines and AI assistants can read, and it only repeats what the page shows. Without the plugin they are ordinary blocks.
 * **Sitemap:** WordPress's own `/wp-sitemap.xml` with accurate `lastmod`, where the sitemap addresses of Yoast SEO and Rank Math (`sitemap_index.xml`, `post-sitemap.xml` and the like) now lead, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, or hidden author pages. It exists only while search engines may index the site.
 * **robots.txt:** points to the sitemap; blocks nothing else, and AI crawlers are welcome.
 * **Redirects:** a page, category or tag whose address changes (new slug or parent) sends visitors and search engines from the old address to the new one (301). WordPress does this for posts only. Children move with their parent. A post can also send its visitors to another address on purpose (301), for example after two guides are merged.
@@ -94,6 +94,9 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.16.1 =
+* A post's only How-to group may go without a heading of its own: the guide is then named after the post, whose title is the page's heading, as Yoast SEO's and Rank Math's how-to blocks were. With several groups, each still needs its heading.
 
 = 1.16.0 =
 * New: the title separator is a setting (Settings → SEO → Titles): vertical bar, hyphen, en or em dash, colon, middle dot or bullet. A hyphen stays a hyphen; WordPress would make " - " an en dash.

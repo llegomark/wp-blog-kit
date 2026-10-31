@@ -42,7 +42,7 @@ function tala_seo_content_nodes( $post ) {
 	return array_merge(
 		tala_seo_video_nodes( $post, $blocks, $url ),
 		array_filter( array( tala_seo_faq_node( $blocks, $url ) ) ),
-		tala_seo_howto_nodes( $blocks, $url ),
+		tala_seo_howto_nodes( $blocks, $url, tala_seo_clean_text( get_the_title( $post ) ) ),
 		array_filter( array( tala_seo_post_event_node( $post, $blocks ) ) ),
 		tala_seo_post_course_nodes( $post, $blocks )
 	);
@@ -217,14 +217,18 @@ function tala_seo_faq_node( array $blocks, string $url ) {
 
 /**
  * HowTo nodes from the post's How-to groups: a heading and a numbered list of two steps or more.
+ * A post's only How-to group may go without a heading of its own: the guide is then named after
+ * the post, whose title is the page's heading (as Yoast SEO's and Rank Math's how-to blocks were).
  *
- * @param array<array<string, mixed>> $blocks Parsed blocks.
- * @param string                      $url    Post URL.
+ * @param array<array<string, mixed>> $blocks     Parsed blocks.
+ * @param string                      $url        Post URL.
+ * @param string                      $post_title The post's title, for a lone group without a heading.
  * @return array<int, array<string, mixed>>
  */
-function tala_seo_howto_nodes( array $blocks, string $url ): array {
-	$nodes = array();
-	foreach ( tala_seo_find_blocks( $blocks, static fn( $block ) => tala_seo_is_group( $block, TALA_SEO_HOWTO_CLASS ) ) as $group ) {
+function tala_seo_howto_nodes( array $blocks, string $url, string $post_title = '' ): array {
+	$nodes  = array();
+	$groups = tala_seo_find_blocks( $blocks, static fn( $block ) => tala_seo_is_group( $block, TALA_SEO_HOWTO_CLASS ) );
+	foreach ( $groups as $group ) {
 		$name        = '';
 		$description = array();
 		$steps       = array();
@@ -246,6 +250,9 @@ function tala_seo_howto_nodes( array $blocks, string $url ): array {
 				}
 				break;
 			}
+		}
+		if ( '' === $name && 1 === count( $groups ) ) {
+			$name = $post_title;
 		}
 		if ( '' === $name || count( $steps ) < 2 ) {
 			continue;

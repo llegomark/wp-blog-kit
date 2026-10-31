@@ -228,7 +228,25 @@ class Test_Tala_SEO_Content_Schema extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * Not a how-to guide: a bulleted list, a single step, or no heading.
+	 * A post's only How-to group without a heading is named after the post (its title is the
+	 * page's heading), as Yoast SEO's and Rank Math's how-to blocks were.
+	 */
+	public function test_lone_howto_takes_the_post_title(): void {
+		$post = $this->publish_post(
+			array(
+				'post_title'   => 'Tagging learners in the LIS',
+				'post_content' => $this->group( 'tala-seo-howto', $this->items( array( 'Log in to the LIS.', 'Open the learner list.' ) ) ),
+			)
+		);
+		$this->go_to( get_permalink( $post ) );
+		$nodes = $this->nodes( 'HowTo' );
+		$this->assertCount( 1, $nodes );
+		$this->assertSame( 'Tagging learners in the LIS', $nodes[0]['name'] );
+		$this->assertCount( 2, $nodes[0]['step'] );
+	}
+
+	/**
+	 * Not a how-to guide: a bulleted list, a single step, or no heading among several groups.
 	 */
 	public function test_no_howto_without_a_heading_and_steps(): void {
 		$heading = "<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">How to do it</h2>\n<!-- /wp:heading -->";
