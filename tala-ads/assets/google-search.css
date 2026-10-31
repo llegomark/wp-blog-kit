@@ -1,0 +1,222 @@
+/**
+ * Google's search box and results on the results page, in the site's own look: the theme's
+ * colours, font, links, form field and button, in light and dark mode. The colours are the
+ * theme.json presets block themes define (Tala Blog's: contrast, muted, accent, rule, base), each
+ * with the surrounding text's colour as a fallback for themes without them.
+ *
+ * Google's widget brings its own stylesheet and writes some colours and borders on the elements
+ * themselves, so declarations that must win over those carry !important. Google's name and its
+ * "Search on Google" link stay visible, as its terms ask.
+ */
+
+.tala-ads-google-search {
+	--tala-ads-text: var(--wp--preset--color--contrast, currentcolor);
+	--tala-ads-muted: var(--wp--preset--color--muted, currentcolor);
+	--tala-ads-accent: var(--wp--preset--color--accent, currentcolor);
+	--tala-ads-rule: var(--wp--preset--color--rule, currentcolor);
+	--tala-ads-page: var(--wp--preset--color--base, transparent);
+	min-height: 3rem; /* the search field, before Google's script draws it */
+	margin-block: var(--wp--preset--spacing--30, 1.25rem);
+	color: var(--tala-ads-text);
+}
+
+/* The page's font and colours throughout, without Google's white boxes, borders and tables. */
+.tala-ads-google-search .gsc-control-cse,
+.tala-ads-google-search .gsc-control-cse * {
+	font-family: inherit !important;
+}
+
+.tala-ads-google-search .gsc-control-cse,
+.tala-ads-google-search .gsc-results,
+.tala-ads-google-search .gsc-webResult.gsc-result,
+.tala-ads-google-search .gsc-above-wrapper-area,
+.tala-ads-google-search .gsc-cursor-box,
+.tala-ads-google-search .gsc-cursor-page {
+	border: 0 !important;
+	background-color: transparent !important;
+}
+
+.tala-ads-google-search .gsc-control-cse {
+	padding: 0 !important;
+	color: inherit;
+	font-size: inherit;
+}
+
+/* Google lays out its box and bars with tables: they take none of the theme's table borders. */
+.tala-ads-google-search .gsc-control-cse table,
+.tala-ads-google-search .gsc-control-cse th,
+.tala-ads-google-search .gsc-control-cse td {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+}
+
+/* The search box: one field and a button, like the theme's Search block. */
+.tala-ads-google-search form.gsc-search-box {
+	margin: 0 0 var(--wp--preset--spacing--30, 1.25rem);
+}
+
+/* The gap before the button belongs to the button: an engine set to hide it leaves none. */
+.tala-ads-google-search td.gsc-search-button {
+	padding-inline-start: 0.5rem;
+}
+
+.tala-ads-google-search .gsc-input-box {
+	padding: 0.35em 0.5em;
+	border: 1px solid var(--tala-ads-muted) !important;
+	border-radius: 5px;
+	background-color: var(--tala-ads-page) !important;
+}
+
+.tala-ads-google-search .gsc-input-box:focus-within {
+	outline: 2px solid var(--tala-ads-accent);
+	outline-offset: 2px;
+}
+
+/* Only the colour: the field's background picture is Google's name, shown until one types. */
+.tala-ads-google-search input.gsc-input {
+	background-color: transparent !important;
+	color: var(--tala-ads-text) !important;
+	font-size: 1rem !important;
+}
+
+.tala-ads-google-search input.gsc-input::placeholder {
+	color: var(--tala-ads-muted);
+	opacity: 1;
+}
+
+.tala-ads-google-search button.gsc-search-button {
+	margin: 0;
+	padding: 0.75em 1.1em;
+	border: 0 !important;
+	border-radius: 5px;
+	background-color: var(--tala-ads-text) !important;
+	color: var(--tala-ads-page);
+	cursor: pointer;
+}
+
+.tala-ads-google-search button.gsc-search-button:hover,
+.tala-ads-google-search button.gsc-search-button:focus-visible {
+	background-color: var(--tala-ads-accent) !important;
+}
+
+.tala-ads-google-search button.gsc-search-button svg {
+	fill: currentcolor;
+}
+
+/* Above the results: the count and the order, small and muted, over a fine rule. */
+.tala-ads-google-search .gsc-above-wrapper-area {
+	padding: 0 0 0.5rem !important;
+	border-block-end: 1px solid var(--tala-ads-rule) !important;
+}
+
+.tala-ads-google-search .gsc-result-info,
+.tala-ads-google-search .gsc-orderby-label,
+.tala-ads-google-search .gsc-selected-option-container,
+.tala-ads-google-search .gs-visibleUrl,
+.tala-ads-google-search .gs-visibleUrl-breadcrumb,
+.tala-ads-google-search .gs-visibleUrl-short,
+.tala-ads-google-search .gs-visibleUrl-long {
+	color: var(--tala-ads-muted) !important;
+	font-size: var(--wp--preset--font-size--small, 0.875rem) !important;
+}
+
+.tala-ads-google-search .gsc-result-info {
+	padding-inline: 0 !important;
+}
+
+.tala-ads-google-search .gsc-selected-option-container {
+	border-color: var(--tala-ads-rule) !important;
+	background-color: transparent !important;
+}
+
+/* Each result, like the theme's lists of articles: separated by fine rules. */
+.tala-ads-google-search .gsc-webResult.gsc-result {
+	padding: var(--wp--preset--spacing--30, 1.25rem) 0 !important;
+	border-block-end: 1px solid var(--tala-ads-rule) !important;
+}
+
+.tala-ads-google-search .gsc-table-result,
+.tala-ads-google-search .gsc-thumbnail-inside,
+.tala-ads-google-search .gsc-url-top {
+	padding-inline: 0 !important;
+}
+
+.tala-ads-google-search .gs-title {
+	height: auto !important;
+	overflow: visible;
+	line-height: 1.35;
+}
+
+.tala-ads-google-search .gs-title,
+.tala-ads-google-search .gs-title * {
+	color: var(--tala-ads-text) !important;
+	font-size: var(--wp--preset--font-size--medium, 1.125rem) !important;
+	font-weight: 600;
+	text-decoration: none !important;
+}
+
+.tala-ads-google-search a.gs-title:hover,
+.tala-ads-google-search a.gs-title:hover * {
+	color: var(--tala-ads-accent) !important;
+	text-decoration: underline !important;
+}
+
+.tala-ads-google-search .gs-title b,
+.tala-ads-google-search .gs-snippet b {
+	font-weight: inherit;
+}
+
+.tala-ads-google-search .gs-snippet {
+	color: var(--tala-ads-text) !important;
+	font-size: 1rem !important;
+	line-height: 1.6;
+}
+
+.tala-ads-google-search .gs-image-box img,
+.tala-ads-google-search img.gs-image {
+	border: 0 !important;
+	border-radius: 5px;
+}
+
+/* Pages of results: small numbered links, the current one in the accent colour. */
+.tala-ads-google-search .gsc-cursor-box {
+	margin: var(--wp--preset--spacing--30, 1.25rem) 0 0 !important;
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
+}
+
+.tala-ads-google-search .gsc-cursor-box .gsc-cursor-page {
+	margin-inline-end: 0.75em !important;
+	color: var(--tala-ads-text) !important;
+	text-decoration: underline dotted !important;
+	text-decoration-thickness: 1px !important;
+	text-underline-offset: 0.15em;
+}
+
+.tala-ads-google-search .gsc-cursor-box .gsc-cursor-page:hover {
+	color: var(--tala-ads-accent) !important;
+	text-decoration: underline !important;
+}
+
+.tala-ads-google-search .gsc-cursor-box .gsc-cursor-current-page {
+	color: var(--tala-ads-accent) !important;
+	font-weight: 700;
+	text-decoration: none !important;
+}
+
+/* Google's name and its "Search on Google" link, in the muted colour. */
+.tala-ads-google-search .gcsc-branding,
+.tala-ads-google-search .gcsc-branding-text,
+.tala-ads-google-search .gcsc-find-more-on-google,
+.tala-ads-google-search .gcsc-find-more-on-google-query {
+	color: var(--tala-ads-muted) !important;
+}
+
+.tala-ads-google-search .gcsc-find-more-on-google {
+	font-size: var(--wp--preset--font-size--small, 0.875rem) !important;
+}
+
+.tala-ads-google-search .gcsc-find-more-on-google-magnifier {
+	fill: currentcolor !important;
+}

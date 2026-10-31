@@ -62,8 +62,11 @@ typography presets, and the plugin's blocks in the editor. Then, on the local si
 - Keep `Update URI: false` in the theme and plugin headers. The plugins are private.
 - Use the text domains `tala-seo`, `tala-ads` and `tala-blog`, and the prefixes `tala_seo_`, `tala_ads_` and
   `tala_blog_`.
-- Tala Ads' settings hold IDs only, never code: each field is cut down to the ID's shape on save and
-  again on output, so nothing typed into wp-admin can put a script on the site.
+- Tala Ads' settings hold IDs, never code: each field is cut down to the ID's shape on save and
+  again on output, so nothing typed into wp-admin can put a script on the site. The one exception is
+  Google's error protection code, which Google generates per site: it is kept only in Google's shape,
+  for the site's publisher ID, naming only Google's servers, and only users with `unfiltered_html`
+  can change it. Don't add other code fields.
 - When you change the plugin or theme version, bump `Version:`, `Stable tag:` (in readme.txt)
   and the changelog, then run `./build.sh`. Once the push passes the checks, `release.yml` publishes
   the new version as a GitHub release (the zip, its SHA-256, a build attestation, the changelog entry

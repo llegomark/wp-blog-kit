@@ -20,4 +20,14 @@ export default {
 		// how any element looks.
 		'no-descending-specificity': null,
 	},
+	overrides: [
+		{
+			// Google's search widget names its own classes (gsc-webResult, gs-visibleUrl): these
+			// styles can only select them as Google wrote them.
+			files: [ 'tala-ads/assets/google-search.css' ],
+			rules: {
+				'selector-class-pattern': null,
+			},
+		},
+	],
 };

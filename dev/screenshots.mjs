@@ -30,6 +30,7 @@ const ADS_EXAMPLE = {
 	innity_key: '0123456789abcdef0123456789abcdef',
 	innity_zone: '100000',
 	innity_channel: 'EDUCATION,LIFESTYLE',
+	cse: '0123456789abcdef0',
 };
 const BASE = process.env.WP_DEV_URL || 'http://127.0.0.1:8080';
 // Reduced motion: panels are in place at once, not caught sliding in.
@@ -147,7 +148,8 @@ async function adsShot() {
 	} catch {
 		// No settings yet (WP-CLI exits with an error): there is nothing to put back.
 	}
-	wp( 'option', 'update', 'tala_ads', JSON.stringify( ADS_EXAMPLE ), '--format=json' );
+	const about = Number( wp( 'post', 'list', '--post_type=page', '--name=about', '--field=ID' ).trim() );
+	wp( 'option', 'update', 'tala_ads', JSON.stringify( { ...ADS_EXAMPLE, search_page: about } ), '--format=json' );
 	try {
 		await page.goto( '/wp-admin/options-general.php?page=tala-ads' );
 		await tidy( page );

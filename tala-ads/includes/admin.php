@@ -49,7 +49,8 @@ function tala_ads_settings_fields(): void {
 			'help'        => __( 'Paste the ID, or any code AdSense gives you (the Auto ads code, an ads.txt line): only the publisher ID is kept.', 'tala-ads' ),
 		)
 	);
-	add_settings_field( 'tala_ads_consent', __( 'Consent message', 'tala-ads' ), 'tala_ads_field_consent', 'tala-ads', 'tala_ads_adsense' );
+	add_settings_field( 'tala_ads_consent', __( 'Google\'s messages', 'tala-ads' ), 'tala_ads_field_consent', 'tala-ads', 'tala_ads_adsense' );
+	add_settings_field( 'tala_ads_error_protection', __( 'Error protection', 'tala-ads' ), 'tala_ads_field_error_protection', 'tala-ads', 'tala_ads_adsense', array( 'label_for' => 'tala-ads-error-protection' ) );
 
 	add_settings_section( 'tala_ads_gtm', __( 'Google Tag Manager', 'tala-ads' ), '__return_null', 'tala-ads' );
 	add_settings_field(
@@ -65,6 +66,22 @@ function tala_ads_settings_fields(): void {
 			'help'        => __( 'Paste the ID or Tag Manager\'s code: only the container ID is kept. The container then loads Google Analytics and your other tags.', 'tala-ads' ),
 		)
 	);
+
+	add_settings_section( 'tala_ads_search', __( 'Google search', 'tala-ads' ), 'tala_ads_section_search', 'tala-ads' );
+	add_settings_field(
+		'tala_ads_cse',
+		__( 'Search engine ID', 'tala-ads' ),
+		'tala_ads_field_text',
+		'tala-ads',
+		'tala_ads_search',
+		array(
+			'label_for'   => 'tala-ads-cse',
+			'key'         => 'cse',
+			'placeholder' => '0123456789abcdef0',
+			'help'        => __( 'The "cx" of your engine in Programmable Search Engine (programmablesearchengine.google.com). Paste the ID or Google\'s code: only the ID is kept.', 'tala-ads' ),
+		)
+	);
+	add_settings_field( 'tala_ads_search_page', __( 'Results page', 'tala-ads' ), 'tala_ads_field_search_page', 'tala-ads', 'tala_ads_search', array( 'label_for' => 'tala-ads-search-page' ) );
 
 	add_settings_section( 'tala_ads_innity', __( 'Innity', 'tala-ads' ), 'tala_ads_section_innity', 'tala-ads' );
 	$innity = array(
@@ -98,6 +115,35 @@ function tala_ads_section_adsense(): void {
 	if ( $status ) {
 		printf( '<p><span aria-hidden="true" style="color:%s">%s</span> %s</p>', esc_attr( $status['ok'] ? '#00a32a' : '#d63638' ), $status['ok'] ? '✓' : '✕', esc_html( $status['text'] ) );
 	}
+}
+
+/**
+ * The Google search section's introduction.
+ */
+function tala_ads_section_search(): void {
+	echo '<p>' . esc_html__( 'With an engine ID and a results page, Google answers every search on the site: WordPress\'s search forms send their searches to the results page, where the page\'s Search block (or, without one, the end of the page) shows Google\'s search box and results. Results for a search get noindex, as Google asks for internal search results.', 'tala-ads' ) . '</p>';
+}
+
+/**
+ * Field: the results page for Google search.
+ */
+function tala_ads_field_search_page(): void {
+	$select = wp_dropdown_pages(
+		array(
+			'name'              => 'tala_ads[search_page]',
+			'id'                => 'tala-ads-search-page',
+			'selected'          => tala_ads_settings()['search_page'], // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- an integer.
+			'show_option_none'  => esc_html__( '— None (WordPress search) —', 'tala-ads' ),
+			'option_none_value' => '0',
+			'echo'              => false,
+		)
+	);
+	if ( '' === $select ) {
+		echo '<p>' . esc_html__( 'Publish a page first, for example "Search", with a Search block where the results should appear.', 'tala-ads' ) . '</p>';
+		return;
+	}
+	echo $select; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_dropdown_pages() escapes its output.
+	echo '<p class="description">' . esc_html__( 'A published page, for example "Search", with a Search block where the results should appear.', 'tala-ads' ) . '</p>';
 }
 
 /**
@@ -155,15 +201,40 @@ function tala_ads_field_text( $args ): void {
 }
 
 /**
- * Field: Google's consent message.
+ * Field: Google's messages (consent and ad blocking recovery).
  */
 function tala_ads_field_consent(): void {
 	printf(
 		'<label><input type="checkbox" name="tala_ads[consent]" value="1" aria-describedby="tala-ads-consent-help" %s> %s</label><p class="description" id="tala-ads-consent-help">%s</p>',
 		checked( tala_ads_settings()['consent'], true, false ),
-		esc_html__( 'Show Google\'s consent message', 'tala-ads' ),
-		esc_html__( 'Set it up under Privacy & messaging in AdSense. Google needs it to show personalized ads to visitors from the European Economic Area, the UK and Switzerland, and it also shows the ad blocking recovery message when that is on there.', 'tala-ads' )
+		esc_html__( 'Load Google\'s consent and ad blocking recovery messages', 'tala-ads' ),
+		esc_html__( 'The messages you set up under Privacy & messaging in AdSense, which come from one Google tag: the consent message, which Google needs to show personalized ads to visitors from the European Economic Area, the UK and Switzerland, and the ad blocking recovery message.', 'tala-ads' )
 	);
+}
+
+/**
+ * Field: Google's error protection code for the ad blocking recovery message.
+ */
+function tala_ads_field_error_protection(): void {
+	$code = tala_ads_settings()['error_protection'];
+	$can  = current_user_can( 'unfiltered_html' );
+	printf(
+		'<textarea class="large-text code" rows="4" id="tala-ads-error-protection" name="tala_ads[error_protection]" spellcheck="false" aria-describedby="tala-ads-error-protection-help"%s>%s</textarea><p class="description" id="tala-ads-error-protection-help">%s</p>',
+		$can ? '' : ' readonly',
+		esc_textarea( $code ),
+		esc_html(
+			$can
+				? __( 'Optional. When an ad blocker stops the recovery message itself, this asks the reader to allow ads. In AdSense, under Privacy & messaging → Ad blocking recovery → Tagging per site, copy the "Error protection message" code and paste it here whole. It is kept only as Google gives it, for this site\'s publisher ID, and goes on pages with ads while Google\'s messages are on.', 'tala-ads' )
+				: __( 'Only people who may add scripts to this site can change this code.', 'tala-ads' )
+		)
+	);
+	if ( '' !== $code ) {
+		printf(
+			'<p><span aria-hidden="true" style="color:#00a32a">✓</span> %s</p>',
+			/* translators: %s: size of the code in kilobytes. */
+			esc_html( sprintf( __( 'Google\'s error protection code is saved (%s KB).', 'tala-ads' ), number_format_i18n( strlen( $code ) / 1024, 1 ) ) )
+		);
+	}
 }
 
 /**

@@ -34,8 +34,8 @@ function tala_ads_enqueue(): void {
 		return;
 	}
 
-	// Google's consent message, and its ad blocking recovery message when that is on in AdSense
-	// (Privacy & messaging). The second script tells Google's messages the first one ran.
+	// Google's messages (AdSense → Privacy & messaging): the consent message and the ad blocking
+	// recovery message come from the same tag. The second script tells them the first one ran.
 	if ( $settings['consent'] ) {
 		wp_enqueue_script(
 			'tala-ads-consent',
@@ -53,6 +53,14 @@ function tala_ads_enqueue(): void {
 			'tala-ads-consent-signal',
 			"(function(){function signalGooglefcPresent(){if(!window.frames['googlefcPresent']){if(document.body){var iframe=document.createElement('iframe');iframe.style='width: 0; height: 0; border: none; z-index: -1000; left: -1000px; top: -1000px;';iframe.style.display='none';iframe.name='googlefcPresent';document.body.appendChild(iframe);}else{setTimeout(signalGooglefcPresent,0);}}}signalGooglefcPresent();})();"
 		);
+		// Google's error protection tag: when an ad blocker stops the recovery message itself, it asks
+		// the reader to allow ads. Only on pages that show ads; checked against its shape on save and
+		// again here (tala_ads_sanitize_error_protection()).
+		if ( '' !== $settings['error_protection'] && tala_ads_show_ads() ) {
+			wp_register_script( 'tala-ads-error-protection', false, array(), TALA_ADS_VERSION, array( 'in_footer' => false ) );
+			wp_enqueue_script( 'tala-ads-error-protection' );
+			wp_add_inline_script( 'tala-ads-error-protection', $settings['error_protection'] );
+		}
 	}
 
 	if ( tala_ads_show_ads() ) {

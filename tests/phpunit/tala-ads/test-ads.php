@@ -102,17 +102,99 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		);
 		$this->assertSame(
 			array(
-				'adsense'        => 'ca-pub-1234567890123456',
-				'consent'        => true,
-				'gtm'            => '',
-				'innity_key'     => '',
-				'innity_zone'    => '',
-				'innity_channel' => '',
+				'adsense'          => 'ca-pub-1234567890123456',
+				'consent'          => true,
+				'error_protection' => '',
+				'gtm'              => '',
+				'innity_key'       => '',
+				'innity_zone'      => '',
+				'innity_channel'   => '',
+				'cse'              => '',
+				'search_page'      => 0,
 			),
 			$clean,
 			'Unknown fields are dropped and the switch is a boolean.'
 		);
 		$this->assertFalse( tala_ads_sanitize_settings( 'not an array' )['consent'] );
+	}
+
+	/**
+	 * Google's error protection tag as AdSense gives it (shortened: the real function is about 10 KB):
+	 * a self-contained function, then one call with the site's configuration in base64.
+	 *
+	 * @param string $publisher The publisher ID the configuration names.
+	 * @param string $address   An address in the configuration.
+	 * @return string
+	 */
+	private function error_protection( string $publisher = 'pub-1234567890123456', string $address = 'https://fundingchoicesmessages.google.com/b/pub-1234567890123456' ): string {
+		$config = (string) wp_json_encode(
+			array(
+				$publisher,
+				array( null, null, null, $address ),
+				null,
+				null,
+				'https://fundingchoicesmessages.google.com/el/AGSKWx?te=TOKEN_EXPOSED',
+				'div-gpt-ad',
+				20,
+				100,
+				'cHViLTEyMzQ1Njc4OTAxMjM0NTY=',
+				array( null, null, null, 'https://www.gstatic.com/0emn/f/p/' . $publisher . '.js?usqp=CA0' ),
+			)
+		);
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Google's tag carries its configuration this way.
+		return "(function(){'use strict';var t=this||self;(function(a,b){t[a]=function(c){t[a]=function(){};b(c)}})(\"__h82AlnkH6D91__\",function(a){window.talaTest=a});}).call(this);\n\nwindow.__h82AlnkH6D91__(\"" . base64_encode( $config ) . '");';
+	}
+
+	/**
+	 * The error protection code is kept only in Google's shape, for the site's own publisher ID,
+	 * naming only Google's addresses, with nothing that could close the script or add another.
+	 */
+	public function test_error_protection_shape(): void {
+		$id   = 'ca-pub-1234567890123456';
+		$code = $this->error_protection();
+		$this->assertSame( $code, tala_ads_sanitize_error_protection( $code, $id ) );
+		$this->assertSame( $code, tala_ads_sanitize_error_protection( "<script>{$code}</script>\n", $id ), 'Pasted with its <script> element.' );
+		$this->assertSame( $code, tala_ads_sanitize_error_protection( str_replace( "\n", "\r\n", $code ), $id ), 'Line breaks as a form sends them.' );
+
+		$this->assertSame( '', tala_ads_sanitize_error_protection( $code, '' ), 'Not without a publisher ID.' );
+		$this->assertSame( '', tala_ads_sanitize_error_protection( $this->error_protection( 'pub-9999999999999999' ), $id ), 'Another site\'s code.' );
+		$this->assertSame( '', tala_ads_sanitize_error_protection( $this->error_protection( 'pub-1234567890123456', 'https://evil.example/x' ), $id ), 'An address off Google.' );
+		$this->assertSame( '', tala_ads_sanitize_error_protection( $this->error_protection( 'pub-1234567890123456', 'javascript:alert(1)' ), $id ) );
+		$this->assertSame( '', tala_ads_sanitize_error_protection( $code . 'alert(1);', $id ), 'Code after the call.' );
+		$this->assertSame( '', tala_ads_sanitize_error_protection( str_replace( 'var t=', '</script><script>alert(1)</script>var t=', $code ), $id ) );
+		$this->assertSame( '', tala_ads_sanitize_error_protection( str_replace( 'window.__h82AlnkH6D91__(', 'window.__other123__(', $code ), $id ), 'A call to a function the code doesn\'t define.' );
+		$this->assertSame( '', tala_ads_sanitize_error_protection( '<script>alert(1)</script>', $id ) );
+		$this->assertSame( '', tala_ads_sanitize_error_protection( array( $code ), $id ) );
+	}
+
+	/**
+	 * Only people WordPress lets add scripts (unfiltered_html) can change the error protection
+	 * code; anyone else saving the form keeps the stored one.
+	 */
+	public function test_error_protection_needs_unfiltered_html(): void {
+		$code = $this->error_protection();
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		update_option(
+			'tala_ads',
+			array(
+				'adsense'          => 'ca-pub-1234567890123456',
+				'error_protection' => $code,
+			)
+		);
+		$this->assertSame( $code, tala_ads_settings()['error_protection'] );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'author' ) ) );
+		$this->assertFalse( current_user_can( 'unfiltered_html' ) );
+		update_option(
+			'tala_ads',
+			array(
+				'adsense'          => 'ca-pub-1234567890123456',
+				'gtm'              => 'GTM-ABC1234',
+				'error_protection' => '',
+			)
+		);
+		$this->assertSame( $code, tala_ads_settings()['error_protection'], 'The stored code stays.' );
+		$this->assertSame( 'GTM-ABC1234', tala_ads_settings()['gtm'], 'The other fields are saved.' );
 	}
 
 	/**
@@ -164,9 +246,41 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertLessThan( strpos( $head, 'id="tala-ads-consent-js"' ), strpos( $head, 'id="tala-ads-gtm-js-after"' ), 'Tag Manager comes first.' );
 		$this->assertLessThan( strpos( $head, 'id="tala-ads-adsense-js"' ), strpos( $head, 'id="tala-ads-consent-js"' ), 'The consent message comes before AdSense.' );
 
+		$this->assertStringNotContainsString( 'tala-ads-error-protection', $head, 'No error protection without its code.' );
+
 		$body = get_echo( 'wp_body_open' );
 		$this->assertStringContainsString( '<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-ABC1234"', $body );
 		$this->assertStringContainsString( 'title="Google Tag Manager"', $body, 'The frame has a name for screen readers.' );
+	}
+
+	/**
+	 * The error protection code goes in <head> after Google's messages tag, on pages with ads, and
+	 * only while Google's messages are on.
+	 */
+	public function test_error_protection_output(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		update_option( 'tala_ads', array_merge( self::ALL, array( 'error_protection' => $this->error_protection() ) ) );
+		$this->go_to( get_permalink( $this->post() ) );
+		$head = $this->page_head();
+		$this->assertSame( 1, substr_count( $head, 'window.__h82AlnkH6D91__(' ) );
+		$this->assertMatchesRegularExpression( '#<script id="tala-ads-error-protection-js-after">\s*\(function\(\)\{#', $head );
+		$this->assertLessThan( strpos( $head, 'id="tala-ads-error-protection-js-after"' ), strpos( $head, 'id="tala-ads-consent-js"' ), 'After Google\'s messages tag.' );
+
+		$this->go_to( home_url( '/no-such-page/' ) );
+		$this->assertStringNotContainsString( '__h82AlnkH6D91__', $this->page_head(), 'Not on pages without ads.' );
+
+		update_option(
+			'tala_ads',
+			array_merge(
+				self::ALL,
+				array(
+					'consent'          => false,
+					'error_protection' => $this->error_protection(),
+				)
+			)
+		);
+		$this->go_to( home_url( '/' ) );
+		$this->assertStringNotContainsString( '__h82AlnkH6D91__', $this->page_head(), 'Not while Google\'s messages are off.' );
 	}
 
 	/**
@@ -260,16 +374,130 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * A results page set up for Google search.
+	 *
+	 * @param string $content The page's content.
+	 * @return int Page ID.
+	 */
+	private function search_page( string $content = '<!-- wp:paragraph --><p>Did you find what you were looking for?</p><!-- /wp:paragraph -->' . "\n\n" . '<!-- wp:search {"label":"Search"} /-->' ): int {
+		$page = $this->publish_post(
+			array(
+				'post_type'    => 'page',
+				'post_name'    => 'search',
+				'post_title'   => 'Search Results',
+				'post_content' => $content,
+			)
+		);
+		update_option(
+			'tala_ads',
+			array(
+				'cse'         => '0123456789abcdef0',
+				'search_page' => $page,
+			)
+		);
+		return $page;
+	}
+
+	/**
+	 * The engine ID is kept from the ID or Google's code; the results page must be a page.
+	 */
+	public function test_search_settings(): void {
+		$this->assertSame( '43bcda175ae4cfb1a', tala_ads_sanitize_cse( '<script async src="https://cse.google.com/cse.js?cx=43bcda175ae4cfb1a"></script>' ) ); // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Google's code, pasted into the field.
+		$this->assertSame( '012345678901234567890:abcdefghijk', tala_ads_sanitize_cse( ' 012345678901234567890:abcdefghijk ' ), 'The older form of ID.' );
+		$this->assertSame( '', tala_ads_sanitize_cse( '43bcda"><script>' ) );
+		$this->assertSame( 0, tala_ads_sanitize_search_page( $this->post() ), 'A post is not a page.' );
+		$page = $this->publish_post( array( 'post_type' => 'page' ) );
+		$this->assertSame( $page, tala_ads_sanitize_search_page( (string) $page ) );
+		$this->assertSame( 0, tala_ads_sanitize_search_page( 'x' ) );
+	}
+
+	/**
+	 * Every WordPress search goes to the results page, with its words in ?q=; feeds of searches
+	 * stay; without the setup, WordPress's search works as before.
+	 */
+	public function test_searches_go_to_google(): void {
+		$this->post();
+		$this->go_to( home_url( '/?s=lesson' ) );
+		$this->assertNull( $this->redirect_of( 'tala_ads_search_redirect' ), 'No redirect until Google search is set up.' );
+
+		$page = $this->search_page();
+		$this->go_to( home_url( '/?s=lesson+plan%20&cat=1' ) );
+		$redirect = $this->redirect_of( 'tala_ads_search_redirect' );
+		$this->assertNotNull( $redirect );
+		$this->assertSame( get_permalink( $page ) . '?q=lesson%20plan', $redirect->location );
+		$this->assertSame( 302, $redirect->status );
+
+		$this->go_to( home_url( '/?s=' ) );
+		$this->assertSame( get_permalink( $page ), $this->redirect_of( 'tala_ads_search_redirect' )?->location, 'An empty search opens the page.' );
+
+		$this->go_to( home_url( '/?s=lesson&feed=rss2' ) );
+		$this->assertNull( $this->redirect_of( 'tala_ads_search_redirect' ), 'Feeds of searches stay.' );
+
+		wp_update_post(
+			array(
+				'ID'          => $page,
+				'post_status' => 'draft',
+			)
+		);
+		$this->go_to( home_url( '/?s=lesson' ) );
+		$this->assertNull( $this->redirect_of( 'tala_ads_search_redirect' ), 'Not to a page that isn\'t published.' );
+	}
+
+	/**
+	 * On the results page, its Search block becomes Google's search box and results (once), Search
+	 * blocks outside its content stay, Google's script loads in <head>, and results for a search
+	 * get noindex.
+	 */
+	public function test_results_page(): void {
+		$page = $this->search_page();
+		$this->go_to( get_permalink( $page ) );
+		$head = $this->page_head();
+		$this->assertSame( 1, substr_count( $head, 'https://cse.google.com/cse.js?cx=0123456789abcdef0' ) );
+		$this->assertMatchesRegularExpression( '#<script[^>]+\basync\b[^>]+cse\.google\.com#', $head );
+		$this->assertMatchesRegularExpression( '#<style id=["\']tala-ads-google-search-inline-css["\']>#', $head, 'The theme-matching styles, inline (no request).' );
+		$this->assertStringContainsString( 'var(--wp--preset--color--contrast, currentcolor)', $head );
+		$this->assertStringNotContainsString( 'noindex', $head, 'The page itself may be indexed.' );
+
+		$this->assertStringContainsString( 'wp-block-search', do_blocks( '<!-- wp:search {"label":"Search"} /-->' ), 'Outside the page\'s content, a Search block stays.' );
+		the_post();
+		$content = apply_filters( 'the_content', get_post_field( 'post_content', $page ) );
+		$this->assertStringContainsString( 'Did you find what you were looking for?', $content );
+		$this->assertSame( 1, substr_count( $content, '<div class="gcse-search" data-queryParameterName="q"></div>' ) );
+		$this->assertStringNotContainsString( 'wp-block-search', $content, 'Google\'s box replaces the Search block.' );
+
+		$_GET['q'] = 'lesson plan';
+		$this->assertMatchesRegularExpression( "#<meta name='robots' content='[^']*\\bnoindex, follow\\b#", $this->page_head(), 'Results for a search stay out of search engines.' );
+		unset( $_GET['q'] );
+
+		$this->go_to( get_permalink( $this->post() ) );
+		$head = $this->page_head();
+		$this->assertStringNotContainsString( 'cse.google.com', $head, 'Google\'s script only on the results page.' );
+		$this->assertStringNotContainsString( 'tala-ads-google-search', $head, 'And its styles.' );
+	}
+
+	/**
+	 * A results page without a Search block gets Google's results after its content.
+	 */
+	public function test_results_page_without_search_block(): void {
+		$page = $this->search_page( '<!-- wp:paragraph --><p>Search the site.</p><!-- /wp:paragraph -->' );
+		$this->go_to( get_permalink( $page ) );
+		the_post();
+		$this->assertMatchesRegularExpression( '#Search the site\.</p>\s*<div class="tala-ads-google-search"><div class="gcse-search" data-queryParameterName="q"></div></div>#', apply_filters( 'the_content', get_post_field( 'post_content', $page ) ) );
+	}
+
+	/**
 	 * Settings → Ads shows every field to administrators, and whether ads.txt lists the ID.
 	 */
 	public function test_settings_page(): void {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 		tala_ads_settings_fields();
+		$this->assertStringContainsString( 'Publish a page first', get_echo( 'tala_ads_field_search_page' ), 'A site without pages is told what to do.' );
+		$this->publish_post( array( 'post_type' => 'page' ) );
 		update_option( 'tala_ads', self::ALL );
 
 		$page = get_echo( 'tala_ads_settings_page' );
-		foreach ( array( 'adsense', 'consent', 'gtm', 'innity_key', 'innity_zone', 'innity_channel' ) as $key ) {
-			$this->assertStringContainsString( 'name="tala_ads[' . $key . ']"', $page );
+		foreach ( array( 'adsense', 'consent', 'error_protection', 'gtm', 'innity_key', 'innity_zone', 'innity_channel', 'cse', 'search_page' ) as $key ) {
+			$this->assertMatchesRegularExpression( '#name=["\']tala_ads\[' . $key . '\]["\']#', $page, $key );
 		}
 		$this->assertStringContainsString( 'value="ca-pub-1234567890123456"', $page );
 		$this->assertStringContainsString( 'There is no ads.txt', $page );
