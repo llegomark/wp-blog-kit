@@ -14,7 +14,7 @@
 		"lint:js": "eslint .",
 		"lint:js:fix": "eslint . --fix",
 		"lint:theme": "node bin/validate-theme.mjs",
-		"lint:readme": "node bin/validate-readme.mjs",
+		"lint:readme": "node bin/validate-readme.mjs tala-seo && node bin/validate-readme.mjs tala-ads",
 		"lint:php": "composer run lint",
 		"prepare": "husky",
 		"test:e2e": "playwright test"

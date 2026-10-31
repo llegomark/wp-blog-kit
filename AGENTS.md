@@ -1,6 +1,7 @@
 # Working on this repository (for AI agents and people)
 
-A WordPress block theme (`tala-blog/`) and SEO plugin (`tala-seo/`) for minimalist, fast blogs.
+A WordPress block theme (`tala-blog/`), an SEO plugin (`tala-seo/`) and an ads plugin (`tala-ads/`) for
+minimalist, fast blogs.
 Everything must follow official WordPress practice, as checked by WordPress's own tools.
 
 ## Before changing code
@@ -37,8 +38,8 @@ typography presets, and the plugin's blocks in the editor. Then, on the local si
 - for theme changes: WordPress's Theme Unit Test on `dev/unit-test-site.sh` (the theme alone, without
   Tala SEO): `node dev/unit-test-check.mjs` must pass, then the handbook's checklist by eye
   (https://make.wordpress.org/themes/handbook/review/theme-unit-test/)
-- for visible changes to the SEO panel, the publish check, Settings → SEO, the SEO column or the
-  plugin's blocks: `node dev/screenshots.mjs` takes the readme's screenshots again
+- for visible changes to the SEO panel, the publish check, Settings → SEO, the SEO column, the
+  plugin's blocks or Settings → Ads: `node dev/screenshots.mjs` takes the readmes' screenshots again
 
 ## Rules that come from decisions, not taste
 
@@ -49,22 +50,26 @@ typography presets, and the plugin's blocks in the editor. Then, on the local si
   other search engines and AI assistants, built only from content the page shows (the FAQ and
   How-to groups, the Course block's card). Don't add other retired types without asking.
 - Don't block AI crawlers (robots.txt or anything else).
-- Each works on its own: the theme without the plugin (no plugin blocks in templates, only through
-  patterns that are empty without it) and the plugin with any theme (nothing that relies on Tala
-  Blog's markup or wording). `tests/e2e/standalone.spec.mjs` checks both.
+- Each works on its own: the theme without the plugins (no plugin blocks in templates, only through
+  patterns that are empty without it) and each plugin with any theme (nothing that relies on Tala
+  Blog's markup or wording). Ad and tracking code lives in Tala Ads, never in the theme.
+  `tests/e2e/standalone.spec.mjs` checks both.
 - No build step, no web fonts, no jQuery. Keep the theme's CSS inlined (`assets/theme.css`). Node and npm
   are for the linters only; nothing they install ships in the theme or plugin.
 - Fix lint findings in the code. Only switch a rule off in `stylelint.config.mjs` or `eslint.config.mjs`,
   with a comment saying why, when it can't apply here; never with disable comments in `assets/theme.css`,
   which is inlined into every page.
-- Keep `Update URI: false` in the theme and plugin headers. The plugin is private.
-- Use the text domains `tala-seo` and `tala-blog`, and the prefixes `tala_seo_` and `tala_blog_`.
+- Keep `Update URI: false` in the theme and plugin headers. The plugins are private.
+- Use the text domains `tala-seo`, `tala-ads` and `tala-blog`, and the prefixes `tala_seo_`, `tala_ads_` and
+  `tala_blog_`.
+- Tala Ads' settings hold IDs only, never code: each field is cut down to the ID's shape on save and
+  again on output, so nothing typed into wp-admin can put a script on the site.
 - When you change the plugin or theme version, bump `Version:`, `Stable tag:` (in readme.txt)
   and the changelog, then run `./build.sh`. Once the push passes the checks, `release.yml` publishes
   the new version as a GitHub release (the zip, its SHA-256, a build attestation, the changelog entry
   as notes). Never move or reuse a release tag: a released version is fixed; release a new one. Add an upgrade notice (under 300 characters) when
   updating needs the site owner to do something or know something.
-- The plugin readme follows WordPress.org's readme standard, checked by `npm run lint:readme`.
+- The plugin readmes follow WordPress.org's readme standard, checked by `npm run lint:readme`.
   Contributors are WordPress.org usernames (`edventuredev`); there is no donate link, by decision.
 
 ## Repository protection (GitHub settings, not files)

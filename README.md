@@ -1,4 +1,4 @@
-# WordPress blog kit: Tala Blog theme + Tala SEO plugin
+# WordPress blog kit: Tala Blog theme + Tala SEO and Tala Ads plugins
 
 A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No premium licences, nothing that expires.
 
@@ -6,11 +6,12 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 |---|---|
 | `tala-blog/` | Block theme. Minimalist: near-black text on a near-white page, the same inverted in automatic dark mode, a header with the site logo and a menu that opens full screen on phones, system fonts (no downloads), labelled Published/Updated dates, author box with bio under every article, breadcrumbs, "Filed under" categories and tags, article lists with thumbnails and numbered pages, dated comments, print styles. Semantic HTML: the article has its own header and footer, the links to the previous and next articles are a named navigation landmark, and each comment is an article. Three colour presets (Sepia, Blue, Green, each with its own dark mode) and two serif typography presets in the Site Editor, all with system fonts. Translation-ready and accessible (WCAG 2.2 AA checks pass in both colour schemes, with every colour preset). |
 | `tala-seo/` | SEO plugin. Titles, meta descriptions, canonicals, robots rules, Open Graph, JSON-LD, sitemap and robots.txt tuning, redirects for moved pages and categories, and a publish check. |
+| `tala-ads/` | Ads plugin. AdSense Auto ads, Google Tag Manager and Google's consent message, each loaded once and set up with IDs alone, and an optional Innity box after articles with its height reserved. |
 | `dev/` | Demo content and a WordPress Playground blueprint for local testing (not deployed). |
-| `.wordpress-org/` | The plugin's screenshots, as WordPress.org keeps them in a plugin's SVN `assets/` folder (not in the zip). `node dev/screenshots.mjs` takes them again on the local site. |
-| `build.sh` | Packages both as zips in `dist/`. |
+| `.wordpress-org/` | The plugins' screenshots (Tala SEO's at the top, Tala Ads' in `tala-ads/`), as WordPress.org keeps them in a plugin's SVN `assets/` folder (not in the zips). `node dev/screenshots.mjs` takes them again on the local site. |
+| `build.sh` | Packages all three as zips in `dist/`. |
 
-Each works on its own: the theme without the plugin, and the plugin with any theme that follows WordPress's standards (the browser tests run Tala SEO with Twenty Twenty-Five and Tala Blog without Tala SEO). Together, the theme places the plugin's Breadcrumbs block in its templates. Both need WordPress 7.0 or newer and PHP 8.5 or newer. They follow the current WordPress and PHP releases and carry no code for older versions.
+Each works on its own: the theme without the plugins, and each plugin with any theme that follows WordPress's standards (the browser tests run Tala SEO with Twenty Twenty-Five and Tala Blog without Tala SEO). Together, the theme places Tala SEO's Breadcrumbs block in its templates. All three need WordPress 7.0 or newer and PHP 8.5 or newer. They follow the current WordPress and PHP releases and carry no code for older versions.
 
 ## What Tala SEO does
 
@@ -47,9 +48,18 @@ Each works on its own: the theme without the plugin, and the plugin with any the
   - `wp tala-seo import` copies titles, descriptions, canonicals, noindex, primary categories and redirects from Yoast SEO, Rank Math, The SEO Framework or SEOPress, for posts, categories, tags and authors.
   - Post meta keys for agents: `_tala_seo_description`, `_tala_seo_title`, `_tala_seo_noindex`, `_tala_seo_canonical`, `_tala_seo_redirect`, `_tala_seo_primary_category`, `_tala_seo_video_dates` (YouTube video ID => `YYYY-MM-DD`).
 
+## What Tala Ads does
+
+- **AdSense Auto ads:** the publisher ID puts the AdSense code on every page, once; Google places the ads, and the formats and their number are chosen in AdSense. Error pages and searches that found nothing get no ads, as AdSense's policies ask.
+- **Google Tag Manager:** the container ID puts the code high in the head and the no-JavaScript fallback right after `<body>` (through `wp_body_open()`).
+- **Google's consent message** (and its ad blocking recovery message), as set up under Privacy & messaging in AdSense, behind one switch.
+- **Innity:** an optional 300 × 250 box after the text of posts and pages, with its height reserved so the page doesn't move. Innity's universal tags (full-screen phone formats) aren't offered.
+- **IDs only:** each field keeps just the ID, even when the whole code is pasted, so the settings can't put a script on the site. Settings → Ads also says whether `ads.txt` lists the publisher ID.
+- Filters: `tala_ads_show` (return false to keep ads off a page) and `tala_ads_post_types` (where the Innity box goes; posts and pages by default).
+
 ## Download
 
-Each version of the theme and the plugin is published as a [GitHub release](https://github.com/llegomark/wp-blog-kit/releases): `tala-blog-1.6.0`, `tala-seo-1.11.0` and so on. Download the zip under **Assets** (not "Source code", which is the whole repository) and upload it in WordPress: Appearance → Themes → Add New Theme → Upload Theme, or Plugins → Add New Plugin → Upload Plugin. Each zip comes with its SHA-256 and a build attestation (`gh attestation verify <zip> --repo llegomark/wp-blog-kit --signer-workflow llegomark/wp-blog-kit/.github/workflows/release.yml --source-ref refs/heads/main`).
+Each version of the theme and the plugins is published as a [GitHub release](https://github.com/llegomark/wp-blog-kit/releases): `tala-blog-1.6.0`, `tala-seo-1.11.0`, `tala-ads-1.0.0` and so on. Download the zip under **Assets** (not "Source code", which is the whole repository) and upload it in WordPress: Appearance → Themes → Add New Theme → Upload Theme, or Plugins → Add New Plugin → Upload Plugin. Each zip comes with its SHA-256 and a build attestation (`gh attestation verify <zip> --repo llegomark/wp-blog-kit --signer-workflow llegomark/wp-blog-kit/.github/workflows/release.yml --source-ref refs/heads/main`).
 
 Releases are made by `.github/workflows/release.yml`: when a push to `main` raises a `Version:` and the checks pass on that commit, it builds the zip with `build.sh` and publishes it, with the changelog entry from the readme as the notes (`bin/release-notes.mjs`). A version is released once; pushes that don't change a version publish nothing.
 
@@ -58,6 +68,7 @@ Releases are made by `.github/workflows/release.yml`: when a push to `main` rais
 ```bash
 ./build.sh                                   # makes dist/*.zip
 wp plugin install dist/tala-seo-1.0.0.zip --activate
+wp plugin install dist/tala-ads-1.0.0.zip --activate   # if the site shows ads
 wp theme install dist/tala-blog-1.0.0.zip --activate
 wp media regenerate --only-missing --yes     # only on sites with existing images: creates the share and Google crops
 ```
@@ -66,6 +77,7 @@ Then in wp-admin:
 - Settings → General: site title, tagline and site icon (square PNG, at least 512 × 512).
 - Users → Profile: biography and author photo.
 - Settings → SEO: work through the checklist.
+- Settings → Ads: the AdSense publisher ID and Tag Manager container ID, once the same code is gone from the theme and other plugins.
 
 ## Development
 
@@ -90,14 +102,14 @@ dev/serve.sh                  # http://127.0.0.1:8080 (admin login: ~/.local/sta
 | `composer lint` | WordPress Coding Standards: WPCS 3.4 with WordPress-Core, WordPress-Docs and WordPress-Extra (`phpcs.xml.dist`) |
 | `composer fix` | the automatic coding-standards fixes |
 | `composer analyse` | PHPStan level 8 with the WordPress extension (`phpstan.neon.dist`), against WordPress 7.1's functions and classes |
-| `composer plugin-check` | WordPress Plugin Check, including experimental checks, against the local site; exits 1 on any finding |
+| `composer plugin-check` | WordPress Plugin Check, including experimental checks, on both plugins against the local site; exits 1 on any finding |
 | `composer check` | all of the above |
 | `npm run lint:css` | Stylelint with WordPress's CSS coding standards (`@wordpress/stylelint-config`, `stylelint.config.mjs`); `lint:css:fix` fixes what it can |
 | `npm run lint:js` | ESLint with WordPress's JavaScript coding standards (`@wordpress/eslint-plugin`, `eslint.config.mjs`), text domains included; `lint:js:fix` fixes what it can |
 | `npm run lint:theme` | `bin/validate-theme.mjs`: `theme.json` and `block.json` against WordPress's schemas for the "Requires at least" version, pattern headers, block markup in templates, parts and patterns, and no hard-coded text in templates and parts |
-| `npm run lint:readme` | `bin/validate-readme.mjs`: `tala-seo/readme.txt` by the rules of [WordPress.org's readme validator](https://wordpress.org/plugins/developers/readme-validator/) (its errors, warnings and notes, ported from the plugin directory's parser), plus a match with the plugin header, "Tested up to" the current WordPress, upgrade notices within 300 characters, a changelog entry for the release, and an image in `.wordpress-org/` for each screenshot caption. Contributors, tag usage and the WordPress release are looked up on WordPress.org. The one note left on purpose: no donate link, as the plugin takes no donations. |
+| `npm run lint:readme` | `bin/validate-readme.mjs`: `tala-seo/readme.txt` and `tala-ads/readme.txt` by the rules of [WordPress.org's readme validator](https://wordpress.org/plugins/developers/readme-validator/) (its errors, warnings and notes, ported from the plugin directory's parser), plus a match with the plugin header, "Tested up to" the current WordPress, upgrade notices within 300 characters, a changelog entry for the release, and an image in `.wordpress-org/` (`.wordpress-org/tala-ads/` for Tala Ads) for each screenshot caption. Contributors, tag usage and the WordPress release are looked up on WordPress.org. The one note left on purpose: no donate link, as the plugins take no donations. |
 | `npm run lint` | the four above, plus `composer lint` |
-| `composer test` | PHPUnit integration tests (`tests/phpunit/`) on WordPress's own test framework: Tala SEO's head tags, structured data (videos, events, courses, FAQ and how-to included), sitemap, redirects, publish check, admin forms, import and share images, and Tala Blog's block filters, patterns, template parts and style variations (colour contrast in light and dark mode, colour and typography presets as the Site Editor lists them) |
+| `composer test` | PHPUnit integration tests (`tests/phpunit/`) on WordPress's own test framework: Tala SEO's head tags, structured data (videos, events, courses, FAQ and how-to included), sitemap, redirects, publish check, admin forms, import and share images, Tala Ads' settings and scripts (each loaded once, none on error pages, the Innity box once with its height reserved), and Tala Blog's block filters, patterns, template parts and style variations (colour contrast in light and dark mode, colour and typography presets as the Site Editor lists them) |
 | `npm run test:e2e` | browser tests (`tests/e2e/`, Playwright) on the local site: every kind of page, the phone menu frame by frame, layout shifts, the logo, axe in light and dark mode on phone and desktop and with each colour preset, the article's header, footer and navigation and the comments as articles, the block editor's validation of the theme, classic content (aligned images, captions, galleries, embeds, tables, quotes, long words, password forms), and Tala SEO's FAQ, How-to, Event and Course blocks and video dates in the editor and on the page |
 
 A pre-commit hook (husky and lint-staged, set up by `npm ci`) runs the linters on the staged files of each commit.

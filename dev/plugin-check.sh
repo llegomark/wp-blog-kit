@@ -1,6 +1,6 @@
 #!/bin/bash
 # dev/plugin-check.sh: run WordPress's official Plugin Check (wordpress.org/plugins/plugin-check)
-# against tala-seo, including its runtime and experimental checks.
+# against tala-seo and tala-ads, including its runtime and experimental checks.
 #   dev/plugin-check.sh                 errors and warnings
 #   dev/plugin-check.sh --format=json   any extra arguments go to `wp plugin check`
 # It uses the local site from dev/site.sh when there is one, otherwise WordPress Playground (no local
@@ -12,22 +12,25 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 SITE=${WP_DEV_SITE:-$HOME/Sites/blogkit}
-ARGS=(plugin check tala-seo --include-experimental --ignore-codes=plugin_updater_detected
+PLUGINS=(tala-seo tala-ads)
+ARGS=(--include-experimental --ignore-codes=plugin_updater_detected
       --fields=line,column,type,code,message "$@")
 
-report() {   # print the findings; fail when there are any
+report() {   # print one plugin's findings; fail when there are any
   local out
   out=$(cat)
   if grep -q '^FILE:' <<<"$out"; then
     printf '%s\n' "$out"
     exit 1
   fi
-  echo "Plugin Check: no findings."
+  echo "Plugin Check, $1: no findings."
 }
 
 if command -v wp >/dev/null && [ -f "$SITE/wp-config.php" ]; then
   wp --path="$SITE" plugin is-active plugin-check || wp --path="$SITE" plugin install plugin-check --activate --quiet
-  wp --path="$SITE" --require="$SITE/wp-content/plugins/plugin-check/cli.php" "${ARGS[@]}" 2>&1 | report
+  for plugin in "${PLUGINS[@]}"; do
+    wp --path="$SITE" --require="$SITE/wp-content/plugins/plugin-check/cli.php" plugin check "$plugin" "${ARGS[@]}" 2>&1 | report "$plugin"
+  done
   exit 0
 fi
 
@@ -44,9 +47,12 @@ if ! echo "$WP_CLI_SHA512  $TOOLS/wp-cli.phar" | sha512sum -c --quiet - 2>/dev/n
   echo "$WP_CLI_SHA512  $TOOLS/wp-cli.phar" | sha512sum -c --quiet - \
     || { echo "Checksum failed for WP-CLI $WP_CLI_VERSION; not running it." >&2; rm -f "$TOOLS/wp-cli.phar"; exit 1; }
 fi
-npx -y "@wp-playground/cli@$PLAYGROUND_VERSION" php --php=8.5 --verbosity=quiet \
-  --mount="$PWD/tala-seo:/wordpress/wp-content/plugins/tala-seo" \
-  --mount="$PWD/$TOOLS:/tools" \
-  --blueprint="$PWD/dev/plugin-check-blueprint.json" \
-  -- /tools/wp-cli.phar --path=/wordpress --require=/wordpress/wp-content/plugins/plugin-check/cli.php "${ARGS[@]}" 2>&1 \
-  | grep -v -E '^npm notice|^(PHP )?Deprecated: .*(phar:///tools/wp-cli.phar|plugin-check/vendor)' | report
+for plugin in "${PLUGINS[@]}"; do
+  npx -y "@wp-playground/cli@$PLAYGROUND_VERSION" php --php=8.5 --verbosity=quiet \
+    --mount="$PWD/tala-seo:/wordpress/wp-content/plugins/tala-seo" \
+    --mount="$PWD/tala-ads:/wordpress/wp-content/plugins/tala-ads" \
+    --mount="$PWD/$TOOLS:/tools" \
+    --blueprint="$PWD/dev/plugin-check-blueprint.json" \
+    -- /tools/wp-cli.phar --path=/wordpress --require=/wordpress/wp-content/plugins/plugin-check/cli.php plugin check "$plugin" "${ARGS[@]}" 2>&1 \
+    | grep -v -E '^npm notice|^(PHP )?Deprecated: .*(phar:///tools/wp-cli.phar|plugin-check/vendor)' | report "$plugin"
+done

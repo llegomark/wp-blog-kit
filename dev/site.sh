@@ -10,7 +10,7 @@
 # WP_DEV_DB_PASSWORD; wp-config.php then reads the password from the environment, so it is never
 # stored or put on a command line.
 #
-# The theme and plugin are symlinked from this repository, so edits show up immediately.
+# The theme and plugins are symlinked from this repository, so edits show up immediately.
 set -euo pipefail
 KIT=$(cd "$(dirname "$0")/.." && pwd)
 SITE=${WP_DEV_SITE:-$HOME/Sites/blogkit}
@@ -67,8 +67,9 @@ printf 'URL=%s/wp-admin/\nUSER=admin\nPASSWORD=%s\n' "$URL" "$PASSWORD" > "$CRED
 
 ln -s "$KIT/tala-blog" "$SITE/wp-content/themes/tala-blog"
 ln -s "$KIT/tala-seo" "$SITE/wp-content/plugins/tala-seo"
+ln -s "$KIT/tala-ads" "$SITE/wp-content/plugins/tala-ads"
 wp plugin install plugin-check query-monitor --activate --quiet
-wp plugin activate tala-seo --quiet
+wp plugin activate tala-seo tala-ads --quiet
 wp theme activate tala-blog --quiet
 KIT_DEV_MEDIA="$KIT/dev/media/" wp eval-file "$KIT/dev/seed.php"
 wp rewrite structure '/%postname%/' --quiet    # in its own process, so every taxonomy's rules are rebuilt

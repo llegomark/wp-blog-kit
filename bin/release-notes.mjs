@@ -5,6 +5,7 @@
  * notice of that version from its readme.txt, then how to install it and check the download.
  *
  *   node bin/release-notes.mjs tala-seo [sha256-of-the-zip]
+ *   node bin/release-notes.mjs tala-ads [sha256-of-the-zip]
  *   node bin/release-notes.mjs tala-blog [sha256-of-the-zip]
  *
  * Prints Markdown. Exits 1 when the readme has no changelog entry for the version.
@@ -16,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath( new URL( '..', import.meta.url ) );
 const PRODUCTS = {
 	'tala-seo': { name: 'Tala SEO', header: 'tala-seo/tala-seo.php', kind: 'plugin' },
+	'tala-ads': { name: 'Tala Ads', header: 'tala-ads/tala-ads.php', kind: 'plugin' },
 	'tala-blog': { name: 'Tala Blog', header: 'tala-blog/style.css', kind: 'theme' },
 };
 

@@ -1,8 +1,8 @@
 # Publishes the theme and the plugin as GitHub releases, each version once.
 #
-# When a push to main raises the Version of Tala SEO or Tala Blog, and the Checks workflow passes on
+# When a push to main raises the Version of Tala SEO, Tala Ads or Tala Blog, and the Checks workflow passes on
 # that commit, this builds the zip with build.sh (the same zip a site installs) and creates a release
-# named after it, tala-seo-1.11.0 or tala-blog-1.6.0, tagged on that commit. The release holds:
+# named after it, tala-seo-1.11.0, tala-ads-1.0.0 or tala-blog-1.6.0, tagged on that commit. The release holds:
 #   - the zip, to download and install (Plugins or Appearance → Themes → Upload);
 #   - its SHA-256, to check the download;
 #   - a build attestation (GitHub's signed record that this workflow built the zip from that commit on
@@ -83,9 +83,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tags=()
-          for product in tala-seo tala-blog; do
+          for product in tala-seo tala-ads tala-blog; do
             case $product in
               tala-seo) header=tala-seo/tala-seo.php ;;
+              tala-ads) header=tala-ads/tala-ads.php ;;
               tala-blog) header=tala-blog/style.css ;;
             esac
             version=$(grep -m1 -E '^\s*\*?\s*Version:' "$header" | sed -E 's/.*Version:\s*//; s/\s+$//')
@@ -149,6 +150,7 @@ jobs:
             version=${tag##*-}
             case $product in
               tala-seo) title="Tala SEO $version" ;;
+              tala-ads) title="Tala Ads $version" ;;
               tala-blog) title="Tala Blog $version" ;;
             esac
             node bin/release-notes.mjs "$product" "$(cut -d' ' -f1 "dist/$tag.zip.sha256")" > "$RUNNER_TEMP/notes.md"

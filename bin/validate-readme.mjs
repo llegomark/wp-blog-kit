@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Checks tala-seo/readme.txt as WordPress.org's readme validator does
+ * Checks a plugin's readme.txt (tala-seo or tala-ads, named on the command line) as WordPress.org's
+ * readme validator does
  * (https://wordpress.org/plugins/developers/readme-validator/): the same parsing rules and the same
  * errors, warnings and notes, ported from the plugin directory's Readme\Parser and Readme\Validator
  * (github.com/WordPress/wordpress.org, public_html/wp-content/plugins/plugin-directory/readme/).
@@ -13,14 +14,16 @@
  * - "Tested up to" is the current WordPress release or the next;
  * - each upgrade notice fits in 300 characters;
  * - the changelog has an entry for the Stable tag;
- * - each screenshot caption has its image in .wordpress-org/ (screenshot-1.png, …), the folder
- *   WordPress.org's SVN calls assets/, and each image a caption.
+ * - each screenshot caption has its image in .wordpress-org/ for Tala SEO and .wordpress-org/<plugin>/
+ *   for the others (screenshot-1.png, …), the folder WordPress.org's SVN calls assets/, and each
+ *   image a caption.
  *
  * Contributors, tag usage and the current WordPress release are looked up on WordPress.org.
  * Offline those checks are skipped with a warning; in CI they must run.
  *
  * Everything found fails the check, notes included, except the notes this project decided to
- * leave (ACCEPTED_NOTES, with the reason). Run it with `npm run lint:readme`.
+ * leave (ACCEPTED_NOTES, with the reason). Run it with `npm run lint:readme` (both plugins), or
+ * `node bin/validate-readme.mjs tala-ads` for one.
  */
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -28,9 +31,14 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath( new URL( '..', import.meta.url ) );
-const PLUGIN = 'tala-seo';
+const PLUGINS = [ 'tala-seo', 'tala-ads' ];
+const PLUGIN = process.argv[ 2 ] ?? 'tala-seo';
+if ( ! PLUGINS.includes( PLUGIN ) ) {
+	process.stderr.write( `Usage: node bin/validate-readme.mjs <${ PLUGINS.join( '|' ) }>\n` );
+	process.exit( 2 );
+}
 const README = `${ PLUGIN }/readme.txt`;
-const SCREENSHOTS = '.wordpress-org';
+const SCREENSHOTS = 'tala-seo' === PLUGIN ? '.wordpress-org' : `.wordpress-org/${ PLUGIN }`;
 
 /**
  * Validator notes left on purpose.
@@ -91,7 +99,7 @@ function report( level, code, message, line = 1 ) {
  */
 async function lookUp( url, what ) {
 	try {
-		return await fetch( url, { signal: AbortSignal.timeout( 30000 ), headers: { 'User-Agent': 'tala-seo readme check' } } );
+		return await fetch( url, { signal: AbortSignal.timeout( 30000 ), headers: { 'User-Agent': `${ PLUGIN } readme check` } } );
 	} catch ( error ) {
 		const message = `Could not reach ${ new URL( url ).host } (${ error.message }), so ${ what } were not checked.`;
 		if ( process.env.CI ) {

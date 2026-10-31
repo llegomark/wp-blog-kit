@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
 	PHPUnit integration tests on WordPress's own test framework (wp-phpunit): each test runs inside a
-	database transaction against a real WordPress, with Tala SEO active and Tala Blog as the theme.
+	database transaction against a real WordPress, with Tala SEO and Tala Ads active and Tala Blog as the theme.
 	Run them with `composer test` (see tests/bin/install-wp-tests.sh for what it sets up first).
 -->
 <phpunit
@@ -20,6 +20,9 @@
 	<testsuites>
 		<testsuite name="tala-seo">
 			<directory prefix="test-" suffix=".php">tests/phpunit/tala-seo</directory>
+		</testsuite>
+		<testsuite name="tala-ads">
+			<directory prefix="test-" suffix=".php">tests/phpunit/tala-ads</directory>
 		</testsuite>
 		<testsuite name="tala-blog">
 			<directory prefix="test-" suffix=".php">tests/phpunit/tala-blog</directory>

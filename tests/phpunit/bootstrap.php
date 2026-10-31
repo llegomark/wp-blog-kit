@@ -1,7 +1,7 @@
 <?php
 /**
- * PHPUnit bootstrap: WordPress's test framework (wp-phpunit) with Tala SEO active and Tala Blog as
- * the theme, loaded from this repository.
+ * PHPUnit bootstrap: WordPress's test framework (wp-phpunit) with Tala SEO and Tala Ads active and
+ * Tala Blog as the theme, loaded from this repository.
  *
  * @package TalaTests
  */
@@ -29,6 +29,7 @@ tests_add_filter(
 	'muplugins_loaded',
 	static function () use ( $tala_root ): void {
 		require $tala_root . '/tala-seo/tala-seo.php';
+		require $tala_root . '/tala-ads/tala-ads.php';
 	}
 );
 tests_add_filter(
@@ -52,6 +53,7 @@ foreach ( array( 'admin', 'admin-fields', 'admin-columns' ) as $tala_file ) {
 require_once __DIR__ . '/includes/class-wp-cli.php';
 require_once __DIR__ . '/includes/wp-cli-utils.php';
 require_once $tala_root . '/tala-seo/includes/class-tala-seo-cli.php';
+require_once $tala_root . '/tala-ads/includes/admin.php';
 
 require __DIR__ . '/includes/class-tala-seo-redirect-caught.php';
 require __DIR__ . '/includes/class-tala-seo-test-case.php';

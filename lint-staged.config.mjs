@@ -23,6 +23,7 @@ export default {
 	'tala-blog/{theme.json,style.css,styles/**/*.json,templates/**/*.html,parts/**/*.html,patterns/**/*.php}':
 		validateTheme,
 	'tala-seo/{tala-seo.php,blocks/**/block.json}': validateTheme,
-	// The plugin readme as WordPress.org's readme validator reads it, with its header and screenshots.
-	'{tala-seo/readme.txt,tala-seo/tala-seo.php,.wordpress-org/*}': () => 'node bin/validate-readme.mjs',
+	// Each plugin's readme as WordPress.org's readme validator reads it, with its header and screenshots.
+	'{tala-seo/readme.txt,tala-seo/tala-seo.php,.wordpress-org/*}': () => 'node bin/validate-readme.mjs tala-seo',
+	'{tala-ads/readme.txt,tala-ads/tala-ads.php,.wordpress-org/tala-ads/*}': () => 'node bin/validate-readme.mjs tala-ads',
 };

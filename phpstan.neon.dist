@@ -1,9 +1,10 @@
-# Static analysis for the theme and plugin. The WordPress extension (szepeviktor/phpstan-wordpress)
+# Static analysis for the theme and plugins. The WordPress extension (szepeviktor/phpstan-wordpress)
 # is loaded automatically by phpstan/extension-installer and brings the WordPress core stubs.
 parameters:
 	level: 8
 	paths:
 		- tala-seo
+		- tala-ads
 		- tala-blog
 	scanFiles:
 		- vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php

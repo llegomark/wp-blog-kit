@@ -1,8 +1,8 @@
 # The same checks as `composer check`, `npm run lint` and the tests, on GitHub's servers: WordPress
 # Coding Standards and PHPStan level 8 for the PHP, WordPress's CSS and JavaScript standards
 # (Stylelint, ESLint), theme.json and block.json against WordPress's schemas with the patterns and
-# block markup, the plugin readme by WordPress.org's readme rules, WordPress's Plugin Check for the
-# plugin, the PHPUnit integration tests on WordPress's test framework, and the browser tests
+# block markup, the plugins' readmes by WordPress.org's readme rules, WordPress's Plugin Check for the
+# plugins, the PHPUnit integration tests on WordPress's test framework, and the browser tests
 # (Playwright) on the demo site.
 # Every action is pinned to a full commit SHA (the comment names the release); Dependabot
 # proposes updates (.github/dependabot.yml).
@@ -183,12 +183,13 @@ jobs:
           retention-days: 7
 
   plugin-check:
-    name: Plugin Check (WordPress ${{ matrix.wordpress }})
+    name: Plugin Check (${{ matrix.plugin }}, WordPress ${{ matrix.wordpress }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
+        plugin: [tala-seo, tala-ads]
         wordpress: [latest, trunk]
     # trunk is the WordPress release in development: a finding there is an early warning, not a
     # failed build.
@@ -208,7 +209,7 @@ jobs:
       - name: Plugin Check
         uses: WordPress/plugin-check-action@10857da14b6c2246d15402b3e69f777edcf8c12e # v1.1.9
         with:
-          build-dir: ./tala-seo
+          build-dir: ./${{ matrix.plugin }}
           wp-version: ${{ matrix.wordpress }}
           include-experimental: true
           # Deliberate: "Update URI: false" keeps this private plugin from ever being "updated"
