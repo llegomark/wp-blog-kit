@@ -81,6 +81,15 @@ class WP_CLI {
 	}
 
 	/**
+	 * Records a line printed as it is (WP-CLI prints these even with --quiet).
+	 *
+	 * @param string $message Message.
+	 */
+	public static function line( $message = '' ): void {
+		self::$messages[] = array( 'line', (string) $message );
+	}
+
+	/**
 	 * An error ends the command, as in WP-CLI.
 	 *
 	 * @param string $message Message.

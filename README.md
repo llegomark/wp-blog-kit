@@ -47,6 +47,7 @@ Each works on its own: the theme without the plugins, and each plugin with any t
   - `wp tala-seo audit` lists published posts that are missing something.
   - `wp tala-seo import` copies titles, descriptions, canonicals, noindex, primary categories and redirects from Yoast SEO, Rank Math, The SEO Framework or SEOPress, for posts, categories, tags and authors, with titles made of variables filled in and the site name they added taken off; from Yoast SEO or Rank Math also the site-wide settings (title separator, home description, site owner, profiles, share image, verification, and the organization's kind, address, telephone and email from Yoast Local SEO or Rank Math's local SEO), attachment pages off if they were redirected, and the category, tag and author pages hidden as a rule (`--from=yoast|rank-math` when both left settings).
   - `wp tala-seo describe` writes the missing meta descriptions once, from each post's opening paragraphs (a whole sentence that fits; an introduction three or more posts share is passed over).
+  - `wp tala-seo pdf-canonicals` lists each PDF with the article that presents it, as an nginx map for a `Link: <article>; rel="canonical"` header on the file, so search engines can show the article in the PDF's place (redirecting the PDF would drop it from search).
   - Post meta keys for agents: `_tala_seo_description`, `_tala_seo_title`, `_tala_seo_noindex`, `_tala_seo_canonical`, `_tala_seo_redirect`, `_tala_seo_primary_category`, `_tala_seo_video_dates` (YouTube video ID => `YYYY-MM-DD`).
 
 ## What Tala Ads does

@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.17.0
+Stable tag: 1.18.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -35,7 +35,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **Hidden-site warning:** while "Discourage search engines" is on, every admin screen and the pre-publish checklist say so.
 * **Authors:** a real author photo (no Gravatar request), social profile links (TikTok and Mastodon included) for the author markup, and a Fediverse handle.
 * **Settings → SEO:** the title separator (vertical bar, hyphen, dashes, colon, middle dot or bullet), site owner, official profiles (the organization's sameAs), its kind, legal name, address, telephone and email, home description (also the Organization description), default share image, the minimum number of posts for tag pages to be indexed (2 by default), Google Search Console, Bing Webmaster Tools and Meta (Facebook) verification codes, and a setup checklist.
-* **WP-CLI:** `wp tala-seo audit` lists published posts that are missing something; `wp tala-seo import` copies data from Yoast SEO, Rank Math, The SEO Framework or SEOPress; `wp tala-seo describe` writes the missing meta descriptions from each post's opening text, once, for you to edit.
+* **WP-CLI:** `wp tala-seo audit` lists published posts that are missing something; `wp tala-seo import` copies data from Yoast SEO, Rank Math, The SEO Framework or SEOPress; `wp tala-seo describe` writes the missing meta descriptions from each post's opening text, once, for you to edit; `wp tala-seo pdf-canonicals` maps each PDF to its article for the web server's rel="canonical" header.
 
 == Installation ==
 
@@ -85,6 +85,16 @@ Google's event results only cover events at a physical place that the public can
 
 From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title and thumbnail, but not the date. Open the SEO panel, find the video under "Videos" and enter the date shown under it on YouTube. Until then the video has no VideoObject markup, since Google requires the date.
 
+= My PDFs show up in Google instead of my articles. Should I redirect them? =
+
+No: a redirect tells Google the PDF is gone, and the article doesn't take its place (it isn't the same document), so the traffic is lost. Keep every PDF available to everyone and give it an HTTP header that names the article as the preferred page, `Link: <article URL>; rel="canonical"`, as Google advises for documents that aren't HTML. Google can then show the article instead, where your readers see the rest of your site; where it doesn't, the PDF keeps its place in search.
+
+`wp tala-seo pdf-canonicals` lists each PDF with its article: a published post or page, not hidden from search engines, that links to it or embeds it (the one it was uploaded to first, else the one presenting the fewest PDFs). For nginx it prints a map:
+
+`wp tala-seo pdf-canonicals --variable=example_pdf_canonical > /etc/nginx/maps/example-pdf-canonicals.conf`
+
+Include that file in nginx's `http` block, and in the site's PDF location add `add_header Link $example_pdf_canonical always;`. Run the command again when PDFs are added (a daily job is enough) and reload nginx.
+
 == Screenshots ==
 
 1. The SEO panel in the block editor: a preview of the Google result, and the SEO title and meta description with length meters measured in pixels, as Google cuts them.
@@ -94,6 +104,9 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.18.0 =
+* New: `wp tala-seo pdf-canonicals` lists each PDF in the uploads folder with the article that presents it, as an nginx map (or a table, CSV or JSON), for a `Link: <article>; rel="canonical"` header on the file. Search engines can then show the article in the PDF's place, and the PDF stays available to everyone; redirecting PDFs to their articles instead drops them from search. The article is a published post or page, not hidden from search engines, redirected or behind a password, that links to the PDF or embeds it (block attributes and encoded file names count, other sites' files and missing files don't): the one the PDF was uploaded to when it presents it, else the one presenting the fewest PDFs, posts before pages, the earliest first.
 
 = 1.17.0 =
 * New: the organization's details (Settings → SEO → Address and contact): its kind (organization, educational organization, NGO, news media, online business, corporation), legal name, postal address, telephone and email, in its markup on the home page, with the telephone and email also as its customer support contact point. Only what is filled in is used, and none of it for a person.

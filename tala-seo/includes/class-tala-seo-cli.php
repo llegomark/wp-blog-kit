@@ -1,12 +1,14 @@
 <?php
 /**
- * WP-CLI commands: find posts that aren't SEO-ready, import data from another SEO plugin, and write
- * missing meta descriptions from the posts' opening text.
+ * WP-CLI commands: find posts that aren't SEO-ready, import data from another SEO plugin, write
+ * missing meta descriptions from the posts' opening text, and map PDFs to their articles.
  *
  * @package TalaSEO
  */
 
 defined( 'ABSPATH' ) || exit;
+
+require_once __DIR__ . '/documents.php';
 
 /**
  * Tala SEO tools.
@@ -746,6 +748,71 @@ class Tala_SEO_CLI {
 				'order'          => 'ASC',
 			)
 		);
+	}
+
+	/**
+	 * Lists each PDF with the article that presents it, for the web server's rel="canonical"
+	 * header on the file.
+	 *
+	 * A PDF that search engines index on its own sends readers straight to the file, past the
+	 * article. Redirecting the file loses it from search; Google's answer for documents that aren't
+	 * HTML is a Link: <article>; rel="canonical" header on the file, which keeps the file available
+	 * to everyone and lets search engines show the article instead. Run this whenever PDFs are
+	 * added (a daily job is enough), save the output where nginx reads its maps, and reload nginx.
+	 *
+	 * The article of a PDF is a published post or page, not hidden from search engines, that links
+	 * to it or embeds it: the one it was uploaded to when that one presents it, else the one that
+	 * presents the fewest PDFs, posts before pages, the earliest first.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--format=<format>]
+	 * : nginx prints a map block for the server's configuration.
+	 * ---
+	 * default: nginx
+	 * options:
+	 *   - nginx
+	 *   - table
+	 *   - csv
+	 *   - json
+	 * ---
+	 *
+	 * [--variable=<name>]
+	 * : The nginx variable the map sets, without "$". Give each site its own: nginx maps are shared
+	 * by every site on the server.
+	 * ---
+	 * default: tala_seo_pdf_canonical
+	 * ---
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp tala-seo pdf-canonicals --variable=example_pdf_canonical > /etc/nginx/maps/example-pdf-canonicals.conf
+	 *     wp tala-seo pdf-canonicals --format=table
+	 *
+	 * @subcommand pdf-canonicals
+	 *
+	 * @param string[]              $args       Positional arguments.
+	 * @param array<string, string> $assoc_args Options.
+	 */
+	public function pdf_canonicals( array $args, array $assoc_args ): void {
+		$format   = (string) ( $assoc_args['format'] ?? 'nginx' );
+		$variable = (string) ( $assoc_args['variable'] ?? 'tala_seo_pdf_canonical' );
+		if ( ! preg_match( '/^[a-z_][a-z0-9_]*$/i', $variable ) ) {
+			WP_CLI::error( 'The variable name may have only letters, digits and underscores, and may not start with a digit.' );
+		}
+		$canonicals = tala_seo_pdf_canonicals();
+		if ( 'nginx' === $format ) {
+			WP_CLI::line( rtrim( tala_seo_pdf_canonicals_nginx( $canonicals, $variable ) ) );
+			return;
+		}
+		$rows = array();
+		foreach ( $canonicals as $path => $url ) {
+			$rows[] = array(
+				'pdf'     => $path,
+				'article' => $url,
+			);
+		}
+		WP_CLI\Utils\format_items( $format, $rows, array( 'pdf', 'article' ) );
 	}
 }
 
