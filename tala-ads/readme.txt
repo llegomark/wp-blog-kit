@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,11 +14,11 @@ AdSense Auto ads, Google Tag Manager, Google's consent and ad blocking recovery 
 
 Tala Ads puts a site's ad and tracking code in one place, outside the theme, so switching themes never takes the ads with it.
 
-* **AdSense Auto ads.** Enter the publisher ID and the AdSense code goes on every page, once. Google places the ads: you choose the formats (in-page, anchor, vignette, multiplex) and how many in AdSense. Error pages and searches that found nothing get no ads, as AdSense doesn't allow ads on pages without the site's own content. A place Google leaves without an ad is hidden, so no empty frame or blank gap shows in the text.
+* **AdSense Auto ads.** Enter the publisher ID and the AdSense code goes on every page, once. Google places the ads: you choose the formats (in-page, anchor, vignette, multiplex) and how many in AdSense. Error pages and searches that found nothing get no ads, as AdSense doesn't allow ads on pages without the site's own content. A place Google leaves without an ad is hidden, so no empty frame or blank gap shows in the text, and an ad frame waiting for its ad stays see-through in dark mode instead of showing a white box.
 * **Google Tag Manager.** Enter the container ID: the code goes as high in the head as WordPress allows, and the fallback for browsers without JavaScript right after the opening body tag. The container then loads Google Analytics and the other tags.
 * **Google's consent and ad blocking recovery messages.** One switch loads the messages set up under Privacy & messaging in AdSense, which come from one Google tag: the consent message, which Google needs to show personalized ads to visitors from the European Economic Area, the UK and Switzerland, and the ad blocking recovery message.
 * **Error protection.** Google's optional error protection code, which asks readers to allow ads when an ad blocker stops the recovery message itself, goes on pages with ads. It is the one piece of code the settings keep: only in the shape Google gives it, for the site's own publisher ID, naming only Google's addresses, and only from people WordPress lets add scripts.
-* **Google search.** With a Programmable Search Engine ID and a results page, Google answers every search on the site: WordPress's search forms send their searches to that page, where its Search block shows Google's search box and results in the theme's look: its colours (light and dark), font, links, form field and button, from the theme.json presets block themes define. Results for a search get noindex, as Google asks for internal search results.
+* **Google search.** With a Programmable Search Engine ID and a results page, Google answers every search on the site: WordPress's search forms send their searches to that page, where its Search block shows Google's search box (with the block's placeholder, or "Type here to search", as its hint) and results in the theme's look: its colours (light and dark), font, links, form field and button, from the theme.json presets block themes define. Results for a search get noindex, as Google asks for internal search results.
 * **Innity.** An optional 300 × 250 box after the text of each post and page, with its height kept free while the ad loads so the page doesn't move. Innity's universal tags (full-screen phone formats) aren't offered: they shift the page as it loads.
 * **IDs, not code.** Each ID field keeps just the ID it asks for, even when the whole code is pasted, so nothing typed into those fields can put a script on the site.
 * **ads.txt check.** Settings → Ads says whether the site's ads.txt lists the publisher ID, without which AdSense may hold back ads.
@@ -49,7 +49,7 @@ Yes. The code is the same for every visitor, so cached pages carry it. Google's 
 
 = How does Google search replace WordPress's search? =
 
-Every search form on the site still sends its search to WordPress (?s=…). With Google search set up, WordPress sends it on to the results page (?q=…), where Google's script reads it and shows Google's results in place of the page's Search block, or after the page's text when it has none. The theme's search forms need no change.
+Every search form on the site still sends its search to WordPress (?s=…). With Google search set up, WordPress sends it on to the results page (?q=…), where Google's script reads it and shows Google's results in place of the page's Search block, or after the page's text when it has none. The theme's search forms need no change; on the results page itself they are left out, so Google's box is the only one there.
 
 = Why does the error protection code need special care? =
 
@@ -65,6 +65,11 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 
 == Changelog ==
 
+= 1.3.0 =
+* Fixed: in dark mode an ad frame no longer shows as a white box while it waits for its ad (or for Google to mark it unfilled). Browsers paint the frame of a light page white on a dark page; ad frames are now declared light, so they stay see-through as on a light page, and an ad paints its own background.
+* New: Google's search box shows a hint until one types: the placeholder of the Search block it replaces ("Type here to search" when the block has none, or when Google's results follow the page's text).
+* Changed: the results page shows one search box, Google's. Other Search blocks on that page, such as a theme's search form at the top or in the footer, are left out there; on every other page they stay and send their searches to it.
+
 = 1.2.0 =
 * Fixed: a place Auto ads leave without an ad no longer shows. Google marks such slots "unfilled", collapsed but with their ad frame still visible (a white box over the text), or "unfill-optimized", a blank gap; both are hidden now, as Google recommends for unfilled slots.
 
@@ -77,6 +82,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 * First release: AdSense Auto ads, Google Tag Manager, Google's consent message and an Innity box after posts and pages, each loaded once, set up with IDs only.
 
 == Upgrade Notice ==
+
+= 1.3.0 =
+No white box in dark mode while an ad loads; a hint in Google's search box (the Search block's placeholder); one search box on the results page.
 
 = 1.2.0 =
 Hides the empty places Auto ads leave without an ad: no more white boxes over the text or blank gaps.

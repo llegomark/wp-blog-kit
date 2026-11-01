@@ -5,7 +5,7 @@
  * Categories: footer
  * Block Types: core/template-part/footer
  * Inserter: no
- * Description: Search form, site title and tagline. Search results and the 404 page use the footer without search, as they have a search form at the top.
+ * Description: Search form, site title and tagline, on the home page. Every other page has a search form at the top and uses the footer without search.
  *
  * @package TalaBlog
  */

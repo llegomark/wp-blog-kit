@@ -4,8 +4,9 @@
  * Slug: tala-blog/search
  * Categories: text
  * Inserter: no
- * Description: The search form at the top of search results and the 404 page. Those pages use the
- * footer without search, so this is their only search form.
+ * Description: The search form at the top of every page but the home page: above the breadcrumbs of
+ * articles, pages and archives, and on search results and the 404 page. Those pages use the footer
+ * without search, so this is their only search form; the home page keeps the one in the footer.
  *
  * @package TalaBlog
  */

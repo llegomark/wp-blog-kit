@@ -68,6 +68,16 @@ function tala_ads_search_script(): void {
 	wp_enqueue_style( 'tala-ads-google-search', plugins_url( 'assets/google-search.css', TALA_ADS_FILE ), array(), TALA_ADS_VERSION );
 	wp_style_add_data( 'tala-ads-google-search', 'path', dirname( __DIR__ ) . '/assets/google-search.css' );
 	wp_enqueue_script(
+		'tala-ads-search-hint',
+		plugins_url( 'assets/google-search.js', TALA_ADS_FILE ),
+		array(),
+		TALA_ADS_VERSION,
+		array(
+			'strategy'  => 'defer',
+			'in_footer' => true,
+		)
+	);
+	wp_enqueue_script(
 		'tala-ads-google-search',
 		'https://cse.google.com/cse.js?cx=' . rawurlencode( tala_ads_settings()['cse'] ),
 		array(),
@@ -80,13 +90,18 @@ function tala_ads_search_script(): void {
 }
 
 /**
- * Google's search box and results, which read the search from ?q=.
+ * Google's search box and results, which read the search from ?q=. Google's box has no hint of its
+ * own; assets/google-search.js gives it this one once Google has drawn it.
  *
+ * @param string $hint What the empty box says: the Search block's placeholder, or a default.
  * @return string
  */
-function tala_ads_search_markup() {
+function tala_ads_search_markup( $hint = '' ) {
 	do_action( 'tala_ads_search_placed' );
-	return '<div class="tala-ads-google-search"><div class="gcse-search" data-queryParameterName="q"></div></div>';
+	if ( '' === trim( $hint ) ) {
+		$hint = __( 'Type here to search', 'tala-ads' );
+	}
+	return '<div class="tala-ads-google-search" data-hint="' . esc_attr( $hint ) . '"><div class="gcse-search" data-queryParameterName="q"></div></div>';
 }
 
 /**
@@ -101,17 +116,25 @@ function tala_ads_search_place_here() {
 		&& doing_filter( 'the_content' ) && ! did_action( 'tala_ads_search_placed' );
 }
 
-add_filter( 'render_block_core/search', 'tala_ads_search_block' );
+add_filter( 'render_block_core/search', 'tala_ads_search_block', 10, 2 );
 
 /**
- * The results page's own Search block becomes Google's search box and results. Search blocks
- * elsewhere (a header or footer, other pages) stay WordPress's: their searches come here anyway.
+ * The results page's own Search block becomes Google's search box and results, with the block's
+ * placeholder as the box's hint. Other Search blocks on the results page (the theme's, at the top
+ * or in the footer) are left out, so the page has one search box, Google's. Search blocks on other
+ * pages stay WordPress's: their searches come here anyway.
  *
- * @param string $html The Search block's HTML.
+ * @param string               $html  The Search block's HTML.
+ * @param array<string, mixed> $block The parsed block.
  * @return string
  */
-function tala_ads_search_block( $html ) {
-	return tala_ads_search_place_here() ? tala_ads_search_markup() : $html;
+function tala_ads_search_block( $html, $block = array() ) {
+	if ( tala_ads_search_place_here() ) {
+		$hint = $block['attrs']['placeholder'] ?? '';
+		return tala_ads_search_markup( is_string( $hint ) ? $hint : '' );
+	}
+	$page = tala_ads_search_page();
+	return $page && is_page( $page ) ? '' : $html;
 }
 
 add_filter( 'the_content', 'tala_ads_search_content', 20 );

@@ -111,9 +111,13 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 		);
 		clean_post_cache( $post );
 
+		update_option( 'date_format', 'F j, Y' );
+		update_option( 'time_format', 'g:i a' );
 		$this->go_to( get_permalink( $post ) );
 		$published = $this->render( '<!-- wp:post-date /-->', $post );
 		$this->assertStringContainsString( '<span class="tala-date-label">Published</span><time', $published );
+		$this->assertStringContainsString( '>March 1, 2026 at 8:00 am</time>', $published, 'With the time' );
+		$this->assertStringContainsString( '>2026-03-01</time>', $this->render( '<!-- wp:post-date {"format":"Y-m-d"} /-->', $post ), "The block's own format" );
 		$this->assertSame( '', $this->render( '<!-- wp:post-date {"displayType":"modified"} /-->', $post ), 'Updated on the same day' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- a modified date WordPress itself won't write.
@@ -127,10 +131,14 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 		);
 		clean_post_cache( $post );
 		$this->go_to( get_permalink( $post ) );
-		$this->assertStringContainsString( '<span class="tala-date-label">Updated</span>', $this->render( '<!-- wp:post-date {"displayType":"modified"} /-->', $post ) );
+		$updated = $this->render( '<!-- wp:post-date {"displayType":"modified"} /-->', $post );
+		$this->assertStringContainsString( '<span class="tala-date-label">Updated</span>', $updated );
+		$this->assertStringContainsString( '>March 20, 2026 at 3:00 pm</time>', $updated );
 
 		$this->go_to( home_url( '/' ) );
-		$this->assertStringNotContainsString( 'tala-date-label', $this->render( '<!-- wp:post-date /-->', $post ), 'In a list' );
+		$listed = $this->render( '<!-- wp:post-date /-->', $post );
+		$this->assertStringNotContainsString( 'tala-date-label', $listed, 'In a list' );
+		$this->assertStringContainsString( '>March 1, 2026</time>', $listed, 'No time in a list' );
 	}
 
 	/**
@@ -189,12 +197,17 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 			$this->assertInstanceOf( WP_Block_Template::class, $part, $slug );
 			$this->assertSame( $area, $part->area, $slug );
 		}
-		foreach ( array( 'search', '404' ) as $slug ) {
-			$this->assertStringContainsString( '"slug":"footer-without-search"', get_block_template( 'tala-blog//' . $slug )->content, $slug );
+		// One search form per page: at the top of every page but the home page, in its footer there.
+		foreach ( array( 'search', '404', 'index', 'single', 'page', 'archive', 'author' ) as $slug ) {
+			$content = get_block_template( 'tala-blog//' . $slug )->content;
+			$this->assertStringContainsString( '"slug":"footer-without-search"', $content, $slug );
+			if ( '404' !== $slug ) { // Its search form is in its text pattern (tala-blog/hidden-404).
+				$this->assertStringContainsString( '"slug":"tala-blog/search"', $content, $slug );
+			}
 		}
-		foreach ( array( 'index', 'home', 'single', 'page', 'archive', 'author' ) as $slug ) {
-			$this->assertStringContainsString( '"slug":"footer",', get_block_template( 'tala-blog//' . $slug )->content, $slug );
-		}
+		$home = get_block_template( 'tala-blog//home' )->content;
+		$this->assertStringContainsString( '"slug":"footer",', $home );
+		$this->assertStringNotContainsString( '"slug":"tala-blog/search"', $home );
 	}
 
 	/**

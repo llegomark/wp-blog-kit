@@ -238,6 +238,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 
 		$this->assertSame( 1, substr_count( $head, 'adsbygoogle.js' ), 'AdSense is loaded once.' );
 		$this->assertStringContainsString( 'ins.adsbygoogle[data-ad-status^="unfill"]{display:none!important}', $head, 'Slots Google leaves empty are hidden.' );
+		$this->assertStringContainsString( 'ins.adsbygoogle iframe{color-scheme:light}', $head, 'Ad frames stay see-through in dark mode.' );
 		$this->assertMatchesRegularExpression( '#<script[^>]+src="https://pagead2\.googlesyndication\.com/pagead/js/adsbygoogle\.js\?client=ca-pub-1234567890123456"[^>]*>#', $head );
 		$this->assertMatchesRegularExpression( '#<script(?=[^>]*\basync\b)(?=[^>]*crossorigin="anonymous")[^>]+adsbygoogle\.js#', $head, 'Async, with crossorigin="anonymous".' );
 
@@ -381,7 +382,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	 * @param string $content The page's content.
 	 * @return int Page ID.
 	 */
-	private function search_page( string $content = '<!-- wp:paragraph --><p>Did you find what you were looking for?</p><!-- /wp:paragraph -->' . "\n\n" . '<!-- wp:search {"label":"Search"} /-->' ): int {
+	private function search_page( string $content = '<!-- wp:paragraph --><p>Did you find what you were looking for?</p><!-- /wp:paragraph -->' . "\n\n" . '<!-- wp:search {"label":"Search","placeholder":"Type here to search TeacherPH"} /-->' ): int {
 		$page = $this->publish_post(
 			array(
 				'post_type'    => 'page',
@@ -446,9 +447,9 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * On the results page, its Search block becomes Google's search box and results (once), Search
-	 * blocks outside its content stay, Google's script loads in <head>, and results for a search
-	 * get noindex.
+	 * On the results page, its Search block becomes Google's search box and results (once), with the
+	 * block's placeholder as the box's hint; Search blocks outside its content are left out there and
+	 * stay on other pages; Google's script loads in <head>, and results for a search get noindex.
 	 */
 	public function test_results_page(): void {
 		$page = $this->search_page();
@@ -460,11 +461,13 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertStringContainsString( 'var(--wp--preset--color--contrast, currentcolor)', $head );
 		$this->assertStringNotContainsString( 'noindex', $head, 'The page itself may be indexed.' );
 
-		$this->assertStringContainsString( 'wp-block-search', do_blocks( '<!-- wp:search {"label":"Search"} /-->' ), 'Outside the page\'s content, a Search block stays.' );
+		$this->assertMatchesRegularExpression( '#<script(?=[^>]*\sdefer\b)[^>]*/assets/google-search\.js\?ver=#', get_echo( 'wp_print_footer_scripts' ), 'The hint for Google\'s box.' );
+		$this->assertSame( '', do_blocks( '<!-- wp:search {"label":"Search"} /-->' ), 'Outside the page\'s content, a Search block is left out: Google\'s is the one.' );
 		the_post();
 		$content = apply_filters( 'the_content', get_post_field( 'post_content', $page ) );
 		$this->assertStringContainsString( 'Did you find what you were looking for?', $content );
 		$this->assertSame( 1, substr_count( $content, '<div class="gcse-search" data-queryParameterName="q"></div>' ) );
+		$this->assertStringContainsString( '<div class="tala-ads-google-search" data-hint="Type here to search TeacherPH">', $content, 'The block\'s placeholder is the hint.' );
 		$this->assertStringNotContainsString( 'wp-block-search', $content, 'Google\'s box replaces the Search block.' );
 
 		$_GET['q'] = 'lesson plan';
@@ -472,6 +475,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		unset( $_GET['q'] );
 
 		$this->go_to( get_permalink( $this->post() ) );
+		$this->assertStringContainsString( 'wp-block-search', do_blocks( '<!-- wp:search {"label":"Search"} /-->' ), 'On other pages a Search block stays.' );
 		$head = $this->page_head();
 		$this->assertStringNotContainsString( 'cse.google.com', $head, 'Google\'s script only on the results page.' );
 		$this->assertStringNotContainsString( 'tala-ads-google-search', $head, 'And its styles.' );
@@ -484,7 +488,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$page = $this->search_page( '<!-- wp:paragraph --><p>Search the site.</p><!-- /wp:paragraph -->' );
 		$this->go_to( get_permalink( $page ) );
 		the_post();
-		$this->assertMatchesRegularExpression( '#Search the site\.</p>\s*<div class="tala-ads-google-search"><div class="gcse-search" data-queryParameterName="q"></div></div>#', apply_filters( 'the_content', get_post_field( 'post_content', $page ) ) );
+		$this->assertMatchesRegularExpression( '#Search the site\.</p>\s*<div class="tala-ads-google-search" data-hint="Type here to search"><div class="gcse-search" data-queryParameterName="q"></div></div>#', apply_filters( 'the_content', get_post_field( 'post_content', $page ) ) );
 	}
 
 	/**

@@ -7,19 +7,19 @@ import { demoPages } from './utils.mjs';
 
 const pages = demoPages();
 
-// What each kind of page should have: HTTP status, the name of its one search form (at the top of
-// search results and the 404 page, in the footer elsewhere) and its structured data. WebSite and
+// What each kind of page should have: HTTP status, the name of its one search form (in the footer
+// of the home page, at the top of every other page) and its structured data. WebSite and
 // Organization belong to the home page (its first page) only.
 const expected = {
 	home: [ 200, 'Site', [ 'WebSite', 'Organization' ] ],
 	page2: [ 200, 'Site', [] ],
-	article: [ 200, 'Site', [ 'BlogPosting', 'BreadcrumbList' ] ],
-	withComments: [ 200, 'Site', [ 'BlogPosting', 'BreadcrumbList' ] ],
-	page: [ 200, 'Site', [ 'BreadcrumbList' ] ],
-	category: [ 200, 'Site', [ 'BreadcrumbList' ] ],
-	tag: [ 200, 'Site', [ 'BreadcrumbList' ] ],
-	author: [ 200, 'Site', [ 'ProfilePage', 'BreadcrumbList' ] ],
-	date: [ 200, 'Site', [] ],
+	article: [ 200, 'Articles', [ 'BlogPosting', 'BreadcrumbList' ] ],
+	withComments: [ 200, 'Articles', [ 'BlogPosting', 'BreadcrumbList' ] ],
+	page: [ 200, 'Articles', [ 'BreadcrumbList' ] ],
+	category: [ 200, 'Articles', [ 'BreadcrumbList' ] ],
+	tag: [ 200, 'Articles', [ 'BreadcrumbList' ] ],
+	author: [ 200, 'Articles', [ 'ProfilePage', 'BreadcrumbList' ] ],
+	date: [ 200, 'Articles', [] ],
 	search: [ 200, 'Articles', [] ],
 	searchNone: [ 200, 'Articles', [] ],
 	notFound: [ 404, 'Articles', [] ],

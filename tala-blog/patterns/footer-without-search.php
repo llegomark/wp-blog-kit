@@ -5,7 +5,7 @@
  * Categories: footer
  * Block Types: core/template-part/footer
  * Inserter: no
- * Description: Site title and tagline, for pages with their own search form at the top (search results and the 404 page), so they show one search form, not two.
+ * Description: Site title and tagline, for pages with their own search form at the top (every page but the home page), so they show one search form, not two.
  *
  * @package TalaBlog
  */

@@ -67,9 +67,12 @@ function tala_ads_enqueue(): void {
 		// A slot Auto ads place but Google doesn't fill is marked "unfilled" (collapsed, but its ad
 		// frame stays visible: a white box over the text) or "unfill-optimized" (a blank gap). Google's
 		// recommendation is to hide unfilled slots; both are hidden here.
+		// Ad frames are light pages. On a page in dark mode the browser paints a frame of a light page
+		// white until its ad arrives (and through an unfilled slot's last moment); declared light, the
+		// frame stays see-through, as on a light page, and an ad paints its own background.
 		wp_register_style( 'tala-ads', false, array(), TALA_ADS_VERSION );
 		wp_enqueue_style( 'tala-ads' );
-		wp_add_inline_style( 'tala-ads', 'ins.adsbygoogle[data-ad-status^="unfill"]{display:none!important}' );
+		wp_add_inline_style( 'tala-ads', 'ins.adsbygoogle[data-ad-status^="unfill"]{display:none!important}ins.adsbygoogle iframe{color-scheme:light}' );
 		wp_enqueue_script(
 			'tala-ads-adsense',
 			'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . $settings['adsense'],

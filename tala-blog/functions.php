@@ -302,9 +302,9 @@ function tala_blog_preset_dark_colors( $theme_json ) {
 add_filter( 'render_block_core/post-date', 'tala_blog_label_dates', 10, 3 );
 
 /**
- * Labels the article dates "Published" and "Updated", as Google recommends, and hides the
- * updated date when the post was only changed on the day it was published.
- * Dates in post lists stay unlabelled.
+ * Labels the article dates "Published" and "Updated", as Google recommends, adds the time to
+ * each, and hides the updated date when the post was only changed on the day it was published.
+ * Dates in post lists stay unlabelled and without the time.
  *
  * @param string               $html     Block HTML.
  * @param array<string, mixed> $block    Parsed block.
@@ -321,8 +321,41 @@ function tala_blog_label_dates( $html, $block, $instance ) {
 	if ( $modified && get_the_modified_date( 'Y-m-d', $post_id ) <= get_the_date( 'Y-m-d', $post_id ) ) {
 		return '';
 	}
+	// A date in the site's own format (the block's default) gets the time too; a format chosen in
+	// the block, such as "2 days ago", is left as it is.
+	if ( empty( $block['attrs']['format'] ) ) {
+		$html = tala_blog_date_with_time( $html );
+	}
 	$label = $modified ? __( 'Updated', 'tala-blog' ) : __( 'Published', 'tala-blog' );
 	return tala_blog_before_time( $html, '<span class="tala-date-label">' . esc_html( $label ) . '</span>' );
+}
+
+/**
+ * Writes the date of a Date block's <time> element as "date at time", in the site's date and time
+ * formats (Settings → General), from the element's own datetime attribute.
+ *
+ * @param string $html Date block HTML.
+ * @return string
+ */
+function tala_blog_date_with_time( $html ) {
+	return (string) preg_replace_callback(
+		'#(<time\b[^>]*\bdatetime="([^"]+)"[^>]*>)[^<]*(</time>)#',
+		static function ( $parts ) {
+			$timestamp = strtotime( $parts[2] );
+			if ( false === $timestamp ) {
+				return $parts[0];
+			}
+			$text = sprintf(
+				/* translators: 1: a date, 2: a time, as on "Published 3 October 2026 at 8:00 am". */
+				_x( '%1$s at %2$s', 'date and time', 'tala-blog' ),
+				wp_date( (string) get_option( 'date_format' ), $timestamp ),
+				wp_date( (string) get_option( 'time_format' ), $timestamp )
+			);
+			return $parts[1] . esc_html( $text ) . $parts[3];
+		},
+		$html,
+		1
+	);
 }
 
 // Priority 20: after Enhanced Responsive Images (10), which doesn't see the CSS width either.
