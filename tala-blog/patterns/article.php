@@ -25,8 +25,6 @@ defined( 'ABSPATH' ) || exit;
 <!-- /wp:group --></header>
 <!-- /wp:group -->
 
-<!-- wp:post-featured-image {"aspectRatio":"16/9","sizeSlug":"large"} /-->
-
 <!-- wp:post-content {"layout":{"type":"default"}} /-->
 
 <!-- wp:pattern {"slug":"tala-blog/post-terms"} /--></article>

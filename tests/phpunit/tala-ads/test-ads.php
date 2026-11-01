@@ -221,6 +221,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->go_to( get_permalink( $this->post() ) );
 		$head = $this->page_head();
 		$this->assertStringNotContainsString( 'googlesyndication', $head );
+		$this->assertStringNotContainsString( 'data-ad-status', $head, 'No ad styles without ads.' );
 		$this->assertStringNotContainsString( 'googletagmanager', $head );
 		$this->assertStringNotContainsString( 'fundingchoices', $head );
 		$this->assertSame( '', get_echo( 'wp_body_open' ) );
@@ -236,6 +237,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$head = $this->page_head();
 
 		$this->assertSame( 1, substr_count( $head, 'adsbygoogle.js' ), 'AdSense is loaded once.' );
+		$this->assertStringContainsString( 'ins.adsbygoogle[data-ad-status^="unfill"]{display:none!important}', $head, 'Slots Google leaves empty are hidden.' );
 		$this->assertMatchesRegularExpression( '#<script[^>]+src="https://pagead2\.googlesyndication\.com/pagead/js/adsbygoogle\.js\?client=ca-pub-1234567890123456"[^>]*>#', $head );
 		$this->assertMatchesRegularExpression( '#<script(?=[^>]*\basync\b)(?=[^>]*crossorigin="anonymous")[^>]+adsbygoogle\.js#', $head, 'Async, with crossorigin="anonymous".' );
 

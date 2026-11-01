@@ -740,4 +740,25 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 			wp_clean_theme_json_cache();
 		}
 	}
+
+	/**
+	 * Article lists show numbered pages only when Appearance → Customize → Article lists asks for
+	 * them; the Customizer offers the switch, off by default.
+	 */
+	public function test_page_numbers_are_a_choice(): void {
+		$numbers = '<div class="wp-block-query-pagination-numbers"><span class="page-numbers current">1</span><a class="page-numbers" href="/page/388/">388</a></div>';
+		$this->assertSame( '', tala_blog_page_numbers( $numbers ), 'Off by default.' );
+		set_theme_mod( 'tala_blog_page_numbers', true );
+		$this->assertSame( $numbers, tala_blog_page_numbers( $numbers ) );
+		remove_theme_mod( 'tala_blog_page_numbers' );
+		$this->assertSame( 10, has_filter( 'render_block_core/query-pagination-numbers', 'tala_blog_page_numbers' ) );
+
+		require_once ABSPATH . WPINC . '/class-wp-customize-manager.php';
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$manager = new WP_Customize_Manager();
+		tala_blog_customize_register( $manager );
+		$this->assertNotNull( $manager->get_section( 'tala_blog_lists' ) );
+		$this->assertEmpty( $manager->get_setting( 'tala_blog_page_numbers' )->default, 'Off by default.' );
+		$this->assertSame( 'checkbox', $manager->get_control( 'tala_blog_page_numbers' )->type );
+	}
 }

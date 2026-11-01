@@ -17,7 +17,5 @@ defined( 'ABSPATH' ) || exit;
 
 <!-- wp:post-title {"level":1} /-->
 
-<!-- wp:post-featured-image {"aspectRatio":"16/9","sizeSlug":"large"} /-->
-
 <!-- wp:post-content {"layout":{"type":"default"}} /--></article>
 <!-- /wp:group -->

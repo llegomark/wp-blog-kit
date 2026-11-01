@@ -651,6 +651,11 @@ footer.wp-block-template-part {
 	font-size: var(--wp--preset--font-size--small);
 }
 
+/* "Older articles" stays on the right, also on the first page, where it is the only link. */
+.tala-list .wp-block-query-pagination-next {
+	margin-inline-start: auto;
+}
+
 /* Printing: just the article, with its dates and author, in black on white. */
 
 @media print {

@@ -4,7 +4,7 @@
  * Slug: tala-blog/post-list
  * Categories: query
  * Inserter: no
- * Description: The list of articles on the home page, archives and search results: title, summary, date and a thumbnail of the featured image, then numbered pages. Posts per page come from Settings → Reading.
+ * Description: The list of articles on the home page, archives and search results: title, summary, date and a thumbnail of the featured image, then links to newer and older articles (numbered pages too, if Appearance → Customize → Article lists asks for them). Posts per page come from Settings → Reading.
  *
  * @package TalaBlog
  */

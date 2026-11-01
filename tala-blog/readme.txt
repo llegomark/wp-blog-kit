@@ -16,8 +16,8 @@ Tala Blog is a block theme for blogs that are mostly read on phones.
 * System fonts only: nothing to download, and the theme's CSS is inlined, so a page needs no stylesheet requests.
 * Colour and typography presets (Appearance → Editor → Styles → Browse styles): Sepia, Blue and Green, each with a dark mode of its own and text contrast of at least 6:1 like the default colours, and Serif or Serif headings, with the device's own serif font.
 * A header with the site logo (when the site has one) beside the site title, and the site's menu, or its pages until there is one. On phones it folds behind a menu button and opens full screen in the page's colours, light or dark.
-* Article pages: breadcrumbs, "Published" and "Updated" dates, featured image, "Filed under" categories and tags, then "Keep reading": up to three recent articles from the same categories and the older and newer articles as cards, placed right after the article where readers decide what to read next; then an author box with biography and comments with their dates. The HTML says what each part is: the title and dates are the article's header and the categories and tags its footer, "Keep reading" is a navigation landmark of its own, and each comment is an article.
-* Article lists (home page, archives, search results): title, summary, date and a thumbnail of the featured image, with numbered pages.
+* Article pages: breadcrumbs, "Published" and "Updated" dates, the article itself (the featured image is used in lists and link previews, not repeated above the text), "Filed under" categories and tags, then "Keep reading": up to three recent articles from the same categories and the older and newer articles as cards, placed right after the article where readers decide what to read next; then an author box with biography and comments with their dates. The HTML says what each part is: the title and dates are the article's header and the categories and tags its footer, "Keep reading" is a navigation landmark of its own, and each comment is an article.
+* Article lists (home page, archives, search results): title, summary, date and a thumbnail of the featured image, with links to newer and older articles. Numbered pages are a choice in Appearance → Customize → Article lists, off by default, so the number of pages isn't on show.
 * Accessible: one H1 per page, uniquely named landmarks, one search form per page, a skip link, visible keyboard focus, text contrast of at least 6:1 and form fields of at least 3:1 in both colour schemes and with every colour preset, and long words that wrap instead of widening the page when zoomed.
 * Prints just the article, with its dates and author, in black on white.
 * Translation-ready: every text in the templates comes from translatable patterns (text domain tala-blog), and translated block settings are escaped as JSON, so no translation can break a block.
@@ -52,6 +52,10 @@ In Appearance → Editor → Patterns → Header, select the logo placeholder be
 In Appearance → Editor → Styles → Browse styles. Under "Color variations", Sepia, Blue and Green replace the light colours and the dark-mode colours together; under "Typography", Serif sets all text in the device's serif font and Serif headings only the headings and the site title. "Default" goes back to the theme's own. Both use fonts already on the reader's device, so nothing is downloaded.
 
 == Changelog ==
+
+= 1.9.0 =
+* Changed: articles and pages no longer show the featured image above their text. It still shows as the thumbnail in article lists and "Keep reading", and Tala SEO still uses it for link previews and the article's markup.
+* Changed: article lists link to newer and older articles without numbered pages, so the number of pages isn't on show. Appearance → Customize → Article lists → "Show numbered pages" brings them back.
 
 = 1.8.1 =
 * Fixed: a palette entry saved in the site's styles that isn't a colour (which a multisite administrator's styles can hold, saved as written) no longer stops every page of the site with an error; the theme colour and the dark colours just leave it out.

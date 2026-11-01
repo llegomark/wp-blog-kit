@@ -64,6 +64,12 @@ function tala_ads_enqueue(): void {
 	}
 
 	if ( tala_ads_show_ads() ) {
+		// A slot Auto ads place but Google doesn't fill is marked "unfilled" (collapsed, but its ad
+		// frame stays visible: a white box over the text) or "unfill-optimized" (a blank gap). Google's
+		// recommendation is to hide unfilled slots; both are hidden here.
+		wp_register_style( 'tala-ads', false, array(), TALA_ADS_VERSION );
+		wp_enqueue_style( 'tala-ads' );
+		wp_add_inline_style( 'tala-ads', 'ins.adsbygoogle[data-ad-status^="unfill"]{display:none!important}' );
 		wp_enqueue_script(
 			'tala-ads-adsense',
 			'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . $settings['adsense'],

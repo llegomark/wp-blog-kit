@@ -472,3 +472,52 @@ function tala_blog_comments_closed( $html, $block, $instance ) {
 	}
 	return '<p class="tala-comments-closed">' . esc_html__( 'Comments are closed.', 'tala-blog' ) . '</p>';
 }
+
+add_action( 'customize_register', 'tala_blog_customize_register' );
+
+/**
+ * Appearance → Customize → Article lists: whether lists of articles show numbered pages. Off by
+ * default: only links to newer and older articles, so the number of pages isn't on show.
+ *
+ * @param WP_Customize_Manager $wp_customize Customizer.
+ */
+function tala_blog_customize_register( $wp_customize ): void {
+	$wp_customize->add_section(
+		'tala_blog_lists',
+		array(
+			'title'    => __( 'Article lists', 'tala-blog' ),
+			'priority' => 120,
+		)
+	);
+	$wp_customize->add_setting(
+		'tala_blog_page_numbers',
+		array(
+			'default'           => '',
+			'type'              => 'theme_mod',
+			'capability'        => 'edit_theme_options',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+		)
+	);
+	$wp_customize->add_control(
+		'tala_blog_page_numbers',
+		array(
+			'section'     => 'tala_blog_lists',
+			'type'        => 'checkbox',
+			'label'       => __( 'Show numbered pages', 'tala-blog' ),
+			'description' => __( 'Under the home page, archives and search results. Off, the lists link only to newer and older articles, and the number of pages isn\'t shown.', 'tala-blog' ),
+		)
+	);
+}
+
+add_filter( 'render_block_core/query-pagination-numbers', 'tala_blog_page_numbers' );
+
+/**
+ * The numbered pages under article lists, only when Appearance → Customize → Article lists asks
+ * for them.
+ *
+ * @param string $content The numbers' HTML.
+ * @return string
+ */
+function tala_blog_page_numbers( $content ) {
+	return get_theme_mod( 'tala_blog_page_numbers', false ) ? $content : '';
+}
