@@ -329,6 +329,21 @@ class Test_Tala_SEO_Import extends Tala_SEO_Test_Case {
 				'msverify'     => '509AC9662108B4BE62203A99F67F9CC9',
 			)
 		);
+		update_option(
+			'wpseo_local',
+			array(
+				'business_type'             => 'EducationalOrganization',
+				'location_address'          => 'Block 2 Lot 10 Unit A Venus Street',
+				'location_address_2'        => 'Crestview Homes Subdivision Brgy. Mayamot',
+				'location_city'             => 'Antipolo',
+				'location_state'            => 'Rizal',
+				'location_zipcode'          => '1870',
+				'location_country'          => 'PH',
+				'location_phone'            => '09260211602',
+				'location_email'            => 'support@example.org',
+				'opening_hours_monday_from' => '09:00',
+			)
+		);
 		update_option( 'wp_attachment_pages_enabled', '1' );
 		$hidden_tag = self::factory()->tag->create();
 		$open_tag   = self::factory()->tag->create();
@@ -336,7 +351,7 @@ class Test_Tala_SEO_Import extends Tala_SEO_Test_Case {
 		update_option( 'wpseo_taxonomy_meta', array( 'post_tag' => array( $open_tag => array( 'wpseo_noindex' => 'index' ) ) ) );
 		$this->set_setting( 'home_description', 'Our own words.' );
 
-		$this->assertSame( 'Dry run, nothing changed. Would copy 7 value(s).', $this->import( true ), 'Six settings and one tag.' );
+		$this->assertSame( 'Dry run, nothing changed. Would copy 11 value(s).', $this->import( true ), 'Ten settings and one tag.' );
 		$this->assertSame( '|', tala_seo_settings()['separator'] );
 		$this->assertSame( '1', get_option( 'wp_attachment_pages_enabled' ) );
 
@@ -351,6 +366,11 @@ class Test_Tala_SEO_Import extends Tala_SEO_Test_Case {
 		$this->assertSame( 'gWDk0KEWEAEKs4V5uaDNe2Hmb5TboTz8zJNXLoS1AtY', $settings['verify']['google'] );
 		$this->assertSame( '509AC9662108B4BE62203A99F67F9CC9', $settings['verify']['bing'] );
 		$this->assertSame( '0', get_option( 'wp_attachment_pages_enabled' ) );
+		$this->assertSame( 'EducationalOrganization', $settings['organization_type'] );
+		$this->assertSame( 'Block 2 Lot 10 Unit A Venus Street, Crestview Homes Subdivision Brgy. Mayamot', $settings['street_address'] );
+		$this->assertSame( array( 'Antipolo', 'Rizal', '1870', 'PH' ), array( $settings['locality'], $settings['region'], $settings['postal_code'], $settings['country'] ) );
+		$this->assertSame( '09260211602', $settings['telephone'] );
+		$this->assertSame( 'support@example.org', $settings['email'] );
 		$this->assertSame( '1', get_term_meta( $hidden_tag, TALA_SEO_NOINDEX, true ) );
 		$this->assertFalse( metadata_exists( 'term', $open_tag, TALA_SEO_NOINDEX ), 'A tag Yoast SEO let in stays in.' );
 		$this->assertFalse( metadata_exists( 'term', $category, TALA_SEO_NOINDEX ), 'Categories were indexed.' );
@@ -380,6 +400,21 @@ class Test_Tala_SEO_Import extends Tala_SEO_Test_Case {
 				'tax_post_tag_robots'        => array( 'noindex' ),
 				'tax_post_tag_custom_robots' => 'off',
 				'disable_author_archives'    => 'on',
+				'local_business_type'        => 'EducationalOrganization',
+				'local_address'              => array(
+					'streetAddress'   => 'Block 2 Venus Street',
+					'addressLocality' => 'Antipolo City',
+					'addressRegion'   => 'Rizal',
+					'postalCode'      => '1870',
+					'addressCountry'  => 'PH',
+				),
+				'phone_numbers'              => array(
+					array(
+						'type'   => 'customer support',
+						'number' => '+639761082833',
+					),
+				),
+				'email'                      => 'support@example.net',
 			)
 		);
 		update_option( 'rank-math-options-general', array( 'attachment_redirect_urls' => 'on' ) );
@@ -408,6 +443,10 @@ class Test_Tala_SEO_Import extends Tala_SEO_Test_Case {
 		$this->assertSame( '', $settings['publisher_name'], 'The site\'s own name, in other letters, is the default.' );
 		$this->assertSame( array( 'https://www.facebook.com/talatest/', 'https://www.youtube.com/@talatest', 'https://www.tiktok.com/@talatest' ), $settings['same_as'] );
 		$this->assertSame( '0', get_option( 'wp_attachment_pages_enabled' ) );
+		$this->assertSame( 'EducationalOrganization', $settings['organization_type'] );
+		$this->assertSame( array( 'Block 2 Venus Street', 'Antipolo City', 'Rizal', '1870', 'PH' ), array( $settings['street_address'], $settings['locality'], $settings['region'], $settings['postal_code'], $settings['country'] ) );
+		$this->assertSame( '+639761082833', $settings['telephone'] );
+		$this->assertSame( 'support@example.net', $settings['email'] );
 		$this->assertSame( '1', get_term_meta( $category, TALA_SEO_NOINDEX, true ), 'Categories were hidden as a rule.' );
 		$this->assertFalse( metadata_exists( 'term', $tag, TALA_SEO_NOINDEX ), 'Tags followed the site\'s robots setting.' );
 		$this->assertSame( '1', get_user_meta( $author, TALA_SEO_NOINDEX, true ), 'Author pages were switched off.' );

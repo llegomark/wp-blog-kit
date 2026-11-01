@@ -168,6 +168,42 @@ function tala_seo_settings_fields(): void {
 	add_settings_field( 'tala_seo_publisher_name', __( 'Name', 'tala-seo' ), 'tala_seo_field_publisher_name', 'tala-seo', 'tala_seo_publisher', array( 'label_for' => 'tala-seo-publisher-name' ) );
 	add_settings_field( 'tala_seo_same_as', __( 'Official profiles', 'tala-seo' ), 'tala_seo_field_same_as', 'tala-seo', 'tala_seo_publisher', array( 'label_for' => 'tala-seo-same-as' ) );
 
+	add_settings_section(
+		'tala_seo_contact',
+		__( 'Address and contact', 'tala-seo' ),
+		static function () {
+			echo '<p>' . esc_html__( 'Where the organization is and how to reach it, shown to Google with the organization on the home page. Only what you fill in is used, and none of it when a person runs the site.', 'tala-seo' ) . '</p>';
+		},
+		'tala-seo'
+	);
+	add_settings_field( 'tala_seo_organization_type', __( 'Kind of organization', 'tala-seo' ), 'tala_seo_field_organization_type', 'tala-seo', 'tala_seo_contact', array( 'label_for' => 'tala-seo-organization-type' ) );
+	$fields = array(
+		'legal_name'     => array( __( 'Legal name', 'tala-seo' ), __( 'The registered name, if it differs from the name above.', 'tala-seo' ), 'text', 'organization' ),
+		'street_address' => array( __( 'Street address', 'tala-seo' ), __( 'Building, street, subdivision and barangay or district.', 'tala-seo' ), 'text', 'street-address' ),
+		'locality'       => array( __( 'City or municipality', 'tala-seo' ), '', 'text', 'address-level2' ),
+		'region'         => array( __( 'Province or region', 'tala-seo' ), '', 'text', 'address-level1' ),
+		'postal_code'    => array( __( 'Postal code', 'tala-seo' ), '', 'text', 'postal-code' ),
+		'country'        => array( __( 'Country', 'tala-seo' ), __( 'Its two-letter code, such as PH for the Philippines.', 'tala-seo' ), 'text', 'country' ),
+		'telephone'      => array( __( 'Telephone', 'tala-seo' ), __( 'With the country code, such as +63 917 123 4567. Also given as the customer support contact.', 'tala-seo' ), 'tel', 'tel' ),
+		'email'          => array( __( 'Email', 'tala-seo' ), __( 'A public address for questions. Also given as the customer support contact.', 'tala-seo' ), 'email', 'email' ),
+	);
+	foreach ( $fields as $key => list( $label, $help, $type, $autocomplete ) ) {
+		add_settings_field(
+			'tala_seo_' . $key,
+			$label,
+			'tala_seo_field_organization_text',
+			'tala-seo',
+			'tala_seo_contact',
+			array(
+				'label_for'    => 'tala-seo-' . str_replace( '_', '-', $key ),
+				'key'          => $key,
+				'help'         => $help,
+				'type'         => $type,
+				'autocomplete' => $autocomplete,
+			)
+		);
+	}
+
 	add_settings_section( 'tala_seo_titles', __( 'Titles', 'tala-seo' ), '__return_null', 'tala-seo' );
 	add_settings_field( 'tala_seo_separator', __( 'Separator', 'tala-seo' ), 'tala_seo_field_separator', 'tala-seo', 'tala_seo_titles', array( 'label_for' => 'tala-seo-separator' ) );
 
@@ -282,6 +318,49 @@ function tala_seo_field_default_image(): void {
 	<button type="button" class="button-link" data-tala-media-clear="tala-seo-default-image" data-preview="tala-seo-default-image-preview"><?php esc_html_e( 'Remove', 'tala-seo' ); ?></button>
 	<p class="description"><?php esc_html_e( 'Shown when the home page or a page without a featured image is shared. Use a 1200 × 630 px picture (the shape of link previews), not the logo.', 'tala-seo' ); ?></p>
 	<?php
+}
+
+/**
+ * Field: the kind of organization.
+ */
+function tala_seo_field_organization_type(): void {
+	$labels  = array(
+		'Organization'            => __( 'Organization', 'tala-seo' ),
+		'EducationalOrganization' => __( 'Educational organization', 'tala-seo' ),
+		'NGO'                     => __( 'Non-profit organization (NGO)', 'tala-seo' ),
+		'NewsMediaOrganization'   => __( 'News media', 'tala-seo' ),
+		'OnlineBusiness'          => __( 'Online business', 'tala-seo' ),
+		'Corporation'             => __( 'Corporation', 'tala-seo' ),
+	);
+	$current = tala_seo_settings()['organization_type'];
+	echo '<select id="tala-seo-organization-type" name="tala_seo[organization_type]" aria-describedby="tala-seo-organization-type-help">';
+	foreach ( tala_seo_organization_types() as $type ) {
+		printf( '<option value="%1$s" %2$s>%3$s</option>', esc_attr( $type ), selected( $current, $type, false ), esc_html( $labels[ $type ] ?? $type ) );
+	}
+	echo '</select><p class="description" id="tala-seo-organization-type-help">' . esc_html__( 'The most specific kind that fits, as Google recommends.', 'tala-seo' ) . '</p>';
+}
+
+/**
+ * Field: one of the organization's details (legal name, address, telephone, email).
+ *
+ * @param array{label_for:string,key:string,help:string,type:string,autocomplete:string} $args Field arguments.
+ */
+function tala_seo_field_organization_text( $args ): void {
+	$value = tala_seo_settings()[ $args['key'] ] ?? '';
+	printf(
+		'<input type="%1$s" class="%2$s" id="%3$s" name="tala_seo[%4$s]" value="%5$s" autocomplete="%6$s"%7$s%8$s>',
+		esc_attr( $args['type'] ),
+		esc_attr( 'country' === $args['key'] ? 'small-text' : 'regular-text' ),
+		esc_attr( $args['label_for'] ),
+		esc_attr( $args['key'] ),
+		esc_attr( is_string( $value ) ? $value : '' ),
+		esc_attr( $args['autocomplete'] ),
+		'country' === $args['key'] ? ' maxlength="2"' : '',
+		'' !== $args['help'] ? ' aria-describedby="' . esc_attr( $args['label_for'] . '-help' ) . '"' : ''
+	);
+	if ( '' !== $args['help'] ) {
+		printf( '<p class="description" id="%1$s-help">%2$s</p>', esc_attr( $args['label_for'] ), esc_html( $args['help'] ) );
+	}
 }
 
 /**

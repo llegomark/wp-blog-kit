@@ -134,14 +134,17 @@ function tala_seo_website_node() {
  * @return array<string, mixed>
  */
 function tala_seo_publisher_node() {
-	$settings    = tala_seo_settings();
-	$is_org      = 'person' !== $settings['publisher_type'];
-	$node        = array(
-		'@type' => $is_org ? 'Organization' : 'Person',
+	$settings = tala_seo_settings();
+	$is_org   = 'person' !== $settings['publisher_type'];
+	$node     = array(
+		'@type' => $is_org ? $settings['organization_type'] : 'Person',
 		'@id'   => home_url( '/#publisher' ),
 		'name'  => '' !== $settings['publisher_name'] ? $settings['publisher_name'] : tala_seo_site_name(),
 		'url'   => home_url( '/' ),
 	);
+	if ( $is_org && '' !== $settings['legal_name'] ) {
+		$node['legalName'] = $settings['legal_name'];
+	}
 	$description = tala_seo_home_description();
 	if ( '' !== $description ) {
 		$node['description'] = $description;
@@ -159,7 +162,46 @@ function tala_seo_publisher_node() {
 	if ( $settings['same_as'] ) {
 		$node['sameAs'] = array_values( $settings['same_as'] );
 	}
-	return $node;
+	return $is_org ? $node + tala_seo_organization_contact( $settings ) : $node;
+}
+
+/**
+ * The organization's postal address, telephone and email, and the same telephone and email as its
+ * customer support contact point, as Google's Organization markup describes them. Only what is set.
+ *
+ * @param array<string, mixed> $settings Plugin settings.
+ * @return array<string, mixed>
+ */
+function tala_seo_organization_contact( array $settings ) {
+	$contact = array();
+	$address = array_filter(
+		array(
+			'streetAddress'   => (string) $settings['street_address'],
+			'addressLocality' => (string) $settings['locality'],
+			'addressRegion'   => (string) $settings['region'],
+			'postalCode'      => (string) $settings['postal_code'],
+			'addressCountry'  => (string) $settings['country'],
+		),
+		static fn( string $value ): bool => '' !== $value
+	);
+	if ( $address ) {
+		$contact['address'] = array( '@type' => 'PostalAddress' ) + $address;
+	}
+	$reach = array_filter(
+		array(
+			'telephone' => (string) $settings['telephone'],
+			'email'     => (string) $settings['email'],
+		),
+		static fn( string $value ): bool => '' !== $value
+	);
+	if ( $reach ) {
+		$contact                += $reach;
+		$contact['contactPoint'] = array(
+			'@type'       => 'ContactPoint',
+			'contactType' => 'customer support',
+		) + $reach;
+	}
+	return $contact;
 }
 
 /**

@@ -69,7 +69,7 @@ function tala_seo_course_data( array $attributes, $post ) {
 		$settings      = tala_seo_settings();
 		$provider      = '' !== $settings['publisher_name'] ? $settings['publisher_name'] : tala_seo_site_name();
 		$provider_url  = home_url( '/' );
-		$provider_type = 'person' === $settings['publisher_type'] ? 'Person' : 'Organization';
+		$provider_type = 'person' === $settings['publisher_type'] ? 'Person' : $settings['organization_type'];
 	}
 
 	$hours = $text( 'workload' );

@@ -33,6 +33,10 @@ class Tala_SEO_CLI {
 		'default_image'           => 'default share image',
 		'verify'                  => 'verification codes',
 		'attachment_pages'        => 'attachment pages off',
+		'organization_type'       => 'kind of organization',
+		'address'                 => 'postal address',
+		'telephone'               => 'telephone',
+		'email'                   => 'email',
 	);
 
 	/**
@@ -440,8 +444,10 @@ class Tala_SEO_CLI {
 			}
 		}
 
+		$settings += $this->organization_details( $yoast, $titles, $current );
+
 		foreach ( array_keys( $settings ) as $key ) {
-			$this->copied[ 'site:' . $key ] = 1;
+			$this->copied[ 'site:' . ( in_array( $key, array( 'street_address', 'locality', 'region', 'postal_code', 'country' ), true ) ? 'address' : $key ) ] = 1;
 		}
 		if ( $settings && ! $this->dry ) {
 			update_option( 'tala_seo', array_merge( $current, $settings ) );
@@ -456,6 +462,66 @@ class Tala_SEO_CLI {
 		}
 
 		$this->hide_archives( $titles );
+	}
+
+	/**
+	 * The organization's kind, postal address, telephone and email from Yoast Local SEO (wpseo_local)
+	 * or Rank Math's local SEO settings, for the ones still empty in Settings → SEO. The address is
+	 * copied whole, or not at all when part of it is already filled in.
+	 *
+	 * @param bool                 $yoast   Whether the source is Yoast SEO.
+	 * @param array<string, mixed> $titles  Rank Math's title settings (rank-math-options-titles).
+	 * @param array<string, mixed> $current Tala SEO's settings now.
+	 * @return array<string, string>
+	 */
+	private function organization_details( bool $yoast, array $titles, array $current ): array {
+		if ( $yoast ) {
+			$local   = (array) get_option( 'wpseo_local', array() );
+			$type    = (string) ( $local['business_type'] ?? '' );
+			$address = array(
+				'street_address' => implode( ', ', array_filter( array( trim( (string) ( $local['location_address'] ?? '' ) ), trim( (string) ( $local['location_address_2'] ?? '' ) ) ) ) ),
+				'locality'       => (string) ( $local['location_city'] ?? '' ),
+				'region'         => (string) ( $local['location_state'] ?? '' ),
+				'postal_code'    => (string) ( $local['location_zipcode'] ?? '' ),
+				'country'        => (string) ( $local['location_country'] ?? '' ),
+			);
+			$phone   = (string) ( $local['location_phone'] ?? '' );
+			$email   = (string) ( $local['location_email'] ?? '' );
+		} else {
+			$parts   = (array) ( $titles['local_address'] ?? array() );
+			$type    = (string) ( $titles['local_business_type'] ?? '' );
+			$address = array(
+				'street_address' => (string) ( $parts['streetAddress'] ?? '' ),
+				'locality'       => (string) ( $parts['addressLocality'] ?? '' ),
+				'region'         => (string) ( $parts['addressRegion'] ?? '' ),
+				'postal_code'    => (string) ( $parts['postalCode'] ?? '' ),
+				'country'        => (string) ( $parts['addressCountry'] ?? '' ),
+			);
+			$numbers = (array) ( $titles['phone_numbers'] ?? array() );
+			$phone   = (string) ( is_array( $numbers[0] ?? null ) ? ( $numbers[0]['number'] ?? '' ) : '' );
+			$email   = (string) ( $titles['email'] ?? '' );
+		}
+		$found   = tala_seo_sanitize_organization(
+			$address + array(
+				'organization_type' => $type,
+				'telephone'         => $phone,
+				'email'             => $email,
+			)
+		);
+		$details = array();
+		if ( 'Organization' === $current['organization_type'] && 'Organization' !== $found['organization_type'] ) {
+			$details['organization_type'] = $found['organization_type'];
+		}
+		$keys = array_keys( $address );
+		if ( ! array_filter( array_intersect_key( $current, array_flip( $keys ) ) ) ) {
+			$details += array_filter( array_intersect_key( $found, array_flip( $keys ) ), static fn( string $value ): bool => '' !== $value );
+		}
+		foreach ( array( 'telephone', 'email' ) as $key ) {
+			if ( '' === $current[ $key ] && '' !== $found[ $key ] ) {
+				$details[ $key ] = $found[ $key ];
+			}
+		}
+		return $details;
 	}
 
 	/**

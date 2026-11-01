@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.16.1
+Stable tag: 1.17.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,7 +22,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **Categories, tags and authors** get their own SEO title, meta description and "hide from search engines" switch.
 * **Head tags:** wrapped in a comment that names the plugin, its version and https://edventure.com.ph, so the page source shows what Tala SEO wrote. `<title>` as "Title | Site name", with the separator you choose (the name only once when a page is named like the site), meta description, self-referencing canonical on every indexable page (paginated archives included), noindex for search results, 404s, date archives, empty categories and tag pages with too few posts, Open Graph and Twitter card tags with a 1200 × 630 share image (the 1.91:1 shape of link previews on Facebook, LinkedIn, X and messaging apps), and a `fediverse:creator` tag that credits the author when an article is shared on Mastodon.
 * **Feeds and sitemaps** send `X-Robots-Tag: noindex, follow`, so they never show up in search results themselves (search engines still read them).
-* **Structured data (JSON-LD):** WebSite and Organization (with description) on the home page, BlogPosting on posts (image in 16:9, 4:3 and 1:1), ProfilePage on author pages, BreadcrumbList matching the visible Breadcrumbs block, on pages that show it.
+* **Structured data (JSON-LD):** WebSite and Organization on the home page (its kind, such as an educational organization, with description, legal name, postal address, telephone, email and a customer support contact point when set), BlogPosting on posts (image in 16:9, 4:3 and 1:1), ProfilePage on author pages, BreadcrumbList matching the visible Breadcrumbs block, on pages that show it.
 * **Videos:** each YouTube video in an Embed block is described as a VideoObject (title, thumbnail, player address, the caption as its description). The title and thumbnail are fetched from YouTube once, when the post is saved. Google also needs the date the video was published, which YouTube doesn't share this way: enter it in the SEO panel, where each video gets a date field.
 * **Event block:** when, where, tickets and organizer, shown as a card and described as an Event the way Google's event results ask: start and end with the UTC offset (or the date alone for an all-day event), the venue's address, status (cancelled, postponed, rescheduled), price and ticket page, and the featured image. One per post, as Google supports pages about a single event.
 * **Course block:** a course's description, provider (the site unless you name another), level, format (online, in person or both), time, instructor and cost with an enrollment link, shown as a card and described as a Course for Google's course list, a carousel in English searches. A post with one course is its detail page; a category (or other list of posts) whose posts are all courses, three or more, becomes their summary page; a post with several courses lists them itself. Google uses the name, description and provider; the other details were its Course info result, retired in 2025, and stay for other search engines and AI assistants.
@@ -34,7 +34,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **Permalinks:** the setup checklist switches a site with plain URLs to post-name URLs in one click, and Settings → Permalinks warns before a structure change moves every published post. The plugin never changes the permalinks on its own.
 * **Hidden-site warning:** while "Discourage search engines" is on, every admin screen and the pre-publish checklist say so.
 * **Authors:** a real author photo (no Gravatar request), social profile links (TikTok and Mastodon included) for the author markup, and a Fediverse handle.
-* **Settings → SEO:** the title separator (vertical bar, hyphen, dashes, colon, middle dot or bullet), site owner, official profiles, home description (also the Organization description), default share image, the minimum number of posts for tag pages to be indexed (2 by default), Google Search Console, Bing Webmaster Tools and Meta (Facebook) verification codes, and a setup checklist.
+* **Settings → SEO:** the title separator (vertical bar, hyphen, dashes, colon, middle dot or bullet), site owner, official profiles (the organization's sameAs), its kind, legal name, address, telephone and email, home description (also the Organization description), default share image, the minimum number of posts for tag pages to be indexed (2 by default), Google Search Console, Bing Webmaster Tools and Meta (Facebook) verification codes, and a setup checklist.
 * **WP-CLI:** `wp tala-seo audit` lists published posts that are missing something; `wp tala-seo import` copies data from Yoast SEO, Rank Math, The SEO Framework or SEOPress; `wp tala-seo describe` writes the missing meta descriptions from each post's opening text, once, for you to edit.
 
 == Installation ==
@@ -55,7 +55,7 @@ Create a draft, set the featured image with `wp media import <file> --post_id=<i
 
 = I'm switching from another SEO plugin. What carries over? =
 
-Run `wp tala-seo import --dry-run` to see what would be copied, then `wp tala-seo import`. It copies each post's, category's, tag's and author's SEO title, description, canonical, noindex, primary category and permanent redirect, fills in titles made with the other plugin's variables (%%title%% %%sep%% %%sitename%%) and takes off the site name it added. From Yoast SEO or Rank Math it also copies the title separator, home page description, site owner, official profiles, default share image and verification codes, turns off attachment pages if the plugin redirected them, and hides the category, tag and author pages it hid as a rule. With settings from both, add `--from=yoast` or `--from=rank-math`. Rank Math wrote descriptions on the fly for posts without one; `wp tala-seo describe` writes them once, from the opening text, for you to edit. Until the import, titles, descriptions and noindex from Yoast SEO, Rank Math, The SEO Framework or SEOPress still apply to the pages themselves and keep hidden posts, categories and tags out of the sitemap, but the author settings only know Tala SEO's own values.
+Run `wp tala-seo import --dry-run` to see what would be copied, then `wp tala-seo import`. It copies each post's, category's, tag's and author's SEO title, description, canonical, noindex, primary category and permanent redirect, fills in titles made with the other plugin's variables (%%title%% %%sep%% %%sitename%%) and takes off the site name it added. From Yoast SEO or Rank Math it also copies the title separator, home page description, site owner, official profiles, default share image and verification codes, and the organization's kind, address, telephone and email from Yoast Local SEO or Rank Math's local SEO, turns off attachment pages if the plugin redirected them, and hides the category, tag and author pages it hid as a rule. With settings from both, add `--from=yoast` or `--from=rank-math`. Rank Math wrote descriptions on the fly for posts without one; `wp tala-seo describe` writes them once, from the opening text, for you to edit. Until the import, titles, descriptions and noindex from Yoast SEO, Rank Math, The SEO Framework or SEOPress still apply to the pages themselves and keep hidden posts, categories and tags out of the sitemap, but the author settings only know Tala SEO's own values.
 
 = What size should featured images be? =
 
@@ -94,6 +94,11 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.17.0 =
+* New: the organization's details (Settings → SEO → Address and contact): its kind (organization, educational organization, NGO, news media, online business, corporation), legal name, postal address, telephone and email, in its markup on the home page, with the telephone and email also as its customer support contact point. Only what is filled in is used, and none of it for a person.
+* The Course block's provider, when it is the site, takes the organization's kind.
+* Import: the organization's kind, address, telephone and email come over from Yoast Local SEO and from Rank Math's local SEO settings.
 
 = 1.16.1 =
 * A post's only How-to group may go without a heading of its own: the guide is then named after the post, whose title is the page's heading, as Yoast SEO's and Rank Math's how-to blocks were. With several groups, each still needs its heading.
@@ -221,6 +226,9 @@ From you: YouTube's oEmbed (what WordPress uses to embed videos) gives the title
 * First release.
 
 == Upgrade Notice ==
+
+= 1.17.0 =
+New Address and contact settings for the organization's markup (kind, address, telephone, email). Coming from Yoast Local SEO or Rank Math? `wp tala-seo import` copies them.
 
 = 1.16.0 =
 Title separator setting, attachment pages switch, and a fuller import from Yoast SEO and Rank Math. Coming from one? Run `wp tala-seo import --dry-run`, then `wp tala-seo import`, and `wp tala-seo describe` for posts without a description.

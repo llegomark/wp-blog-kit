@@ -341,4 +341,67 @@ class Test_Tala_SEO_Schema extends Tala_SEO_Test_Case {
 		do_blocks( $inside_hidden . '<!-- wp:tala-seo/breadcrumbs /-->' );
 		$this->assertArrayHasKey( 'BreadcrumbList', $this->schema() );
 	}
+
+	/**
+	 * The organization's kind, legal name, postal address, telephone and email are in its markup,
+	 * the telephone and email also as its customer support contact; a person gets none of them.
+	 */
+	public function test_organization_details(): void {
+		update_option(
+			'tala_seo',
+			array(
+				'organization_type' => 'EducationalOrganization',
+				'legal_name'        => 'Guro Notes Learning Center Inc.',
+				'street_address'    => 'Block 2 Lot 10 Venus Street, Brgy. Mayamot',
+				'locality'          => 'Antipolo',
+				'region'            => 'Rizal',
+				'postal_code'       => '1870',
+				'country'           => 'PH',
+				'telephone'         => '+63 926 021 1602',
+				'email'             => 'support@example.org',
+			)
+		);
+		$this->go_to( home_url( '/' ) );
+		$nodes = $this->schema();
+		$this->assertSame( array( 'WebSite', 'EducationalOrganization' ), array_keys( $nodes ) );
+		$organization = $nodes['EducationalOrganization'];
+		$this->assertSame( 'Guro Notes Learning Center Inc.', $organization['legalName'] );
+		$this->assertSame(
+			array(
+				'@type'           => 'PostalAddress',
+				'streetAddress'   => 'Block 2 Lot 10 Venus Street, Brgy. Mayamot',
+				'addressLocality' => 'Antipolo',
+				'addressRegion'   => 'Rizal',
+				'postalCode'      => '1870',
+				'addressCountry'  => 'PH',
+			),
+			$organization['address']
+		);
+		$this->assertSame( '+63 926 021 1602', $organization['telephone'] );
+		$this->assertSame( 'support@example.org', $organization['email'] );
+		$this->assertSame(
+			array(
+				'@type'       => 'ContactPoint',
+				'contactType' => 'customer support',
+				'telephone'   => '+63 926 021 1602',
+				'email'       => 'support@example.org',
+			),
+			$organization['contactPoint']
+		);
+
+		$this->set_setting( 'telephone', '' );
+		$this->set_setting( 'locality', '' );
+		$this->go_to( home_url( '/' ) );
+		$organization = $this->schema()['EducationalOrganization'];
+		$this->assertArrayNotHasKey( 'telephone', $organization );
+		$this->assertArrayNotHasKey( 'addressLocality', $organization['address'], 'Only what is set.' );
+		$this->assertSame( array( 'email' => 'support@example.org' ), array_diff_key( $organization['contactPoint'], array_flip( array( '@type', 'contactType' ) ) ) );
+
+		$this->set_setting( 'publisher_type', 'person' );
+		$this->go_to( home_url( '/' ) );
+		$person = $this->schema()['Person'];
+		foreach ( array( 'address', 'telephone', 'email', 'contactPoint', 'legalName' ) as $key ) {
+			$this->assertArrayNotHasKey( $key, $person, $key );
+		}
+	}
 }

@@ -522,4 +522,46 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 		$ok = array_values( array_filter( tala_seo_readiness(), static fn( $item ) => str_starts_with( $item['text'], 'Attachment pages are off' ) ) );
 		$this->assertTrue( $ok[0]['ok'] ?? false );
 	}
+
+	/**
+	 * The organization's details are cleaned to their shapes: a kind from the list, a two-letter
+	 * country code, a telephone number with seven digits or more, a valid email address.
+	 */
+	public function test_organization_settings(): void {
+		$clean = tala_seo_sanitize_settings(
+			array(
+				'organization_type' => 'EducationalOrganization',
+				'street_address'    => ' Block 2 <b>Venus</b> Street ',
+				'country'           => 'ph',
+				'telephone'         => '0926 021 1602 (mobile)',
+				'email'             => 'support@example.org',
+			)
+		);
+		$this->assertSame( 'EducationalOrganization', $clean['organization_type'] );
+		$this->assertSame( 'Block 2 Venus Street', $clean['street_address'] );
+		$this->assertSame( 'PH', $clean['country'] );
+		$this->assertSame( '0926 021 1602 ()', $clean['telephone'] );
+		$this->assertSame( 'support@example.org', $clean['email'] );
+
+		$clean = tala_seo_sanitize_settings(
+			array(
+				'organization_type' => 'Hospital',
+				'country'           => 'Philippines',
+				'telephone'         => 'call 1234',
+				'email'             => 'not an address',
+			)
+		);
+		$this->assertSame( 'Organization', $clean['organization_type'], 'Only kinds from the list.' );
+		$this->assertSame( '', $clean['country'] );
+		$this->assertSame( '', $clean['telephone'] );
+		$this->assertSame( '', $clean['email'] );
+
+		tala_seo_settings_fields();
+		$page = get_echo( 'tala_seo_settings_page' );
+		$this->assertStringContainsString( '<option value="EducationalOrganization"', $page );
+		foreach ( array( 'legal_name', 'street_address', 'locality', 'region', 'postal_code', 'country', 'telephone', 'email' ) as $key ) {
+			$this->assertStringContainsString( 'name="tala_seo[' . $key . ']"', $page, $key );
+		}
+		$this->assertStringContainsString( 'type="tel"', $page );
+	}
 }

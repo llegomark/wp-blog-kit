@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Plugin settings (Settings → SEO), with defaults.
  *
- * @return array{publisher_type:string,publisher_name:string,same_as:string[],home_description:string,default_image:int,tag_min_posts:int,verify:array<string,string>,separator:string}
+ * @return array{publisher_type:string,publisher_name:string,same_as:string[],home_description:string,default_image:int,tag_min_posts:int,verify:array<string,string>,separator:string,organization_type:string,legal_name:string,street_address:string,locality:string,region:string,postal_code:string,country:string,telephone:string,email:string}
  */
 function tala_seo_settings() {
 	$saved       = get_option( 'tala_seo', array() );
@@ -30,6 +30,43 @@ function tala_seo_settings() {
 		'tag_min_posts'    => min( 100, max( 0, (int) ( $saved['tag_min_posts'] ?? 2 ) ) ),
 		'verify'           => $codes,
 		'separator'        => tala_seo_sanitize_separator( $saved['separator'] ?? '|' ),
+	) + tala_seo_sanitize_organization( $saved );
+}
+
+/**
+ * The organization types Settings → SEO offers: Organization and the subtypes of it that Google
+ * recommends naming when one fits (the most specific type that describes the organization).
+ *
+ * @return string[]
+ */
+function tala_seo_organization_types() {
+	return array( 'Organization', 'EducationalOrganization', 'NGO', 'NewsMediaOrganization', 'OnlineBusiness', 'Corporation' );
+}
+
+/**
+ * The organization's details for its structured data (Google's Organization properties): its
+ * type, legal name, postal address, telephone and email, each cleaned to its shape.
+ *
+ * @param array<string, mixed> $input Submitted or stored settings.
+ * @return array{organization_type:string,legal_name:string,street_address:string,locality:string,region:string,postal_code:string,country:string,telephone:string,email:string}
+ */
+function tala_seo_sanitize_organization( array $input ) {
+	$text      = static fn( string $key ): string => is_string( $input[ $key ] ?? null ) ? sanitize_text_field( $input[ $key ] ) : '';
+	$type      = $text( 'organization_type' );
+	$country   = strtoupper( $text( 'country' ) );
+	$telephone = trim( (string) preg_replace( '/[^0-9+() .\-]/', '', $text( 'telephone' ) ) );
+	$email     = sanitize_email( $text( 'email' ) );
+	return array(
+		'organization_type' => in_array( $type, tala_seo_organization_types(), true ) ? $type : 'Organization',
+		'legal_name'        => $text( 'legal_name' ),
+		'street_address'    => $text( 'street_address' ),
+		'locality'          => $text( 'locality' ),
+		'region'            => $text( 'region' ),
+		'postal_code'       => $text( 'postal_code' ),
+		'country'           => preg_match( '/^[A-Z]{2}$/', $country ) ? $country : '',
+		// A number has at least seven digits; Google asks for the country code (+63 …).
+		'telephone'         => preg_match_all( '/\d/', $telephone ) >= 7 ? $telephone : '',
+		'email'             => is_email( $email ) ? $email : '',
 	);
 }
 
@@ -511,7 +548,7 @@ function tala_seo_sanitize_settings( $input ) {
 		'tag_min_posts'    => min( 100, absint( $input['tag_min_posts'] ?? 2 ) ),
 		'verify'           => $verify,
 		'separator'        => tala_seo_sanitize_separator( $input['separator'] ?? '|' ),
-	);
+	) + tala_seo_sanitize_organization( $input );
 }
 
 /**
