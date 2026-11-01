@@ -185,6 +185,21 @@ function tala_seo_sitemap_skip_noindex( $args ) {
 	return $args;
 }
 
+add_filter( 'wp_sitemaps_max_urls', 'tala_seo_sitemap_max_urls' );
+
+/**
+ * At most 500 addresses per sitemap page (WordPress lists 2,000). WordPress loads each listed post
+ * in full, content and all; on a site with long articles, such as ones that carry a document's full
+ * text, 2,000 of them can take more memory than PHP is allowed, and the sitemap page fails.
+ * Search engines accept up to 50,000 addresses per page, so more, shorter pages lose nothing.
+ *
+ * @param int $max_urls Addresses per page.
+ * @return int
+ */
+function tala_seo_sitemap_max_urls( $max_urls ) {
+	return min( (int) $max_urls, 500 );
+}
+
 add_filter( 'posts_where', 'tala_seo_sitemap_where', 10, 2 );
 
 /**

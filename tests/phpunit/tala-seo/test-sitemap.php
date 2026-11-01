@@ -243,4 +243,16 @@ class Test_Tala_SEO_Sitemap extends Tala_SEO_Test_Case {
 			$this->assertContains( get_permalink( $post ), $urls, $what );
 		}
 	}
+
+	/**
+	 * Sitemap pages list at most 500 addresses, so a page of long articles stays within PHP's
+	 * memory; a lower limit set elsewhere still applies.
+	 */
+	public function test_sitemap_pages_stay_small(): void {
+		$this->assertSame( 500, apply_filters( 'wp_sitemaps_max_urls', 2000, 'post' ) );
+		$this->assertSame( 50, tala_seo_sitemap_max_urls( 50 ) );
+		$provider = wp_sitemaps_get_server()->registry->get_provider( 'posts' );
+		$this->publish_post();
+		$this->assertSame( 1, $provider->get_max_num_pages( 'post' ), 'Few posts: one page.' );
+	}
 }

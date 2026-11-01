@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.18.0
+Stable tag: 1.18.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -104,6 +104,9 @@ Include that file in nginx's `http` block, and in the site's PDF location add `a
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.18.1 =
+* Fixed: a sitemap page of long articles no longer fails. WordPress loads every post a sitemap page lists in full, and 2,000 long articles (with a document's full text, for example) took more memory than PHP allows, so the page returned an error. Sitemap pages now list at most 500 addresses each; search engines accept up to 50,000 per page, so more, shorter pages lose nothing.
 
 = 1.18.0 =
 * New: `wp tala-seo pdf-canonicals` lists each PDF in the uploads folder with the article that presents it, as an nginx map (or a table, CSV or JSON), for a `Link: <article>; rel="canonical"` header on the file. Search engines can then show the article in the PDF's place, and the PDF stays available to everyone; redirecting PDFs to their articles instead drops them from search. The article is a published post or page, not hidden from search engines, redirected or behind a password, that links to the PDF or embeds it (block attributes and encoded file names count, other sites' files and missing files don't): the one the PDF was uploaded to when it presents it, else the one presenting the fewest PDFs, posts before pages, the earliest first.
@@ -239,6 +242,9 @@ Include that file in nginx's `http` block, and in the site's PDF location add `a
 * First release.
 
 == Upgrade Notice ==
+
+= 1.18.1 =
+Fixes sitemap pages that failed on sites with long articles: each page now lists at most 500 addresses.
 
 = 1.17.0 =
 New Address and contact settings for the organization's markup (kind, address, telephone, email). Coming from Yoast Local SEO or Rank Math? `wp tala-seo import` copies them.
