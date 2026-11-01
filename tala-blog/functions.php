@@ -358,6 +358,325 @@ function tala_blog_date_with_time( $html ) {
 	);
 }
 
+add_filter( 'render_block_core/post-content', 'tala_blog_contents', 10, 3 );
+
+/**
+ * "In this article": on an article with enough sections, a table of contents right before its first
+ * section, after the opening paragraphs. Folded into one line until the reader opens it.
+ * Appearance → Customize → Table of contents turns it off or sets how many sections it takes.
+ *
+ * @param string               $html     Post Content block HTML.
+ * @param array<string, mixed> $block    Parsed block.
+ * @param WP_Block             $instance Block instance.
+ * @return string
+ */
+function tala_blog_contents( $html, $block, $instance ) {
+	$post_id = (int) ( $instance->context['postId'] ?? 0 );
+	if ( ! is_single() || is_attachment() || get_queried_object_id() !== $post_id || post_password_required( $post_id )
+		|| ! get_theme_mod( 'tala_blog_contents', true ) ) {
+		return $html;
+	}
+	return tala_blog_add_contents( $html, tala_blog_sections_needed() );
+}
+
+/**
+ * How many sections an article needs for its table of contents (2 to 10, 3 by default).
+ *
+ * @return int
+ */
+function tala_blog_sections_needed() {
+	return tala_blog_sanitize_sections( get_theme_mod( 'tala_blog_contents_sections', 3 ) );
+}
+
+/**
+ * The number of sections setting, kept between 2 and 10; anything that isn't a number is 3.
+ *
+ * @param mixed $value Value to check.
+ * @return int
+ */
+function tala_blog_sanitize_sections( $value ) {
+	if ( ! is_numeric( $value ) ) {
+		return 3;
+	}
+	return max( 2, min( 10, (int) $value ) );
+}
+
+/**
+ * Adds the table of contents to an article's HTML (the Post Content block's), when it has at least
+ * $needed sections.
+ *
+ * Its sections are the article's highest heading level (H2, or H3 when it has no H2…), each with
+ * the level below as subsections; headings inside an answer (details), a quotation, a figure, a
+ * table, a form or another navigation are left out, and so is a heading with the class
+ * "tala-no-contents", or every heading in a block with it (Advanced → Additional CSS class). Following Google's guidance for links and
+ * "Jump to" links in results, each entry is a plain link to its heading, named by the heading's own
+ * words, to an anchor that describes the section: a heading keeps the id it has (links to it keep
+ * working), one without gets an id made from its words, and so does one whose id the article uses
+ * twice or that the classic editor left (mce_…). The box goes before the article's top-level
+ * block that holds the first section, so the opening paragraphs come first. The label is not a
+ * heading, so the article's outline stays its own. Read with WordPress's HTML API; HTML it can't
+ * read is left as it is, without a table of contents.
+ *
+ * @param string $html   Article HTML, wrapped in its Post Content element.
+ * @param int    $needed Sections needed.
+ * @return string
+ */
+function tala_blog_add_contents( $html, $needed ) {
+	// Most articles are short: no need to read one with fewer headings than sections needed.
+	if ( preg_match_all( '/<h[234][\s>]/i', $html ) < $needed ) {
+		return $html;
+	}
+	$found = tala_blog_read_headings( $html );
+	if ( null === $found ) {
+		return $html;
+	}
+	$usable = array_filter( $found['headings'], static fn( $heading ) => $heading['usable'] );
+	if ( ! $usable ) {
+		return $html;
+	}
+	$top      = min( array_column( $usable, 'level' ) );
+	$taken    = array_fill_keys( array_merge( $found['ids'], tala_blog_reserved_ids() ), true );
+	$uses     = array_count_values( $found['ids'] );
+	$sections = array();
+	$section  = null; // The section being gathered, with its subsections.
+	$new_ids  = array();
+	$first    = null;
+	foreach ( $usable as $index => $heading ) {
+		$is_section = $heading['level'] === $top;
+		if ( ! $is_section && ( $heading['level'] !== $top + 1 || null === $section ) ) {
+			continue;
+		}
+		$id = $heading['id'];
+		// An id the article uses twice can't be jumped to, and the classic editor's mce_… ids were
+		// never anchors: such a heading gets a new one too.
+		if ( '' === $id || 1 !== ( $uses[ $id ] ?? 0 ) || preg_match( '/^mce_\d+$/', $id ) ) {
+			$id                = tala_blog_unique_id( tala_blog_anchor( $heading['text'] ), $taken );
+			$new_ids[ $index ] = $id;
+		}
+		if ( $is_section ) {
+			if ( null !== $section ) {
+				$sections[] = $section;
+			}
+			$section = array(
+				'id'       => $id,
+				'text'     => $heading['text'],
+				'children' => array(),
+			);
+			$first   = $first ?? $heading['block'];
+		} elseif ( null !== $section ) {
+			$section['children'][] = array(
+				'id'   => $id,
+				'text' => $heading['text'],
+			);
+		}
+	}
+	if ( null !== $section ) {
+		$sections[] = $section;
+	}
+	if ( count( $sections ) < $needed || null === $first ) {
+		return $html;
+	}
+	return tala_blog_write_contents( $html, $new_ids, $first, tala_blog_contents_box( $sections ) );
+}
+
+/**
+ * The article's H2 to H4 headings in order (level, text, id, the index of the top-level block they
+ * are in, whether they may be a section) and every id in it; null when the HTML API can't read it.
+ *
+ * @param string $html Article HTML, wrapped in its Post Content element.
+ * @return array{headings: list<array{level: int, text: string, id: string, block: int, usable: bool}>, ids: list<string>}|null
+ */
+function tala_blog_read_headings( $html ) {
+	$processor = WP_HTML_Processor::create_fragment( $html );
+	if ( null === $processor ) {
+		return null;
+	}
+	$headings = array();
+	$ids      = array();
+	$base     = null; // The depth of the article's top-level blocks: inside its wrapper.
+	$block    = -1;
+	$outside  = array( 'DETAILS', 'BLOCKQUOTE', 'FIGURE', 'TABLE', 'FORM', 'NAV', 'ASIDE' );
+	$skipped  = null; // The depth of an open element with the class "tala-no-contents".
+	$reading  = null; // The heading whose text is being read.
+	while ( $processor->next_token() ) {
+		$type   = $processor->get_token_type();
+		$closer = $processor->is_tag_closer();
+		$depth  = $processor->get_current_depth();
+		$tag    = (string) $processor->get_tag();
+		if ( null !== $skipped && $depth < $skipped ) {
+			$skipped = null;
+		}
+		if ( null !== $reading ) {
+			if ( '#text' === $type ) {
+				$reading['text'] .= $processor->get_modifiable_text();
+			} elseif ( $closer && $reading['tag'] === $tag ) {
+				$text       = trim( (string) preg_replace( '/\s+/u', ' ', $reading['text'] ) );
+				$headings[] = array(
+					'level'  => $reading['level'],
+					'text'   => $text,
+					'id'     => $reading['id'],
+					'block'  => $reading['block'],
+					'usable' => $reading['usable'] && '' !== $text,
+				);
+				$reading    = null;
+				continue;
+			}
+		}
+		if ( '#tag' !== $type || $closer ) {
+			continue;
+		}
+		if ( null === $skipped && $processor->has_class( 'tala-no-contents' ) ) {
+			$skipped = $depth;
+		}
+		$id = $processor->get_attribute( 'id' );
+		$id = is_string( $id ) ? $id : '';
+		if ( '' !== $id ) {
+			$ids[] = $id;
+		}
+		if ( null === $base ) {
+			$base = $depth + 1;
+			continue;
+		}
+		if ( $depth === $base ) {
+			++$block;
+		}
+		if ( null === $reading && in_array( $tag, array( 'H2', 'H3', 'H4' ), true ) ) {
+			$reading = array(
+				'tag'    => $tag,
+				'level'  => (int) substr( $tag, 1 ),
+				'text'   => '',
+				'id'     => $id,
+				'block'  => $block,
+				'usable' => null === $skipped && ! array_intersect( $processor->get_breadcrumbs(), $outside ),
+			);
+		}
+	}
+	if ( null !== $processor->get_last_error() || $processor->paused_at_incomplete_token() ) {
+		return null;
+	}
+	return array(
+		'headings' => $headings,
+		'ids'      => $ids,
+	);
+}
+
+/**
+ * Writes the new heading ids into the article and puts the table of contents before its top-level
+ * block number $first. The HTML API marks that block; the box goes in front of the marked tag.
+ *
+ * @param string             $html    Article HTML.
+ * @param array<int, string> $new_ids New ids by heading index (H2 to H4, in order).
+ * @param int                $first   Index of the top-level block that holds the first section.
+ * @param string             $box     The table of contents.
+ * @return string
+ */
+function tala_blog_write_contents( $html, $new_ids, $first, $box ) {
+	$processor = WP_HTML_Processor::create_fragment( $html );
+	if ( null === $processor ) {
+		return $html;
+	}
+	$base    = null;
+	$block   = -1;
+	$heading = -1;
+	while ( $processor->next_tag() ) {
+		$depth = $processor->get_current_depth();
+		if ( null === $base ) {
+			$base = $depth + 1;
+			continue;
+		}
+		if ( $depth === $base && ++$block === $first ) {
+			$processor->set_attribute( 'data-tala-contents', 'here' );
+		}
+		if ( in_array( $processor->get_tag(), array( 'H2', 'H3', 'H4' ), true ) && isset( $new_ids[ ++$heading ] ) ) {
+			$processor->set_attribute( 'id', $new_ids[ $heading ] );
+		}
+	}
+	if ( null !== $processor->get_last_error() ) {
+		return $html;
+	}
+	$updated = $processor->get_updated_html();
+	$marker  = ' data-tala-contents="here"';
+	$at      = strpos( $updated, $marker );
+	// A new attribute follows the tag's name, so the tag starts at the last "<" before it.
+	$start = false === $at ? false : strrpos( substr( $updated, 0, $at ), '<' );
+	if ( false === $at || false === $start ) {
+		return $html;
+	}
+	$updated = substr_replace( $updated, '', $at, strlen( $marker ) );
+	return substr_replace( $updated, $box, $start, 0 );
+}
+
+/**
+ * An anchor that describes a section: its heading's words, lowercase and hyphenated, at most 60
+ * characters cut between words ("start-with-the-objective").
+ *
+ * @param string $text Heading text.
+ * @return string
+ */
+function tala_blog_anchor( $text ) {
+	$anchor = sanitize_title( $text );
+	if ( strlen( $anchor ) > 60 ) {
+		$cut    = strrpos( substr( $anchor, 0, 61 ), '-' );
+		$anchor = substr( $anchor, 0, $cut ? $cut : 60 );
+	}
+	return '' === $anchor ? 'section' : $anchor;
+}
+
+/**
+ * The anchor, or the anchor with -2, -3… when the page already has it; then taken.
+ *
+ * @param string              $anchor Anchor.
+ * @param array<string, bool> $taken  Ids in use, updated.
+ * @return string
+ */
+function tala_blog_unique_id( $anchor, &$taken ) {
+	$id = $anchor;
+	for ( $n = 2; isset( $taken[ $id ] ); $n++ ) {
+		$id = $anchor . '-' . $n;
+	}
+	$taken[ $id ] = true;
+	return $id;
+}
+
+/**
+ * Ids the rest of an article page uses (comments and the skip link), which a heading's anchor
+ * mustn't take.
+ *
+ * @return list<string>
+ */
+function tala_blog_reserved_ids() {
+	return array( 'comments', 'respond', 'reply-title', 'commentform', 'comment', 'author', 'email', 'url', 'submit', 'cancel-comment-reply-link', 'wp--skip-link--target' );
+}
+
+/**
+ * The table of contents: a navigation landmark named "In this article", folded into one line
+ * ("In this article · 4 sections") that opens into the list of sections and their subsections.
+ *
+ * @param list<array{id: string, text: string, children: list<array{id: string, text: string}>}> $sections Sections.
+ * @return string
+ */
+function tala_blog_contents_box( $sections ) {
+	$items = '';
+	foreach ( $sections as $section ) {
+		$children = '';
+		foreach ( $section['children'] as $child ) {
+			$children .= '<li><a href="#' . esc_attr( $child['id'] ) . '">' . esc_html( $child['text'] ) . '</a></li>';
+		}
+		$items .= '<li><a href="#' . esc_attr( $section['id'] ) . '">' . esc_html( $section['text'] ) . '</a>'
+			. ( '' !== $children ? '<ol>' . $children . '</ol>' : '' ) . '</li>';
+	}
+	$title = __( 'In this article', 'tala-blog' );
+	$count = sprintf(
+		/* translators: %s: number of sections in the article. */
+		_n( '%s section', '%s sections', count( $sections ), 'tala-blog' ),
+		number_format_i18n( count( $sections ) )
+	);
+	return '<nav class="tala-contents" aria-label="' . esc_attr( $title ) . '"><details><summary>'
+		. '<span class="tala-contents-title">' . esc_html( $title ) . '</span> '
+		. '<span class="tala-contents-count">' . esc_html( $count ) . '</span></summary>'
+		. '<ol>' . $items . '</ol></details></nav>';
+}
+
 // Priority 20: after Enhanced Responsive Images (10), which doesn't see the CSS width either.
 add_filter( 'render_block_core/post-featured-image', 'tala_blog_list_thumb_sizes', 20, 2 );
 
@@ -511,6 +830,8 @@ add_action( 'customize_register', 'tala_blog_customize_register' );
 /**
  * Appearance → Customize → Article lists: whether lists of articles show numbered pages. Off by
  * default: only links to newer and older articles, so the number of pages isn't on show.
+ * Appearance → Customize → Table of contents: whether articles have one (on by default) and how
+ * many sections it takes (3).
  *
  * @param WP_Customize_Manager $wp_customize Customizer.
  */
@@ -538,6 +859,55 @@ function tala_blog_customize_register( $wp_customize ): void {
 			'type'        => 'checkbox',
 			'label'       => __( 'Show numbered pages', 'tala-blog' ),
 			'description' => __( 'Under the home page, archives and search results. Off, the lists link only to newer and older articles, and the number of pages isn\'t shown.', 'tala-blog' ),
+		)
+	);
+
+	$wp_customize->add_section(
+		'tala_blog_contents',
+		array(
+			'title'       => __( 'Table of contents', 'tala-blog' ),
+			'description' => __( '"In this article": a list of the article\'s sections, after its opening paragraphs, that links to each one. It opens with a tap. To leave a heading out, give it (or a group around it) the class tala-no-contents under Advanced → Additional CSS class(es).', 'tala-blog' ),
+			'priority'    => 121,
+		)
+	);
+	$wp_customize->add_setting(
+		'tala_blog_contents',
+		array(
+			'default'           => '1',
+			'type'              => 'theme_mod',
+			'capability'        => 'edit_theme_options',
+			'sanitize_callback' => 'rest_sanitize_boolean',
+		)
+	);
+	$wp_customize->add_control(
+		'tala_blog_contents',
+		array(
+			'section' => 'tala_blog_contents',
+			'type'    => 'checkbox',
+			'label'   => __( 'Show a table of contents on articles', 'tala-blog' ),
+		)
+	);
+	$wp_customize->add_setting(
+		'tala_blog_contents_sections',
+		array(
+			'default'           => '3',
+			'type'              => 'theme_mod',
+			'capability'        => 'edit_theme_options',
+			'sanitize_callback' => 'tala_blog_sanitize_sections',
+		)
+	);
+	$wp_customize->add_control(
+		'tala_blog_contents_sections',
+		array(
+			'section'     => 'tala_blog_contents',
+			'type'        => 'number',
+			'label'       => __( 'Sections needed', 'tala-blog' ),
+			'description' => __( 'Articles with fewer sections (main headings) than this go without one.', 'tala-blog' ),
+			'input_attrs' => array(
+				'min'  => 2,
+				'max'  => 10,
+				'step' => 1,
+			),
 		)
 	);
 }

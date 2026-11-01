@@ -94,6 +94,169 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * An article's sections, as headings of one level in a row.
+	 *
+	 * @param string[] $titles Heading texts.
+	 * @param int      $level  Heading level.
+	 * @return string Block markup.
+	 */
+	private function headings( array $titles, int $level = 2 ): string {
+		$markup = '';
+		foreach ( $titles as $title ) {
+			$attrs   = 2 === $level ? '' : ' {"level":' . $level . '}';
+			$markup .= "<!-- wp:heading$attrs -->\n<h$level class=\"wp-block-heading\">$title</h$level>\n<!-- /wp:heading -->\n\n";
+		}
+		return $markup;
+	}
+
+	/**
+	 * "In this article": after the opening paragraph, before the first section, a navigation
+	 * landmark that folds into one line and links each section (and its subsections) to an anchor
+	 * that describes it. Anchors a heading has are kept (unless used twice, or the classic editor's);
+	 * new ones come from the heading's words and never repeat an id of the page; headings in answers, deeper levels and headings marked
+	 * tala-no-contents stay out.
+	 */
+	public function test_table_of_contents(): void {
+		$content = <<<'HTML'
+<!-- wp:paragraph -->
+<p>Opening paragraph.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Plan the week</h2>
+<!-- /wp:heading -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Monday &amp; Tuesday</h3>
+<!-- /wp:heading -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading" id="kept-anchor">Check the forms</h2>
+<!-- /wp:heading -->
+
+<!-- wp:heading {"level":4} -->
+<h4 class="wp-block-heading">Too deep</h4>
+<!-- /wp:heading -->
+
+<!-- wp:details -->
+<details class="wp-block-details"><summary>A question</summary><!-- wp:heading -->
+<h2 class="wp-block-heading">Inside an answer</h2>
+<!-- /wp:heading --></details>
+<!-- /wp:details -->
+
+<!-- wp:heading {"className":"tala-no-contents"} -->
+<h2 class="wp-block-heading tala-no-contents">Left out</h2>
+<!-- /wp:heading -->
+
+<!-- wp:group {"className":"tala-no-contents"} -->
+<div class="wp-block-group tala-no-contents"><!-- wp:heading -->
+<h2 class="wp-block-heading">Also left out</h2>
+<!-- /wp:heading --></div>
+<!-- /wp:group -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Plan the week</h2>
+<!-- /wp:heading -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Comments</h2>
+<!-- /wp:heading -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading" id="mce_7">Left by the classic editor</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p id="twice">A paragraph with an id.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading" id="twice">An id used twice</h2>
+<!-- /wp:heading -->
+HTML;
+		$post    = $this->publish_post( array( 'post_content' => $content ) );
+		$this->go_to( get_permalink( $post ) );
+		$html = $this->render( '<!-- wp:post-content /-->', $post );
+
+		$this->assertMatchesRegularExpression( '#Opening paragraph\.</p>\s*<nav class="tala-contents" aria-label="In this article"><details><summary><span class="tala-contents-title">In this article</span> <span class="tala-contents-count">6 sections</span></summary><ol>#', $html, 'After the opening, folded.' );
+		$this->assertStringContainsString(
+			'<ol><li><a href="#plan-the-week">Plan the week</a><ol><li><a href="#monday-tuesday">Monday &amp; Tuesday</a></li></ol></li>'
+			. '<li><a href="#kept-anchor">Check the forms</a></li>'
+			. '<li><a href="#plan-the-week-2">Plan the week</a></li>'
+			. '<li><a href="#comments-2">Comments</a></li>'
+			. '<li><a href="#left-by-the-classic-editor">Left by the classic editor</a></li>'
+			. '<li><a href="#an-id-used-twice">An id used twice</a></li></ol></details></nav>',
+			$html
+		);
+		foreach ( array( 'plan-the-week', 'monday-tuesday', 'kept-anchor', 'plan-the-week-2', 'comments-2', 'left-by-the-classic-editor', 'an-id-used-twice' ) as $id ) {
+			$this->assertSame( 1, substr_count( $html, ' id="' . $id . '"' ), $id );
+		}
+		foreach ( array( 'Too deep', 'Inside an answer', 'Left out', 'Also left out' ) as $text ) {
+			$this->assertSame( 1, substr_count( $html, $text ), $text );
+		}
+		$this->assertStringContainsString( '<h4 class="wp-block-heading">Too deep</h4>', $html, 'Headings out of it are left as they are.' );
+		$this->assertStringNotContainsString( 'data-tala-contents', $html );
+		$this->assertSame( 11, preg_match_all( '/<h[1-6][\s>]/', $html ), 'The article\'s eleven headings; the box adds none.' );
+		$this->assertStringNotContainsString( 'mce_7', $html );
+		$this->assertSame( 1, substr_count( $html, 'id="twice"' ), 'The paragraph keeps it.' );
+	}
+
+	/**
+	 * The box goes before the top-level block holding the first section; it needs enough sections
+	 * (3 by default, a setting); it can be turned off; only the article being read has one; HTML
+	 * WordPress can't read is left alone.
+	 */
+	public function test_table_of_contents_when_and_where(): void {
+		$grouped = "<!-- wp:paragraph -->\n<p>Opening.</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:group -->\n<div class=\"wp-block-group\">"
+			. $this->headings( array( 'One' ) ) . "</div>\n<!-- /wp:group -->\n\n" . $this->headings( array( 'Two', 'Three' ) );
+		$post    = $this->publish_post( array( 'post_content' => $grouped ) );
+		$this->go_to( get_permalink( $post ) );
+		$this->assertMatchesRegularExpression( '#Opening\.</p>\s*<nav class="tala-contents"[^>]*>.*</nav><div class="wp-block-group[^"]*">\s*<h2 id="one" class="wp-block-heading">One</h2>#s', $this->render( '<!-- wp:post-content /-->', $post ) );
+
+		$two = $this->publish_post( array( 'post_content' => $this->headings( array( 'One', 'Two' ) ) . $this->headings( array( 'A', 'B', 'C' ), 3 ) ) );
+		$this->go_to( get_permalink( $two ) );
+		$this->assertStringNotContainsString( 'tala-contents', $this->render( '<!-- wp:post-content /-->', $two ), 'Two sections: subsections don\'t count.' );
+		set_theme_mod( 'tala_blog_contents_sections', '2' );
+		$this->assertStringContainsString( '2 sections', $this->render( '<!-- wp:post-content /-->', $two ), 'Unless two are enough.' );
+		remove_theme_mod( 'tala_blog_contents_sections' );
+
+		$this->go_to( get_permalink( $post ) );
+		set_theme_mod( 'tala_blog_contents', false );
+		$this->assertStringNotContainsString( 'tala-contents', $this->render( '<!-- wp:post-content /-->', $post ), 'Turned off.' );
+		remove_theme_mod( 'tala_blog_contents' );
+
+		$this->go_to( home_url( '/' ) );
+		$this->assertStringNotContainsString( 'tala-contents', $this->render( '<!-- wp:post-content /-->', $post ), 'Not in a list.' );
+		$page = $this->publish_post(
+			array(
+				'post_type'    => 'page',
+				'post_content' => $grouped,
+			)
+		);
+		$this->go_to( get_permalink( $page ) );
+		$this->assertStringNotContainsString( 'tala-contents', $this->render( '<!-- wp:post-content /-->', $page ), 'Not on a page.' );
+
+		$broken = '<div class="wp-block-post-content"><h2>One</h2><h2>Two</h2><h2>Three</h2><h2';
+		$this->assertSame( $broken, tala_blog_add_contents( $broken, 3 ), 'HTML that can\'t be read stays as it is.' );
+
+		$this->assertSame( 3, tala_blog_sanitize_sections( 'many' ) );
+		$this->assertSame( 2, tala_blog_sanitize_sections( '1' ) );
+		$this->assertSame( 10, tala_blog_sanitize_sections( 40 ) );
+		$this->assertSame( 5, tala_blog_sanitize_sections( '5' ) );
+		$this->assertSame( 'plan-the-week-with-your-grade-5-class-and-check-every-form', tala_blog_anchor( 'Plan the week with your Grade 5 class, and check every form before Friday' ), 'Cut between words.' );
+		$this->assertSame( 'section', tala_blog_anchor( '!!!' ) );
+
+		require_once ABSPATH . WPINC . '/class-wp-customize-manager.php';
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$manager = new WP_Customize_Manager();
+		tala_blog_customize_register( $manager );
+		$this->assertNotNull( $manager->get_section( 'tala_blog_contents' ) );
+		$this->assertSame( '1', $manager->get_setting( 'tala_blog_contents' )->default, 'On by default.' );
+		$this->assertSame( 'checkbox', $manager->get_control( 'tala_blog_contents' )->type );
+		$this->assertSame( 'number', $manager->get_control( 'tala_blog_contents_sections' )->type );
+	}
+
+	/**
 	 * The article's dates read "Published" and "Updated"; an update on the publishing day isn't
 	 * shown; dates in lists stay unlabelled.
 	 */
