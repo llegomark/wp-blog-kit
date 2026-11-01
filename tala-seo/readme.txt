@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.18.1
+Stable tag: 1.18.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -104,6 +104,9 @@ Include that file in nginx's `http` block, and in the site's PDF location add `a
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.18.2 =
+* Changed: sitemaps are plain XML, without WordPress's XSLT stylesheet. The stylesheet only drew a table for people who open a sitemap in a browser (search engines never use it), and browsers are removing XSLT; Chrome showed a warning on every sitemap. A browser now shows the XML itself.
 
 = 1.18.1 =
 * Fixed: a sitemap page of long articles no longer fails. WordPress loads every post a sitemap page lists in full, and 2,000 long articles (with a document's full text, for example) took more memory than PHP allows, so the page returned an error. Sitemap pages now list at most 500 addresses each; search engines accept up to 50,000 per page, so more, shorter pages lose nothing.

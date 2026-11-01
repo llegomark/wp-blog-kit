@@ -185,6 +185,12 @@ function tala_seo_sitemap_skip_noindex( $args ) {
 	return $args;
 }
 
+// Sitemaps are plain XML, without WordPress's XSLT stylesheet. The stylesheet only draws a table for
+// people who open a sitemap in a browser (search engines ignore it), and browsers are removing XSLT:
+// Chrome warns on every page that uses it. Without it, a browser shows the XML itself.
+add_filter( 'wp_sitemaps_stylesheet_url', '__return_empty_string' );
+add_filter( 'wp_sitemaps_stylesheet_index_url', '__return_empty_string' );
+
 add_filter( 'wp_sitemaps_max_urls', 'tala_seo_sitemap_max_urls' );
 
 /**

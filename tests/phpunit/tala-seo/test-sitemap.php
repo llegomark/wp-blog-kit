@@ -255,4 +255,16 @@ class Test_Tala_SEO_Sitemap extends Tala_SEO_Test_Case {
 		$this->publish_post();
 		$this->assertSame( 1, $provider->get_max_num_pages( 'post' ), 'Few posts: one page.' );
 	}
+
+	/**
+	 * Sitemaps are plain XML: no XSLT stylesheet (browsers are removing XSLT; search engines never
+	 * used it).
+	 */
+	public function test_sitemaps_without_stylesheet(): void {
+		$renderer = new WP_Sitemaps_Renderer();
+		$entries  = array( array( 'loc' => home_url( '/a/' ) ) );
+		$this->assertStringNotContainsString( 'xml-stylesheet', $renderer->get_sitemap_index_xml( $entries ) );
+		$this->assertStringNotContainsString( 'xml-stylesheet', $renderer->get_sitemap_xml( $entries ) );
+		$this->assertStringContainsString( '<loc>' . home_url( '/a/' ) . '</loc>', $renderer->get_sitemap_xml( $entries ) );
+	}
 }
