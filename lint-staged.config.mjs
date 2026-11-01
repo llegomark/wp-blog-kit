@@ -26,4 +26,5 @@ export default {
 	// Each plugin's readme as WordPress.org's readme validator reads it, with its header and screenshots.
 	'{tala-seo/readme.txt,tala-seo/tala-seo.php,.wordpress-org/*}': () => 'node bin/validate-readme.mjs tala-seo',
 	'{tala-ads/readme.txt,tala-ads/tala-ads.php,.wordpress-org/tala-ads/*}': () => 'node bin/validate-readme.mjs tala-ads',
+	'{tala-guard/readme.txt,tala-guard/tala-guard.php,.wordpress-org/tala-guard/*}': () => 'node bin/validate-readme.mjs tala-guard',
 };

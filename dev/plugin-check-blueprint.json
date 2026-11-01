@@ -3,6 +3,7 @@
 	"steps": [
 		{ "step": "installPlugin", "pluginData": { "resource": "wordpress.org/plugins", "slug": "plugin-check" }, "options": { "activate": true } },
 		{ "step": "activatePlugin", "pluginPath": "tala-seo/tala-seo.php" },
-		{ "step": "activatePlugin", "pluginPath": "tala-ads/tala-ads.php" }
+		{ "step": "activatePlugin", "pluginPath": "tala-ads/tala-ads.php" },
+		{ "step": "activatePlugin", "pluginPath": "tala-guard/tala-guard.php" }
 	]
 }

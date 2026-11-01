@@ -1,6 +1,6 @@
 #!/bin/bash
 # dev/plugin-check.sh: run WordPress's official Plugin Check (wordpress.org/plugins/plugin-check)
-# against tala-seo and tala-ads, including its runtime and experimental checks.
+# against tala-seo, tala-ads and tala-guard, including its runtime and experimental checks.
 #   dev/plugin-check.sh                 errors and warnings
 #   dev/plugin-check.sh --format=json   any extra arguments go to `wp plugin check`
 # It uses the local site from dev/site.sh when there is one, otherwise WordPress Playground (no local
@@ -12,7 +12,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 SITE=${WP_DEV_SITE:-$HOME/Sites/blogkit}
-PLUGINS=(tala-seo tala-ads)
+PLUGINS=(tala-seo tala-ads tala-guard)
 ARGS=(--include-experimental --ignore-codes=plugin_updater_detected
       --fields=line,column,type,code,message "$@")
 
@@ -51,6 +51,7 @@ for plugin in "${PLUGINS[@]}"; do
   npx -y "@wp-playground/cli@$PLAYGROUND_VERSION" php --php=8.5 --verbosity=quiet \
     --mount="$PWD/tala-seo:/wordpress/wp-content/plugins/tala-seo" \
     --mount="$PWD/tala-ads:/wordpress/wp-content/plugins/tala-ads" \
+    --mount="$PWD/tala-guard:/wordpress/wp-content/plugins/tala-guard" \
     --mount="$PWD/$TOOLS:/tools" \
     --blueprint="$PWD/dev/plugin-check-blueprint.json" \
     -- /tools/wp-cli.phar --path=/wordpress --require=/wordpress/wp-content/plugins/plugin-check/cli.php plugin check "$plugin" "${ARGS[@]}" 2>&1 \

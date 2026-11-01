@@ -2,13 +2,14 @@
 /**
  * dev/screenshots.mjs: takes the screenshots listed in the plugins' readme.txt (== Screenshots ==)
  * on the local demo site and saves them where WordPress.org keeps a plugin's SVN assets/ folder:
- * .wordpress-org/screenshot-<n>.png for Tala SEO, .wordpress-org/tala-ads/screenshot-<n>.png for
- * Tala Ads. They aren't part of the plugin zips.
+ * .wordpress-org/screenshot-<n>.png for Tala SEO, .wordpress-org/<plugin>/screenshot-<n>.png for
+ * Tala Ads and Tala Guard. They aren't part of the plugin zips.
  *
  * Run it after a visible change to the SEO panel, the publish check, Settings → SEO, the SEO
- * column or the Event and Course blocks, or to Settings → Ads: `node dev/screenshots.mjs` for both
- * plugins, `node dev/screenshots.mjs tala-seo` or `node dev/screenshots.mjs tala-ads` for one (the
- * site from dev/site.sh, served by dev/serve.sh). It changes nothing on the site that it doesn't undo.
+ * column or the Event and Course blocks, to Settings → Ads, or to Tala Guard's widget or settings:
+ * `node dev/screenshots.mjs` for every plugin, `node dev/screenshots.mjs tala-seo` (or tala-ads, or
+ * tala-guard) for one (the site from dev/site.sh, served by dev/serve.sh). It changes nothing on the
+ * site that it doesn't undo. Tala Guard's widget comes from Cloudflare (with its test site key).
  */
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -17,11 +18,13 @@ import { wp, logIn } from '../tests/e2e/utils.mjs';
 
 const OUT = fileURLToPath( new URL( '../.wordpress-org/', import.meta.url ) );
 const ADS_OUT = `${ OUT }tala-ads/`;
+const GUARD_OUT = `${ OUT }tala-guard/`;
 const ONLY = process.argv[ 2 ] ?? '';
-if ( ! [ '', 'tala-seo', 'tala-ads' ].includes( ONLY ) ) {
-	process.stderr.write( 'Usage: node dev/screenshots.mjs [tala-seo|tala-ads]\n' );
+if ( ! [ '', 'tala-seo', 'tala-ads', 'tala-guard' ].includes( ONLY ) ) {
+	process.stderr.write( 'Usage: node dev/screenshots.mjs [tala-seo|tala-ads|tala-guard]\n' );
 	process.exit( 2 );
 }
+const want = ( plugin ) => '' === ONLY || plugin === ONLY;
 // Example IDs for Settings → Ads, shaped like real ones.
 const ADS_EXAMPLE = {
 	adsense: 'ca-pub-1234567890123456',
@@ -68,6 +71,7 @@ async function openEditor( page, path ) {
 }
 
 mkdirSync( ADS_OUT, { recursive: true } );
+mkdirSync( GUARD_OUT, { recursive: true } );
 const browser = await chromium.launch( { channel: 'chrome' } );
 const admin = await browser.newContext( { ...DESKTOP, baseURL: BASE } );
 const page = await admin.newPage();
@@ -164,15 +168,84 @@ async function adsShot() {
 	saved += 1;
 }
 
-if ( 'tala-ads' !== ONLY ) {
+/**
+ * Runs a screenshot with Tala Guard's keys set, then puts the site's own keys back.
+ *
+ * @param {Object}              keys Keys to set.
+ * @param {() => Promise<void>} shot What to do with them.
+ */
+async function withGuardKeys( keys, shot ) {
+	let before = '';
+	try {
+		before = wp( 'option', 'get', 'tala_guard', '--format=json' ).trim();
+	} catch {
+		// No keys yet (WP-CLI exits with an error): there is nothing to put back.
+	}
+	wp( 'option', 'update', 'tala_guard', JSON.stringify( keys ), '--format=json' );
+	try {
+		await shot();
+	} finally {
+		if ( before && '[]' !== before ) {
+			wp( 'option', 'update', 'tala_guard', before, '--format=json' );
+		} else {
+			wp( 'option', 'delete', 'tala_guard' );
+		}
+	}
+}
+
+/**
+ * Tala Guard's screenshot 1: the comment form on a phone with Turnstile's check done (Cloudflare's
+ * test site key, which works on any address).
+ */
+async function guardPhoneShot() {
+	await withGuardKeys( { site_key: '1x00000000000000000000AA', secret_key: '1x0000000000000000000000000000000AA' }, async () => {
+		const phone = await browser.newContext( { ...PHONE, baseURL: BASE } );
+		const visitor = await phone.newPage();
+		await visitor.goto( '/hello-world/' );
+		const widget = visitor.locator( '.tala-guard-turnstile' );
+		await widget.scrollIntoViewIfNeeded();
+		await visitor.locator( 'input[name="cf-turnstile-response"]' ).waitFor( { state: 'attached', timeout: 20_000 } );
+		await visitor.waitForFunction( () => document.querySelector( 'input[name="cf-turnstile-response"]' )?.value );
+		await visitor.locator( '#comment' ).fill( 'This helped me plan our reading week. Thank you!' );
+		await visitor.locator( '#author' ).fill( 'Ana Reyes' );
+		await visitor.locator( '#email' ).fill( 'ana@example.com' );
+		await visitor.locator( '#email' ).blur();
+		await visitor.locator( '#commentform' ).evaluate( ( form ) => window.scrollTo( 0, form.getBoundingClientRect().bottom + window.scrollY - window.innerHeight + 24 ) );
+		await visitor.waitForTimeout( 1500 ); // The widget's own "Success" animation.
+		await visitor.screenshot( { path: `${ GUARD_OUT }screenshot-1.png` } );
+		await phone.close();
+	} );
+	saved += 1;
+}
+
+/**
+ * Tala Guard's screenshot 2: its section on Settings → Discussion, with example keys shaped like real
+ * ones (the secret saved, so not shown).
+ */
+async function guardSettingsShot() {
+	await withGuardKeys( { site_key: '0x4AAAAAAABkMYinukE8nzYS', secret_key: '0x4AAAAAAABkMYinukE8nzYSecretKeyAbCdEf' }, async () => {
+		await page.goto( '/wp-admin/options-discussion.php' );
+		await tidy( page );
+		await page.locator( '#tala-guard' ).screenshot( { path: `${ GUARD_OUT }screenshot-2.png` } );
+	} );
+	saved += 1;
+}
+
+if ( want( 'tala-seo' ) ) {
 	await seoAdminShots();
 }
-if ( 'tala-seo' !== ONLY ) {
+if ( want( 'tala-ads' ) ) {
 	await adsShot();
 }
+if ( want( 'tala-guard' ) ) {
+	await guardSettingsShot();
+}
 await admin.close();
-if ( 'tala-ads' !== ONLY ) {
+if ( want( 'tala-seo' ) ) {
 	await seoPhoneShot();
+}
+if ( want( 'tala-guard' ) ) {
+	await guardPhoneShot();
 }
 
 await browser.close();

@@ -1,6 +1,6 @@
 <?php
 /**
- * PHPUnit bootstrap: WordPress's test framework (wp-phpunit) with Tala SEO and Tala Ads active and
+ * PHPUnit bootstrap: WordPress's test framework (wp-phpunit) with Tala SEO, Tala Ads and Tala Guard active and
  * Tala Blog as the theme, loaded from this repository.
  *
  * @package TalaTests
@@ -30,6 +30,7 @@ tests_add_filter(
 	static function () use ( $tala_root ): void {
 		require $tala_root . '/tala-seo/tala-seo.php';
 		require $tala_root . '/tala-ads/tala-ads.php';
+		require $tala_root . '/tala-guard/tala-guard.php';
 	}
 );
 tests_add_filter(
@@ -54,6 +55,7 @@ require_once __DIR__ . '/includes/class-wp-cli.php';
 require_once __DIR__ . '/includes/wp-cli-utils.php';
 require_once $tala_root . '/tala-seo/includes/class-tala-seo-cli.php';
 require_once $tala_root . '/tala-ads/includes/admin.php';
+require_once $tala_root . '/tala-guard/includes/admin.php';
 
 require __DIR__ . '/includes/class-tala-seo-redirect-caught.php';
 require __DIR__ . '/includes/class-tala-seo-test-case.php';

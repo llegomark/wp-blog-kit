@@ -1,4 +1,4 @@
-# WordPress blog kit: Tala Blog theme + Tala SEO and Tala Ads plugins
+# WordPress blog kit: Tala Blog theme + Tala SEO, Tala Ads and Tala Guard plugins
 
 A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No premium licences, nothing that expires.
 
@@ -7,9 +7,10 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 | `tala-blog/` | Block theme. Minimalist: near-black text on a near-white page, the same inverted in automatic dark mode, a header with the site logo and a menu that opens full screen on phones, system fonts (no downloads), labelled Published/Updated dates, author box with bio under every article, breadcrumbs, "Filed under" categories and tags, article lists with thumbnails and numbered pages, dated comments, print styles. Semantic HTML: the article has its own header and footer, the links to the previous and next articles are a named navigation landmark, and each comment is an article. Three colour presets (Sepia, Blue, Green, each with its own dark mode) and two serif typography presets in the Site Editor, all with system fonts. Translation-ready and accessible (WCAG 2.2 AA checks pass in both colour schemes, with every colour preset). |
 | `tala-seo/` | SEO plugin. Titles, meta descriptions, canonicals, robots rules, Open Graph, JSON-LD, sitemap and robots.txt tuning, redirects for moved pages and categories, and a publish check. |
 | `tala-ads/` | Ads plugin. AdSense Auto ads, Google Tag Manager and Google's consent and ad blocking recovery messages (with Google's error protection code), each loaded once and set up with IDs; Google search in place of WordPress's search; and an optional Innity box after articles with its height reserved. |
+| `tala-guard/` | Comment spam plugin. Cloudflare Turnstile in the comment form, confirmed with Cloudflare's Siteverify on the server before WordPress saves a comment. |
 | `dev/` | Demo content and a WordPress Playground blueprint for local testing (not deployed). |
-| `.wordpress-org/` | The plugins' screenshots (Tala SEO's at the top, Tala Ads' in `tala-ads/`), as WordPress.org keeps them in a plugin's SVN `assets/` folder (not in the zips). `node dev/screenshots.mjs` takes them again on the local site. |
-| `build.sh` | Packages all three as zips in `dist/`. |
+| `.wordpress-org/` | The plugins' screenshots (Tala SEO's at the top, Tala Ads' in `tala-ads/`, Tala Guard's in `tala-guard/`), as WordPress.org keeps them in a plugin's SVN `assets/` folder (not in the zips). `node dev/screenshots.mjs` takes them again on the local site. |
+| `build.sh` | Packages all four as zips in `dist/`. |
 
 Each works on its own: the theme without the plugins, and each plugin with any theme that follows WordPress's standards (the browser tests run Tala SEO with Twenty Twenty-Five and Tala Blog without Tala SEO). Together, the theme places Tala SEO's Breadcrumbs block in its templates. All three need WordPress 7.0 or newer and PHP 8.5 or newer. They follow the current WordPress and PHP releases and carry no code for older versions.
 
@@ -60,6 +61,18 @@ Each works on its own: the theme without the plugins, and each plugin with any t
 - **IDs, not code:** each ID field keeps just the ID, even when the whole code is pasted, so those fields can't put a script on the site. The one piece of code, Google's error protection, is kept only in Google's shape, for the site's publisher ID, naming only Google's servers, and only people who may add scripts (`unfiltered_html`) can change it. Settings → Ads also says whether `ads.txt` lists the publisher ID.
 - Filters: `tala_ads_show` (return false to keep ads off a page) and `tala_ads_post_types` (where the Innity box goes; posts and pages by default).
 
+## What Tala Guard does
+
+Following Cloudflare's Turnstile documentation (October 2026):
+
+- **In the comment form:** Cloudflare Turnstile (the widget type is chosen in Cloudflare's dashboard; Managed is recommended) right before the submit button, through WordPress's own comment form, so it works with block and classic themes. It follows the visitor's light or dark mode, takes the form's width, and has its 65px kept free so nothing moves. Without JavaScript, the form says to turn it on.
+- **Loaded when needed:** Turnstile's script comes straight from Cloudflare (not proxied or cached) when the form comes within 800px of the screen or is used, rendered explicitly; a comment sent before its token is ready waits for it and then goes. When the back button shows the page again from the browser's cache, the widget is reset, since a token works once.
+- **Checked on the server:** before WordPress saves a comment from the public form (after its own checks for required fields, duplicates and flooding), the token goes to Siteverify with the secret key, the visitor's IP and an idempotency key. The comment is saved only when Cloudflare answers `success: true`, action `comment`, and one of the site's own hostnames. A network error or Cloudflare's `internal-error` is retried once with the same idempotency key; anything else turns the comment away (403, or 503 when Cloudflare can't be reached) with a link back: it fails closed.
+- **Only the public form:** replies written in wp-admin and logged-in users' comments through the REST API don't go through `wp-comments-post.php` and aren't asked for a token. Pages stay cacheable: the form carries only the public site key.
+- **Keys:** Settings → Discussion, or `TALA_GUARD_SITE_KEY` and `TALA_GUARD_SECRET_KEY` in wp-config.php. Both are kept only in Turnstile's shape; the secret is never printed back. Cloudflare's test keys work too, and Settings → Discussion warns when they're in use.
+- **Privacy:** a suggested paragraph for the privacy policy (Settings → Privacy → Policy Guide).
+- Hooks: the `tala_guard_hostnames` filter (hostnames a token may come from) and the `tala_guard_turned_away` action (Cloudflare's answer for a turned-away comment).
+
 ## Download
 
 Each version of the theme and the plugins is published as a [GitHub release](https://github.com/llegomark/wp-blog-kit/releases): `tala-blog-1.6.0`, `tala-seo-1.11.0`, `tala-ads-1.0.0` and so on. Download the zip under **Assets** (not "Source code", which is the whole repository) and upload it in WordPress: Appearance → Themes → Add New Theme → Upload Theme, or Plugins → Add New Plugin → Upload Plugin. Each zip comes with its SHA-256 and a build attestation (`gh attestation verify <zip> --repo llegomark/wp-blog-kit --signer-workflow llegomark/wp-blog-kit/.github/workflows/release.yml --source-ref refs/heads/main`).
@@ -72,6 +85,7 @@ Releases are made by `.github/workflows/release.yml`: when a push to `main` rais
 ./build.sh                                   # makes dist/*.zip
 wp plugin install dist/tala-seo-1.0.0.zip --activate
 wp plugin install dist/tala-ads-1.0.0.zip --activate   # if the site shows ads
+wp plugin install dist/tala-guard-1.0.0.zip --activate # if the site takes comments
 wp theme install dist/tala-blog-1.0.0.zip --activate
 wp media regenerate --only-missing --yes     # only on sites with existing images: creates the share and Google crops
 ```
@@ -81,6 +95,7 @@ Then in wp-admin:
 - Users → Profile: biography and author photo.
 - Settings → SEO: work through the checklist.
 - Settings → Ads: the AdSense publisher ID and Tag Manager container ID, once the same code is gone from the theme and other plugins.
+- Settings → Discussion: the Turnstile site key and secret key (from Turnstile in Cloudflare's dashboard).
 
 ## Development
 
@@ -105,12 +120,12 @@ dev/serve.sh                  # http://127.0.0.1:8080 (admin login: ~/.local/sta
 | `composer lint` | WordPress Coding Standards: WPCS 3.4 with WordPress-Core, WordPress-Docs and WordPress-Extra (`phpcs.xml.dist`) |
 | `composer fix` | the automatic coding-standards fixes |
 | `composer analyse` | PHPStan level 8 with the WordPress extension (`phpstan.neon.dist`), against WordPress 7.1's functions and classes |
-| `composer plugin-check` | WordPress Plugin Check, including experimental checks, on both plugins against the local site; exits 1 on any finding |
+| `composer plugin-check` | WordPress Plugin Check, including experimental checks, on every plugin against the local site; exits 1 on any finding |
 | `composer check` | all of the above |
 | `npm run lint:css` | Stylelint with WordPress's CSS coding standards (`@wordpress/stylelint-config`, `stylelint.config.mjs`); `lint:css:fix` fixes what it can |
 | `npm run lint:js` | ESLint with WordPress's JavaScript coding standards (`@wordpress/eslint-plugin`, `eslint.config.mjs`), text domains included; `lint:js:fix` fixes what it can |
 | `npm run lint:theme` | `bin/validate-theme.mjs`: `theme.json` and `block.json` against WordPress's schemas for the "Requires at least" version, pattern headers, block markup in templates, parts and patterns, and no hard-coded text in templates and parts |
-| `npm run lint:readme` | `bin/validate-readme.mjs`: `tala-seo/readme.txt` and `tala-ads/readme.txt` by the rules of [WordPress.org's readme validator](https://wordpress.org/plugins/developers/readme-validator/) (its errors, warnings and notes, ported from the plugin directory's parser), plus a match with the plugin header, "Tested up to" the current WordPress, upgrade notices within 300 characters, a changelog entry for the release, and an image in `.wordpress-org/` (`.wordpress-org/tala-ads/` for Tala Ads) for each screenshot caption. Contributors, tag usage and the WordPress release are looked up on WordPress.org. The one note left on purpose: no donate link, as the plugins take no donations. |
+| `npm run lint:readme` | `bin/validate-readme.mjs`: `tala-seo/readme.txt`, `tala-ads/readme.txt` and `tala-guard/readme.txt` by the rules of [WordPress.org's readme validator](https://wordpress.org/plugins/developers/readme-validator/) (its errors, warnings and notes, ported from the plugin directory's parser), plus a match with the plugin header, "Tested up to" the current WordPress, upgrade notices within 300 characters, a changelog entry for the release, and an image in `.wordpress-org/` (`.wordpress-org/<plugin>/` for Tala Ads and Tala Guard) for each screenshot caption. Contributors, tag usage and the WordPress release are looked up on WordPress.org. The one note left on purpose: no donate link, as the plugins take no donations. |
 | `npm run lint` | the four above, plus `composer lint` |
 | `composer test` | PHPUnit integration tests (`tests/phpunit/`) on WordPress's own test framework: Tala SEO's head tags, structured data (videos, events, courses, FAQ and how-to included), sitemap, redirects, publish check, admin forms, import and share images, Tala Ads' settings and scripts (each loaded once, none on error pages, the error protection code's checks, Google search's redirect and results page, the Innity box once with its height reserved), and Tala Blog's block filters, patterns, template parts and style variations (colour contrast in light and dark mode, colour and typography presets as the Site Editor lists them) |
 | `npm run test:e2e` | browser tests (`tests/e2e/`, Playwright) on the local site: every kind of page, the phone menu frame by frame, layout shifts, the logo, axe in light and dark mode on phone and desktop and with each colour preset, the article's header, footer and navigation and the comments as articles, the block editor's validation of the theme, classic content (aligned images, captions, galleries, embeds, tables, quotes, long words, password forms), and Tala SEO's FAQ, How-to, Event and Course blocks and video dates in the editor and on the page |

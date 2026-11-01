@@ -5,6 +5,7 @@ parameters:
 	paths:
 		- tala-seo
 		- tala-ads
+		- tala-guard
 		- tala-blog
 	scanFiles:
 		- vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php

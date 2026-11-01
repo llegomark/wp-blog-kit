@@ -189,7 +189,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        plugin: [tala-seo, tala-ads]
+        plugin: [tala-seo, tala-ads, tala-guard]
         wordpress: [latest, trunk]
     # trunk is the WordPress release in development: a finding there is an early warning, not a
     # failed build.

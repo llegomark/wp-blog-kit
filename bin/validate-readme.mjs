@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Checks a plugin's readme.txt (tala-seo or tala-ads, named on the command line) as WordPress.org's
+ * Checks a plugin's readme.txt (tala-seo, tala-ads or tala-guard, named on the command line) as WordPress.org's
  * readme validator does
  * (https://wordpress.org/plugins/developers/readme-validator/): the same parsing rules and the same
  * errors, warnings and notes, ported from the plugin directory's Readme\Parser and Readme\Validator
@@ -22,7 +22,7 @@
  * Offline those checks are skipped with a warning; in CI they must run.
  *
  * Everything found fails the check, notes included, except the notes this project decided to
- * leave (ACCEPTED_NOTES, with the reason). Run it with `npm run lint:readme` (both plugins), or
+ * leave (ACCEPTED_NOTES, with the reason). Run it with `npm run lint:readme` (every plugin), or
  * `node bin/validate-readme.mjs tala-ads` for one.
  */
 
@@ -31,7 +31,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath( new URL( '..', import.meta.url ) );
-const PLUGINS = [ 'tala-seo', 'tala-ads' ];
+const PLUGINS = [ 'tala-seo', 'tala-ads', 'tala-guard' ];
 const PLUGIN = process.argv[ 2 ] ?? 'tala-seo';
 if ( ! PLUGINS.includes( PLUGIN ) ) {
 	process.stderr.write( `Usage: node bin/validate-readme.mjs <${ PLUGINS.join( '|' ) }>\n` );

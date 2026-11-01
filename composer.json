@@ -1,6 +1,6 @@
 {
 	"name": "llegomark/wp-blog-kit",
-	"description": "Tala Blog block theme and the Tala SEO and Tala Ads plugins, with the WordPress development tools used to check them.",
+	"description": "Tala Blog block theme and the Tala SEO, Tala Ads and Tala Guard plugins, with the WordPress development tools used to check them.",
 	"type": "project",
 	"license": "GPL-2.0-or-later",
 	"require": {
@@ -47,7 +47,7 @@
 		"lint": "Check PHP against the WordPress Coding Standards (phpcs.xml.dist).",
 		"fix": "Apply automatic WordPress Coding Standards fixes.",
 		"analyse": "Static analysis with PHPStan and the WordPress extension (phpstan.neon.dist).",
-		"plugin-check": "Run WordPress Plugin Check on tala-seo and tala-ads against the local site.",
+		"plugin-check": "Run WordPress Plugin Check on tala-seo, tala-ads and tala-guard against the local site.",
 		"check": "Run every check: coding standards, static analysis and Plugin Check.",
 		"test:install": "Download WordPress for the tests (.cache/wordpress) and create the empty test database.",
 		"test:multisite": "The tests that need a network (@group ms-required), on a multisite test install.",

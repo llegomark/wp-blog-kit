@@ -1,7 +1,7 @@
 #!/bin/bash
 # build.sh: package the theme and plugin as installable zips in dist/.
-#   ./build.sh            → dist/tala-blog-<version>.zip, dist/tala-seo-<version>.zip and
-#                           dist/tala-ads-<version>.zip
+#   ./build.sh            → dist/tala-blog-<version>.zip, dist/tala-seo-<version>.zip,
+#                           dist/tala-ads-<version>.zip and dist/tala-guard-<version>.zip
 set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p dist
@@ -33,3 +33,4 @@ PY
 pack tala-blog tala-blog/style.css
 pack tala-seo tala-seo/tala-seo.php
 pack tala-ads tala-ads/tala-ads.php
+pack tala-guard tala-guard/tala-guard.php

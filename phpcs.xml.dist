@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
 <ruleset name="WP blog kit">
-	<description>WordPress Coding Standards (WordPress-Core, WordPress-Docs, WordPress-Extra) for the Tala Blog theme and the Tala SEO and Tala Ads plugins.</description>
+	<description>WordPress Coding Standards (WordPress-Core, WordPress-Docs, WordPress-Extra) for the Tala Blog theme and the Tala SEO, Tala Ads and Tala Guard plugins.</description>
 
 	<file>tala-seo</file>
 	<file>tala-ads</file>
+	<file>tala-guard</file>
 	<file>tala-blog</file>
 	<file>tests</file>
 
@@ -32,6 +33,7 @@
 			<property name="text_domain" type="array">
 				<element value="tala-seo"/>
 				<element value="tala-ads"/>
+				<element value="tala-guard"/>
 				<element value="tala-blog"/>
 			</property>
 		</properties>
@@ -52,6 +54,7 @@
 			<property name="prefixes" type="array">
 				<element value="tala_seo"/>
 				<element value="tala_ads"/>
+				<element value="tala_guard"/>
 				<element value="tala_blog"/>
 			</property>
 			<property name="custom_test_classes" type="array">

@@ -13,7 +13,7 @@ export default [
 	},
 	...wordpress.configs[ 'recommended-with-formatting' ],
 	{
-		files: [ 'tala-seo/**/*.js', 'tala-blog/**/*.js', 'tala-ads/**/*.js' ],
+		files: [ 'tala-seo/**/*.js', 'tala-blog/**/*.js', 'tala-ads/**/*.js', 'tala-guard/**/*.js' ],
 		languageOptions: {
 			sourceType: 'script',
 			globals: { ...globals.browser, wp: 'readonly' },
