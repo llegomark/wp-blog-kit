@@ -337,45 +337,121 @@ test.describe( 'the footer', () => {
 		expect( wide.letters.right ).toBeLessThanOrEqual( wide.band.right );
 	} );
 
-	test.describe( 'phone', () => {
-		test.use( { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true } );
-
-		test( 'menu columns two up under the brand cell; links on the slab pass contrast', async ( { page } ) => {
-			for ( const colorScheme of [ 'light', 'dark' ] ) {
-				await page.emulateMedia( { colorScheme } );
-				await page.goto( pages.article );
-				const cells = await page.evaluate( () => {
-					const box = ( el ) => {
-						const r = el.getBoundingClientRect();
-						return { left: Math.round( r.left ), top: Math.round( r.top ), width: Math.round( r.width ) };
-					};
-					const columns = [ ...document.querySelectorAll( 'footer .tala-footer-menu .wp-block-navigation__container > li' ) ];
-					return {
-						rail: document.querySelector( 'footer .tala-rail' ).clientWidth,
-						brand: box( document.querySelector( 'footer .tala-footer-brand' ) ),
-						columns: columns.map( ( li ) => ( { ...box( li ), heading: li.querySelector( ':scope > a' )?.textContent ?? '' } ) ),
-						reading: !! document.querySelector( 'footer .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container a[href="/?s=reading"]' ),
-						slab: getComputedStyle( document.querySelector( 'footer .tala-slab' ) ).backgroundColor,
-						underline: getComputedStyle( document.querySelector( 'footer .tala-footer-menu li li a' ) ).textDecorationLine,
-					};
-				} );
-				expect( cells.slab, colorScheme ).toBe( 'light' === colorScheme ? 'rgb(19, 72, 220)' : 'rgb(22, 64, 184)' );
-				expect( cells.brand.width, 'The brand cell spans the rail' ).toBe( cells.rail );
-				expect( cells.columns.map( ( c ) => c.heading ) ).toEqual( [ 'Guides', 'About', '' ] );
-				const [ first, second, last ] = cells.columns;
-				expect( second.top, 'Two up' ).toBe( first.top );
-				expect( second.left ).toBeGreaterThan( first.left );
-				expect( Math.abs( second.width - first.width ) ).toBeLessThanOrEqual( 1 );
-				expect( last.top, 'The odd column on a row of its own' ).toBeGreaterThan( first.top );
-				expect( last.width ).toBe( cells.rail );
-				expect( cells.reading, 'The third level is listed' ).toBe( true );
-				expect( cells.underline ).toBe( 'underline' );
-				expect( await axeViolations( page ), colorScheme ).toEqual( [] );
-				// The focus ring shows on the slab: white, not cobalt on cobalt.
-				const link = page.locator( 'footer .tala-footer-menu a' ).first();
-				await link.focus();
-				expect( await link.evaluate( ( a ) => [ a.matches( ':focus-visible' ), getComputedStyle( a ).outlineColor, getComputedStyle( a ).outlineWidth ] ) ).toEqual( [ true, 'rgb(255, 255, 255)', '2px' ] );
-			}
-		} );
+	test( 'a short title stops at a third of the band, so no letter is cut off', async ( { page } ) => {
+		await page.setViewportSize( DESKTOP.viewport );
+		wp( 'option', 'update', 'blogname', 'Me' );
+		await page.goto( pages.article );
+		const short = await wordmark( page );
+		expect( short.letters.left ).toBeGreaterThanOrEqual( short.band.left );
+		expect( short.letters.right ).toBeLessThanOrEqual( short.band.right );
+		wp( 'option', 'update', 'blogname', title );
 	} );
+
+	/**
+	 * The footer's cells: the brand cell, each column of the menu (its heading, box, and whether
+	 * it shows), the third-level link and its parent, the rail.
+	 *
+	 * @param {import('@playwright/test').Page} page Page.
+	 * @return {Promise<Object>} Boxes.
+	 */
+	const cells = ( page ) =>
+		page.evaluate( () => {
+			const box = ( el ) => {
+				const r = el.getBoundingClientRect();
+				return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width };
+			};
+			const columns = [ ...document.querySelectorAll( 'footer .tala-footer-menu .wp-block-navigation__container > li' ) ];
+			const reading = document.querySelector( 'footer a[href="/?s=reading"]' );
+			const teaching = document.querySelector( 'footer a[href="/tag/teaching/"]' );
+			return {
+				rail: document.querySelector( 'footer .tala-rail' ).clientWidth,
+				brand: box( document.querySelector( 'footer .tala-footer-brand' ) ),
+				columns: columns.map( ( li ) => ( { ...box( li ), heading: li.querySelector( ':scope > a' )?.textContent ?? '' } ) ),
+				third: reading && {
+					visible: reading.checkVisibility( { visibilityProperty: true, opacityProperty: true } ),
+					link: box( reading ),
+					parent: box( teaching ),
+					column: box( reading.closest( '.wp-block-navigation__container > li' ) ),
+				},
+				slab: getComputedStyle( document.querySelector( 'footer .tala-slab' ) ).backgroundColor,
+				underline: getComputedStyle( document.querySelector( 'footer .tala-footer-menu li li a' ) ).textDecorationLine,
+			};
+		} );
+
+	/**
+	 * Every column on one row, each 1fr, and the brand cell 2fr.
+	 *
+	 * @param {Object} footer What cells() measured.
+	 * @param {number} count  Columns expected.
+	 */
+	const oneRow = ( footer, count ) => {
+		expect( footer.columns, 'Columns' ).toHaveLength( count );
+		for ( const column of footer.columns ) {
+			expect( column.top, `${ column.heading || 'last column' }: on the brand cell's row` ).toBeCloseTo( footer.brand.top, 0 );
+			expect( column.width ).toBeCloseTo( footer.columns[ 0 ].width, 0 );
+		}
+		expect( footer.brand.width / footer.columns[ 0 ].width, 'The brand cell is 2fr' ).toBeCloseTo( 2, 1 );
+		// The cells fill the rail: brand, columns and their 1 px hairlines.
+		expect( footer.brand.width + ( count * footer.columns[ 0 ].width ) + count ).toBeCloseTo( footer.rail, 0 );
+	};
+
+	test( 'desktop: the menu\'s columns on one row beside the brand cell, 2fr to each column\'s 1fr', async ( { page } ) => {
+		// Four columns (a newer menu is the one used): three with submenus, then the gathered items.
+		const content =
+			'<!-- wp:navigation-submenu {"label":"Guides","url":"/category/classroom-guides/","kind":"custom"} --><!-- wp:navigation-link {"label":"Classroom guides","url":"/category/classroom-guides/","kind":"custom"} /--><!-- /wp:navigation-submenu -->' +
+			'<!-- wp:navigation-submenu {"label":"Topics","url":"/tag/teaching/","kind":"custom"} --><!-- wp:navigation-link {"label":"Teaching","url":"/tag/teaching/","kind":"custom"} /--><!-- /wp:navigation-submenu -->' +
+			'<!-- wp:navigation-submenu {"label":"About","url":"/about/","kind":"custom"} --><!-- wp:navigation-link {"label":"Contact","url":"/about/#contact","kind":"custom"} /--><!-- /wp:navigation-submenu -->' +
+			'<!-- wp:navigation-link {"label":"Hello","url":"/hello-world/","kind":"custom"} /-->';
+		const four = wp( 'post', 'create', '--post_type=wp_navigation', '--post_status=publish', '--post_title=Four columns', `--post_content=${ content }`, '--porcelain' );
+		try {
+			await page.setViewportSize( DESKTOP.viewport );
+			await page.goto( pages.article );
+			oneRow( await cells( page ), 4 );
+		} finally {
+			wp( 'post', 'delete', four, '--force' );
+		}
+		// Three columns (Guides, About, the gathered items) at 820 px: 48rem of footer and more.
+		await page.setViewportSize( { width: 820, height: 900 } );
+		await page.goto( pages.article );
+		const three = await cells( page );
+		oneRow( three, 3 );
+		expect( three.columns.map( ( c ) => c.heading ) ).toEqual( [ 'Guides', 'About', '' ] );
+	} );
+
+	for ( const width of [ 320, 390 ] ) {
+		test.describe( `phone, ${ width } px`, () => {
+			test.use( { viewport: { width, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true } );
+
+			test( 'menu columns two up under the brand cell, the third level under its parent; links on the slab pass contrast', async ( { page } ) => {
+				for ( const colorScheme of [ 'light', 'dark' ] ) {
+					await page.emulateMedia( { colorScheme } );
+					await page.goto( pages.article );
+					const footer = await cells( page );
+					expect( footer.slab, colorScheme ).toBe( 'light' === colorScheme ? 'rgb(19, 72, 220)' : 'rgb(22, 64, 184)' );
+					expect( footer.brand.width, 'The brand cell spans the rail' ).toBeCloseTo( footer.rail, 0 );
+					expect( footer.columns.map( ( c ) => c.heading ) ).toEqual( [ 'Guides', 'About', '' ] );
+					const [ first, second, last ] = footer.columns;
+					expect( second.top, 'Two up' ).toBeCloseTo( first.top, 0 );
+					expect( second.left ).toBeGreaterThan( first.left );
+					expect( second.width ).toBeCloseTo( first.width, 0 );
+					expect( last.top, 'The odd column on a row of its own' ).toBeGreaterThan( first.top );
+					expect( last.width ).toBeCloseTo( footer.rail, 0 );
+					// The third level shows, under its parent, indented, inside the parent's column.
+					expect( footer.third.visible, 'The third level shows' ).toBe( true );
+					expect( footer.third.link.top ).toBeGreaterThanOrEqual( footer.third.parent.bottom );
+					expect( footer.third.link.left ).toBeGreaterThan( footer.third.parent.left );
+					expect( footer.third.link.right ).toBeLessThanOrEqual( footer.third.column.right );
+					expect( footer.third.link.bottom ).toBeLessThanOrEqual( footer.third.column.bottom );
+					expect( [ footer.third.column.left, footer.third.column.top ], 'In the Guides column' ).toEqual( [ first.left, first.top ] );
+					expect( footer.underline ).toBe( 'underline' );
+					expect( await page.evaluate( () => document.documentElement.scrollWidth - document.documentElement.clientWidth ), 'No sideways scrolling' ).toBe( 0 );
+					expect( await axeViolations( page ), colorScheme ).toEqual( [] );
+					// The focus ring shows on the slab: white, not cobalt on cobalt.
+					const link = page.locator( 'footer .tala-footer-menu a' ).first();
+					await link.focus();
+					expect( await link.evaluate( ( a ) => [ a.matches( ':focus-visible' ), getComputedStyle( a ).outlineColor, getComputedStyle( a ).outlineWidth ] ) ).toEqual( [ true, 'rgb(255, 255, 255)', '2px' ] );
+				}
+			} );
+		} );
+	}
 } );

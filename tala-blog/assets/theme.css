@@ -776,30 +776,41 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	}
 }
 
-/* The cells: hairline gaps on the line colour. On a phone each takes the rail's width (the menu's
-   columns go two up inside theirs); from 48rem of footer the brand cell takes two shares and each
-   column of the menu one (--tala-columns, set by tala_blog_footer_columns()). */
+/* The cells: hairline gaps on the line colour. On a phone the brand cell takes the rail's width and
+   the menu's columns go two up below it (a last odd one takes the row). From 48rem of footer it is
+   one row: the brand cell 2fr, each column of the menu 1fr (--tala-columns, set on the cells and the
+   menu by tala_blog_footer_columns() and tala_blog_footer_cells()); the menu and its list share the
+   cells' tracks (subgrid), so every hairline lines up. */
 .tala-cells {
-	display: flex;
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
 	gap: 1px;
 	background-color: var(--tala-line);
 }
 
 .tala-cells > * {
-	flex: 1 1 100%;
 	min-inline-size: 0;
 	background-color: var(--wp--preset--color--slab);
 }
 
 @container tala-footer (width >= 48rem) {
 
-	.tala-cells > .tala-footer-brand {
-		flex: 2 1 0%;
+	.tala-cells {
+		grid-template-columns: minmax(0, 2fr) repeat(var(--tala-columns, 2), minmax(0, 1fr));
 	}
 
-	.tala-cells > .tala-footer-menu {
-		flex: var(--tala-columns, 2) 1 0%;
+	.tala-cells:not(:has(> .tala-footer-menu li)) {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.tala-slab .tala-cells > .tala-footer-menu {
+		grid-column: 2 / -1;
+		grid-template-columns: subgrid;
+	}
+
+	.tala-slab .tala-cells > .tala-footer-menu > .wp-block-navigation__container {
+		grid-column: 1 / -1;
+		grid-template-columns: subgrid;
 	}
 }
 
@@ -837,12 +848,11 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 
 /* The menu as columns: every submenu open and in the flow, each top-level item a cell with its
    label as the heading (h2-sized, regular) and its links below, 15px and 40px tall; a third level
-   indented under its parent. Columns wrap two up on a phone, and a last odd one takes the row. */
+   indented under its parent. */
 .tala-slab .tala-footer-menu {
-	display: flex;
-	flex-direction: column;
+	display: grid;
 	align-items: stretch;
-	gap: 0;
+	gap: 1px;
 }
 
 .tala-slab .tala-footer-menu:empty {
@@ -850,16 +860,22 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 }
 
 .tala-slab .tala-footer-menu .wp-block-navigation__container {
-	flex: 1 0 auto;
-	flex-flow: row wrap;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 	align-items: stretch;
 	gap: 1px;
 	background-color: var(--tala-line);
 }
 
+@container tala-footer (width < 48rem) {
+
+	.tala-slab .tala-footer-menu.wp-block-navigation .wp-block-navigation__container > .wp-block-navigation-item:last-child:nth-child(odd) {
+		grid-column: 1 / -1;
+	}
+}
+
 .tala-slab .tala-footer-menu.wp-block-navigation .wp-block-navigation__container > .wp-block-navigation-item {
 	display: flex;
-	flex: 1 1 10rem;
 	flex-flow: column nowrap;
 	align-items: flex-start;
 	justify-content: flex-start;
@@ -942,7 +958,8 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
    its length (--tala-chars, set by tala_blog_wordmark()) so it spans the band whatever the title;
    the band clips the bottoms of the letters. Inter's display cut at every size (as NASH's SVG
    wordmark, drawn at 330px), so a title's width doesn't change with the window: its capitals
-   average about 0.6em, and 1.6em per character spans 92-98% of the band for most titles. One of
+   average about 0.6em, and 1.6em per character spans 92-98% of the band for most titles; a short
+   one stops at a third of the band's width (NASH's 330 in 1000), so it isn't cut off. One of
    unusually wide letters overflows both ends equally. The fill paints over the stroke's inner
    half, which hides the variable font's overlapping contours. */
 .tala-wordmark-band {
@@ -958,7 +975,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	color: var(--wp--preset--color--slab);
 	display: flex;
 	justify-content: center;
-	font: 300 calc(100cqi / var(--tala-chars, 12) * 1.6) / 0.8 var(--wp--preset--font-family--inter);
+	font: 300 min(calc(100cqi / var(--tala-chars, 12) * 1.6), 33cqi) / 0.8 var(--wp--preset--font-family--inter);
 	font-variation-settings: "opsz" 32;
 	letter-spacing: -0.018em;
 	text-transform: uppercase;

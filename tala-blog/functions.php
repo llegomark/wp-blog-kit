@@ -337,6 +337,37 @@ function tala_blog_footer_columns( $html, $block ) {
 	return $nav->get_updated_html();
 }
 
+add_filter( 'render_block_core/group', 'tala_blog_footer_cells', 10, 2 );
+
+/**
+ * The footer's cells (the Group with the class "tala-cells") get the number of the menu's columns
+ * (--tala-columns, from tala_blog_footer_columns()), so from 48rem of footer they lay out as one
+ * row: the brand cell 2fr and each column 1fr.
+ *
+ * @param string               $html  Rendered Group.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_footer_cells( $html, $block ) {
+	if ( ! tala_blog_block_has_class( $block, 'tala-cells' ) ) {
+		return $html;
+	}
+	$tags = new WP_HTML_Tag_Processor( $html );
+	if ( ! $tags->next_tag() ) {
+		return $html;
+	}
+	$tags->set_bookmark( 'cells' );
+	while ( $tags->next_tag( array( 'tag_name' => 'nav' ) ) ) {
+		if ( $tags->has_class( 'tala-footer-menu' ) && preg_match( '/--tala-columns:(\d+)/', (string) $tags->get_attribute( 'style' ), $columns ) ) {
+			$tags->seek( 'cells' );
+			$style = trim( (string) $tags->get_attribute( 'style' ) );
+			$tags->set_attribute( 'style', ( '' === $style ? '' : rtrim( $style, ';' ) . ';' ) . '--tala-columns:' . $columns[1] );
+			break;
+		}
+	}
+	return $tags->get_updated_html();
+}
+
 // Don't fetch pattern directory patterns into the editor.
 add_filter( 'should_load_remote_block_patterns', '__return_false' );
 

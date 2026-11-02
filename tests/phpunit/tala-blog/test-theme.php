@@ -531,7 +531,7 @@ HTML;
 		$footer = $this->footer();
 		$this->assertMatchesRegularExpression( '#^<footer[^>]*>\s*<div class="wp-block-group tala-slab[ "]#', $footer );
 		$this->assertMatchesRegularExpression( '/<div class="wp-block-group tala-rail[ "]/', $footer );
-		$this->assertMatchesRegularExpression( '/<div class="wp-block-group tala-cells[ "]/', $footer );
+		$this->assertMatchesRegularExpression( '/<div (?=[^>]*class="wp-block-group tala-cells[ "])[^>]*style="--tala-columns:2"/', $footer, 'The cells know the columns' );
 		$this->assertSame( 1, preg_match_all( '/<nav [^>]*>/', $footer, $navs ), 'One menu' );
 		$this->assertStringContainsString( 'tala-footer-menu', $navs[0][0] );
 		// Core numbers a name it has already used on the page ("Footer 2"), as each test renders the footer again.
@@ -569,6 +569,7 @@ HTML;
 		$footer = $this->footer();
 		$this->assertSame( array_merge( $column, array( 'UL', 'LI', 'A' ) ), $this->link_breadcrumbs( $footer, 'Contact' ), 'Pages in one column' );
 		$this->assertMatchesRegularExpression( '/<nav [^>]*--tala-columns:1[;"]/', $footer );
+		$this->assertMatchesRegularExpression( '/<div (?=[^>]*class="wp-block-group tala-cells[ "])[^>]*style="--tala-columns:1"/', $footer );
 		$this->assertStringNotContainsString( 'wp-block-page-list', $footer );
 	}
 
