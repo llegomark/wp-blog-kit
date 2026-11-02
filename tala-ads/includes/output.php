@@ -179,26 +179,60 @@ function tala_ads_innity_args( array $args ) {
 	return array() === $args ? new stdClass() : $args;
 }
 
+/**
+ * Where Innity may load: pages with ads, but not searches or Google's results page, whose addresses
+ * carry what readers typed (Innity's tags send the page's full address to its servers).
+ *
+ * @return bool
+ */
+function tala_ads_innity_allowed() {
+	$results = tala_ads_search_page();
+	return tala_ads_show_ads() && ! is_search() && ! ( $results && is_page( $results ) );
+}
+
+/**
+ * The gate Innity's zones go through, window.talaAdsInnity( show, later, skip ): show() runs, any
+ * error it throws caught; with later, only once the page has loaded and the browser is idle (or after 2 seconds).
+ * With Google's messages on, it first waits for Google's consent data, and where the GDPR applies
+ * runs skip() instead: Innity's tags read no consent signal of their own, and set an identifier
+ * cookie (iUUID) and share it with partners.
+ */
+function tala_ads_innity_gate(): void {
+	if ( wp_script_is( 'tala-ads-innity-gate', 'registered' ) ) {
+		return;
+	}
+	$consent = tala_ads_settings()['consent']
+		? 'window.googlefc=window.googlefc||{};googlefc.callbackQueue=googlefc.callbackQueue||[];googlefc.callbackQueue.push({CONSENT_DATA_READY:function(){if("function"!==typeof window.__tcfapi){run();return}__tcfapi("getTCData",2,function(d,ok){if(ok&&d&&true===d.gdprApplies){if(skip)skip()}else{run()}})}});'
+		: 'run();';
+	wp_register_script( 'tala-ads-innity-gate', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
+	wp_add_inline_script(
+		'tala-ads-innity-gate',
+		'window.talaAdsInnity=function(show,later,skip){function go(){try{show()}catch(e){}}function run(){if(!later){go();return}function idle(){(window.requestIdleCallback||function(f){setTimeout(f,1)})(go,{timeout:2000})}if("complete"===document.readyState){idle()}else{window.addEventListener("load",idle)}}' . $consent . '};'
+	);
+}
+
 add_action( 'wp_enqueue_scripts', 'tala_ads_innity_universal' );
 
 /**
  * Innity's Universal tags on every page with ads: one zone for screens 768 px wide or more and one
  * for narrower ones, each optional. Innity's server picks the format (an in-read ad in the article,
  * an in-image ad, or, on phones, full-screen ones). The page cache gives every device the same
- * HTML, so the browser picks the zone for its screen; a screen without a zone loads none.
+ * HTML, so the browser picks the zone for its screen; a screen without a zone loads none. It loads
+ * once the page has (its in-read ad only draws when scrolled to), so it doesn't compete with the page.
  */
 function tala_ads_innity_universal(): void {
 	$settings = tala_ads_settings();
 	if ( '' === $settings['innity_key'] || ( '' === $settings['innity_desktop'] && '' === $settings['innity_mobile'] )
-		|| ! tala_ads_show_ads() ) {
+		|| ! tala_ads_innity_allowed() ) {
 		return;
 	}
-	wp_register_script( 'tala-ads-innity-universal', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
+	tala_ads_innity_gate();
+	wp_register_script( 'tala-ads-innity-universal', false, array( 'tala-ads-innity-gate' ), TALA_ADS_VERSION, array( 'in_footer' => true ) );
 	wp_enqueue_script( 'tala-ads-innity-universal' );
 	wp_add_inline_script(
 		'tala-ads-innity-universal',
 		sprintf(
-			'window.innity_adZoneAsync=window.innity_adZoneAsync||{};innity_adZoneAsync.q=innity_adZoneAsync.q||[];(function(zone){if(zone){innity_adZoneAsync.q.push(function(){innity_adZoneAsync.display(%s,zone,%s);});}})(window.matchMedia("(min-width: 768px)").matches?%s:%s);',
+			'(function(zone){if(zone){talaAdsInnity(function(){window.innity_adZoneAsync=window.innity_adZoneAsync||{};innity_adZoneAsync.q=innity_adZoneAsync.q||[];innity_adZoneAsync.q.push(function(){try{innity_adZoneAsync.display(%s,zone,%s)}catch(e){}})},true)}})(window.matchMedia("(min-width: 768px)").matches?%s:%s);',
 			wp_json_encode( $settings['innity_key'] ),
 			wp_json_encode( tala_ads_innity_args( array() ) ),
 			wp_json_encode( $settings['innity_desktop'] ),
@@ -216,7 +250,7 @@ function tala_ads_innity_universal(): void {
  */
 function tala_ads_innity_here() {
 	return '' !== tala_ads_settings()['innity_key'] && is_singular( tala_ads_post_types() ) && in_the_loop()
-		&& is_main_query() && get_the_ID() === get_queried_object_id() && ! post_password_required() && tala_ads_show_ads();
+		&& is_main_query() && get_the_ID() === get_queried_object_id() && ! post_password_required() && tala_ads_innity_allowed();
 }
 
 add_filter( 'the_content', 'tala_ads_innity_box', 20 );
@@ -225,7 +259,8 @@ add_filter( 'the_content', 'tala_ads_innity_box', 20 );
  * The Innity box (300 × 250) in the post or page the request shows, once: after its sixth
  * paragraph, where readers still are, or after its text when it has fewer. Its 250 px are kept free
  * while the ad loads, so the page doesn't jump, and close when Innity sends no ad (a zone whose
- * alternate ad is "Blank Ad", when nothing is sold) or none arrives, as behind an ad blocker.
+ * alternate ad is "Blank Ad", when nothing is sold), none arrives, as behind an ad blocker, or Innity
+ * doesn't load (see tala_ads_innity_gate()).
  *
  * @param string $content Post content.
  * @return string
@@ -241,15 +276,18 @@ function tala_ads_innity_box( $content ) {
 		'width'  => '300',
 		'height' => '250',
 	);
-	wp_register_script( 'tala-ads-innity-zone', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
+	tala_ads_innity_gate();
+	wp_register_script( 'tala-ads-innity-zone', false, array( 'tala-ads-innity-gate' ), TALA_ADS_VERSION, array( 'in_footer' => true ) );
 	wp_enqueue_script( 'tala-ads-innity-zone' );
 	// Innity draws its ad (or nothing) in a frame of the page's own origin, so the page can look
-	// inside: no element of at least 50 × 50 once the frame has finished loading means no ad.
+	// inside. Its blank ad hides that frame; otherwise no element of at least 50 × 50 once the frame
+	// has finished loading means no ad.
 	wp_add_inline_script(
 		'tala-ads-innity-zone',
 		sprintf(
-			'window.innity_adZoneAsync=window.innity_adZoneAsync||{};innity_adZoneAsync.q=innity_adZoneAsync.q||[];innity_adZoneAsync.q.push(function(){innity_adZoneAsync.display(%1$s,%2$s,%3$s);});' .
-			'(function(box){if(!box)return;var waited=0,settled=0;function hasAd(d){var e=d.body?d.body.getElementsByTagName("*"):[];for(var i=0;i<e.length;i++){var r=e[i].getBoundingClientRect();if(r.width>=50&&r.height>=50)return true}return false}function check(){var f=box.getElementsByTagName("iframe")[0],d=null;try{d=f?f.contentDocument:null}catch(x){return}if(d&&hasAd(d))return;waited++;if(d&&"complete"===d.readyState)settled++;if(settled<5&&waited<(f?40:15)){setTimeout(check,1000);return}box.parentNode.style.display="none"}setTimeout(check,1000)})(document.getElementById(%4$s));',
+			'(function(box){if(!box)return;function close(){box.parentNode.style.display="none"}' .
+			'talaAdsInnity(function(){window.innity_adZoneAsync=window.innity_adZoneAsync||{};innity_adZoneAsync.q=innity_adZoneAsync.q||[];innity_adZoneAsync.q.push(function(){try{innity_adZoneAsync.display(%1$s,%2$s,%3$s)}catch(e){}})},false,close);' .
+			'var waited=0,settled=0;function hasAd(d){var e=d.body?d.body.getElementsByTagName("*"):[];for(var i=0;i<e.length;i++){var r=e[i].getBoundingClientRect();if(r.width>=50&&r.height>=50)return true}return false}function check(){var f=box.getElementsByTagName("iframe")[0],d=null;if(f&&"none"===f.style.display){close();return}try{d=f?f.contentDocument:null}catch(x){return}if(d&&hasAd(d))return;waited++;if(d&&"complete"===d.readyState)settled++;if(settled<5&&waited<(f?40:15)){setTimeout(check,1000);return}close()}setTimeout(check,1000)})(document.getElementById(%4$s));',
 			wp_json_encode( tala_ads_settings()['innity_key'] ),
 			wp_json_encode( $zone ),
 			wp_json_encode( tala_ads_innity_args( $args ) ),

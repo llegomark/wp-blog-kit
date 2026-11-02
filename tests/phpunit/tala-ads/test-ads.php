@@ -438,6 +438,80 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * Innity's zones go through one gate: with Google's messages on, they wait for Google's consent
+	 * data and don't load where the GDPR applies (the box then closes); the Universal tag waits for
+	 * the page to load; errors in Innity's code are caught; the box closes as soon as Innity's blank
+	 * ad hides its frame.
+	 */
+	public function test_innity_gate(): void {
+		update_option( 'tala_ads', array_merge( self::ALL, array( 'innity_desktop' => '103008' ) ) );
+		$id = $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.', 'Three.', 'Four.', 'Five.', 'Six.', 'Seven.' ) ) );
+		$this->go_to( get_permalink( $id ) );
+		$this->page_head();
+		the_post();
+		apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
+		$footer = get_echo( 'wp_print_footer_scripts' );
+		$this->assertSame( 1, substr_count( $footer, 'window.talaAdsInnity=function(show,later,skip)' ), 'One gate for both zones.' );
+		$this->assertStringContainsString( 'googlefc.callbackQueue.push({CONSENT_DATA_READY:', $footer );
+		$this->assertStringContainsString( 'if(ok&&d&&true===d.gdprApplies){if(skip)skip()}else{run()}', $footer, 'No Innity where the GDPR applies.' );
+		$this->assertStringContainsString( 'window.addEventListener("load",idle)', $footer );
+		$this->assertStringContainsString( '}catch(e){}})},true)}})(window.matchMedia("(min-width: 768px)")', $footer, 'The Universal tag after the page has loaded.' );
+		$this->assertStringContainsString( 'try{innity_adZoneAsync.display("0123456789abcdef0123456789abcdef",zone,', $footer, 'Errors in Innity\'s code are caught.' );
+		$this->assertStringContainsString( '},false,close);', $footer, 'The box at once, closed when Innity may not load.' );
+		$this->assertStringContainsString( 'if(f&&"none"===f.style.display){close();return}', $footer, 'Closed as soon as the blank ad hides its frame.' );
+		$this->assertLessThan( strpos( $footer, 'tala-ads-innity-universal-js-after' ), strpos( $footer, 'tala-ads-innity-gate-js-after' ), 'The gate comes first.' );
+
+		update_option( 'tala_ads', array_merge( self::ALL, array( 'consent' => false ) ) );
+		$GLOBALS['wp_scripts'] = new WP_Scripts();
+		$other                 = $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.' ) ) );
+		$this->go_to( get_permalink( $other ) );
+		the_post();
+		apply_filters( 'the_content', get_post_field( 'post_content', $other ) );
+		$footer = get_echo( 'wp_print_footer_scripts' );
+		$this->assertStringContainsString( 'window.addEventListener("load",idle)}}run();};', $footer, 'Without Google\'s messages, no wait for consent.' );
+		$this->assertStringNotContainsString( 'googlefc', $footer );
+	}
+
+	/**
+	 * No Innity on searches or on Google's results page: their addresses carry what readers typed,
+	 * and Innity's tags send the full address to its servers.
+	 */
+	public function test_no_innity_on_searches(): void {
+		$results = $this->publish_post(
+			array(
+				'post_type'    => 'page',
+				'post_title'   => 'Search',
+				'post_content' => $this->paragraphs( 'One.', 'Two.', 'Three.', 'Four.', 'Five.', 'Six.', 'Seven.' ),
+			)
+		);
+		update_option(
+			'tala_ads',
+			array_merge(
+				self::ALL,
+				array(
+					'innity_desktop' => '103008',
+					'cse'            => '0123456789abcdef0',
+					'search_page'    => $results,
+				)
+			)
+		);
+		$this->go_to( get_permalink( $results ) );
+		$this->page_head();
+		the_post();
+		$content = apply_filters( 'the_content', get_post_field( 'post_content', $results ) );
+		$this->assertStringNotContainsString( 'innity', $content, 'No box or in-read place on the results page.' );
+		$this->assertStringNotContainsString( 'innity', get_echo( 'wp_print_footer_scripts' ), 'No Universal tag there.' );
+
+		update_option( 'tala_ads', array_merge( self::ALL, array( 'innity_desktop' => '103008' ) ) );
+		$this->post();
+		$GLOBALS['wp_scripts'] = new WP_Scripts();
+		$this->go_to( home_url( '/?s=learners' ) );
+		$this->assertTrue( is_search() );
+		$this->page_head();
+		$this->assertStringNotContainsString( 'innity', get_echo( 'wp_print_footer_scripts' ), 'No Universal tag on WordPress searches.' );
+	}
+
+	/**
 	 * With a Universal tag, the place for Innity's in-read ad: once, after the fourth paragraph (two
 	 * below the In-article ad, before the box), or after the text of a shorter post, so Innity
 	 * doesn't put it on the In-article ad.

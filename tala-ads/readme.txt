@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.5.1
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -23,6 +23,7 @@ Tala Ads puts a site's ad and tracking code in one place, outside the theme, so 
 * **Innity.** Each part optional, from the zone IDs in Innity's zone tags:
   * A 300 × 250 box after the sixth paragraph of each post and page (after the text of a shorter one), centred, with its height kept free while the ad loads so the page doesn't move. With the zone's alternate ad set to "Blank Ad", the box closes when Innity has nothing sold for it, instead of showing Innity's own ad.
   * Universal tags, one for wide screens and one for phones. Innity picks the format. Its in-read ad goes after the fourth paragraph, two below the In-article ad, instead of after the second, where Innity would put it. The phones' tag also brings full-screen formats, which cover the page on top of AdSense's vignette and anchor ads; leave it empty to keep them off.
+  * Innity's tags read no consent signal of their own and set an identifier cookie. With Google's messages on, Innity waits for Google's consent data and stays off where the GDPR applies. It also stays off searches and Google's results page, whose addresses carry what readers typed. The Universal tag loads once the page has.
 * **IDs, not code.** Each ID field keeps just the ID it asks for, even when the whole code is pasted, so nothing typed into those fields can put a script on the site.
 * **ads.txt check.** Settings → Ads says whether the site's ads.txt lists the publisher ID, without which AdSense may hold back ads.
 * **Any theme.** Every script goes through WordPress's script loader, which keeps each one to a single copy per page, and the boxes are added to the post's content. A theme only needs to call `wp_body_open()`, as WordPress asks themes to.
@@ -68,6 +69,12 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 
 == Changelog ==
 
+= 1.6.0 =
+* Changed: with Google's messages on, Innity waits for Google's consent data and doesn't load where the GDPR applies; the box then closes. Innity's tags read no consent signal of their own, and set an identifier cookie (iUUID) that they share with partners.
+* Changed: the Universal tag loads once the page has loaded and the browser is idle (at most 2 seconds later), so it doesn't compete with the page. Its in-read ad draws only when scrolled to.
+* Changed: no Innity on searches or Google's results page. Innity's tags send the page's full address, which there carries what readers typed.
+* Changed: the box closes as soon as Innity's blank ad hides its frame, instead of a few seconds later, and an error in Innity's code no longer reaches the page.
+
 = 1.5.1 =
 * Fixed: Innity's in-read ads now open in the place Tala Ads keeps for them, after the fourth paragraph. They look only for a span with the id or class innity-in-post, which the place now is; without one, they found the article themselves and opened after its second paragraph, next to the In-article ad.
 
@@ -100,6 +107,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 * First release: AdSense Auto ads, Google Tag Manager, Google's consent message and an Innity box after posts and pages, each loaded once, set up with IDs only.
 
 == Upgrade Notice ==
+
+= 1.6.0 =
+Innity now waits for Google's consent data and stays off where the GDPR applies, skips searches, and loads its Universal tag after the page.
 
 = 1.5.0 =
 The Innity box moves to after the sixth paragraph and closes when no ad comes; set its zone's alternate ad to Blank Ad in Innity. Optional Universal tags (wide screens, phones) under Settings → Ads.
