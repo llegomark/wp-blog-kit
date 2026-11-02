@@ -446,7 +446,8 @@ HTML;
 
 	/**
 	 * The home page opens with a graph-paper band: the site title as the page's display title, the
-	 * tagline as its lead, a search field and the top-level categories as chips.
+	 * tagline as its lead, a search field and the top-level categories as chips, in a navigation
+	 * landmark named "Browse by topic" by its visible label.
 	 */
 	public function test_home_header_band(): void {
 		$parent = self::factory()->category->create( array( 'name' => 'Teaching' ) );
@@ -474,6 +475,8 @@ HTML;
 		$this->assertStringNotContainsString( 'wp-block-search__button-only', $html, 'A field, not the header\'s button' );
 		$this->assertMatchesRegularExpression( '#<ul class="(?=[^"]*\bwp-block-categories\b)(?=[^"]*\btala-chips\b)[^"]*">#', $html, 'Categories as chips' );
 		$this->assertStringContainsString( '>Teaching</a>', $html );
+		$this->assertMatchesRegularExpression( '#<nav [^>]*aria-labelledby="([^"]+)"[^>]*>\s*<p [^>]*id="\1"[^>]*>Browse by topic</p>.*?tala-chips.*?</nav>#s', $html, 'A navigation landmark named by its visible label, around the chips' );
+		$this->assertStringNotContainsString( 'aria-label=', substr( $html, (int) strpos( $html, '<nav' ) ), 'Named once, by the label' );
 		$this->assertStringNotContainsString( '>Seating</a>', $html, 'Top-level categories only' );
 		$this->assertLessThan( strpos( $html, 'tala-lead' ), strpos( $html, '<h1' ), 'Title, lead, search, chips' );
 		$this->assertLessThan( strpos( $html, 'role="search"' ), strpos( $html, 'tala-lead' ) );

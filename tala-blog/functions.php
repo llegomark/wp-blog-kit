@@ -136,6 +136,37 @@ function tala_blog_empty_navigation( $html, $block ) {
 	return '';
 }
 
+add_filter( 'render_block_core/group', 'tala_blog_topics_label', 10, 2 );
+
+/**
+ * The home page's topics (the Group with the class "tala-topics") are a navigation landmark named
+ * by their visible label, the paragraph with the class "tala-topics__label", through aria-labelledby,
+ * so screen readers announce "Browse by topic" once, as the landmark's name. (A Group can save an
+ * aria-label, but not a reference to another block.)
+ *
+ * @param string               $html  Rendered Group.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_topics_label( $html, $block ) {
+	if ( ! tala_blog_block_has_class( $block, 'tala-topics' ) ) {
+		return $html;
+	}
+	$tags = new WP_HTML_Tag_Processor( $html );
+	if ( ! $tags->next_tag() || ! $tags->set_bookmark( 'landmark' ) || ! $tags->next_tag( array( 'class_name' => 'tala-topics__label' ) ) ) {
+		return $html;
+	}
+	$id = $tags->get_attribute( 'id' );
+	if ( ! is_string( $id ) || '' === $id ) {
+		$id = wp_unique_id( 'tala-topics-label-' );
+		$tags->set_attribute( 'id', $id );
+	}
+	$tags->seek( 'landmark' );
+	$tags->remove_attribute( 'aria-label' );
+	$tags->set_attribute( 'aria-labelledby', $id );
+	return $tags->get_updated_html();
+}
+
 /**
  * Whether a parsed block has a class (its "Additional CSS class(es)").
  *

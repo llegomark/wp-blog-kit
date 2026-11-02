@@ -1424,8 +1424,9 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	margin-block-start: 1.25rem;
 }
 
+/* Display type is narrower: NASH measures it in its own "ch" of 0.594em. */
 .tala-intro > .tala-display {
-	max-inline-size: calc(20 * 0.628em);
+	max-inline-size: calc(20 * 0.594em);
 }
 
 .tala-intro .tala-lead {
@@ -1445,6 +1446,16 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	color: var(--wp--preset--color--muted);
 }
 
+/* The author archive: the photo beside the name and bio. */
+.tala-author-intro {
+	gap: var(--wp--preset--spacing--30);
+}
+
+.tala-author-intro .wp-block-avatar {
+	flex: none;
+	margin: 0;
+}
+
 .tala-intro .wp-block-search {
 	max-inline-size: 30rem;
 }
@@ -1460,6 +1471,20 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	padding-block: 0;
 }
 
+/* The home page's topics: a navigation landmark named by its label, "Browse by topic", over the
+   top-level categories as chips. */
+.tala-intro > .tala-topics {
+	margin-block-start: 1.75rem;
+}
+
+.tala-topics > * {
+	margin-block: 0;
+}
+
+.tala-topics > * + * {
+	margin-block-start: 0.75rem;
+}
+
 /* Chips: square (2px), a hairline box on the surface, 44px tall; cobalt on hover. */
 .tala-chips {
 	display: flex;
@@ -1467,10 +1492,6 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	gap: 0.5rem;
 	padding: 0;
 	list-style: none;
-}
-
-.tala-intro > .tala-chips {
-	margin-block-start: 1.75rem;
 }
 
 .tala-chips li {
@@ -1642,20 +1663,21 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	font-weight: 500;
 }
 
-/* "Previous page" and "Next page": outline buttons with arrows, under a rule across the rail. */
+/* "Previous page" and "Next page": outline buttons with arrows, under a rule across the rail.
+   "No articles found" sits right under the title band's own rule, so it needs none. */
 .tala-rows .wp-block-query-pagination,
 .tala-rows .wp-block-query-no-results {
 	margin: 0;
 	padding: clamp(2rem, 1.5rem + 2vw, 3rem) var(--tala-rail-pad);
+}
+
+.tala-rows .wp-block-query-pagination {
+	gap: 0.75rem;
 	border-block-start: 1px solid var(--wp--preset--color--rule);
 }
 
 .tala-rows .wp-block-query-no-results > * {
 	margin: 0;
-}
-
-.tala-rows .wp-block-query-pagination {
-	gap: 0.75rem;
 }
 
 .tala-rows :is(.wp-block-query-pagination-previous, .wp-block-query-pagination-next) {

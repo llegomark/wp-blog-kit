@@ -476,7 +476,7 @@ const rows = ( page ) =>
 		const s = getComputedStyle( title );
 		return {
 			count: all.length,
-			images: document.querySelectorAll( 'main img, main .wp-block-post-featured-image' ).length,
+			images: document.querySelectorAll( 'main .tala-rows img, main .tala-rows .wp-block-post-featured-image' ).length,
 			columns: getComputedStyle( row ).gridTemplateColumns,
 			meta: { top: box( row.querySelector( '.tala-row__meta' ) ).top, bottom: box( row.querySelector( '.tala-row__meta' ) ).bottom, left: box( row.querySelector( '.tala-row__meta' ) ).left },
 			text: { top: box( row.querySelector( '.tala-row__text' ) ).top, left: box( row.querySelector( '.tala-row__text' ) ).left },
@@ -495,7 +495,7 @@ test.describe( 'article lists, desktop', () => {
 	test.use( DESKTOP );
 
 	test( 'ruled rows, a 9rem column for the date and category beside the title; no pictures', async ( { page } ) => {
-		for ( const path of [ pages.home, pages.category, pages.search ] ) {
+		for ( const path of [ pages.home, pages.category, pages.author, pages.search ] ) {
 			await page.goto( path );
 			const list = await rows( page );
 			expect( list.count, path ).toBeGreaterThan( 0 );
@@ -510,6 +510,54 @@ test.describe( 'article lists, desktop', () => {
 			expect( list.rules.every( ( rule ) => '1px solid' === rule ), path ).toBe( true );
 			expect( list.excerpt ).toBe( '15px' );
 		}
+	} );
+
+	test( 'title bands draw no rules inside them (controls and chips have their own boxes)', async ( { page } ) => {
+		for ( const path of [ pages.home, pages.category, pages.tag, pages.author, pages.date, pages.search ] ) {
+			await page.goto( path );
+			const ruled = await page.evaluate( () =>
+				[ ...document.querySelectorAll( 'main .tala-intro *' ) ]
+					.filter( ( el ) => ! el.matches( 'input, button, .tala-chips a' ) )
+					.filter( ( el ) => [ 'Top', 'Right', 'Bottom', 'Left' ].some( ( side ) => {
+						const s = getComputedStyle( el );
+						return parseFloat( s[ `border${ side }Width` ] ) > 0 && 'none' !== s[ `border${ side }Style` ];
+					} ) )
+					.map( ( el ) => `${ el.tagName.toLowerCase() }.${ [ ...el.classList ].join( '.' ) }` ),
+			);
+			expect( ruled, path ).toEqual( [] );
+		}
+	} );
+
+	test( 'no articles found: one rule under the title band, not two', async ( { page } ) => {
+		await page.goto( pages.searchNone );
+		const edges = await page.evaluate( () => {
+			const band = document.querySelector( 'main .tala-band--paper' );
+			const none = document.querySelector( 'main .tala-rows .wp-block-query-no-results' );
+			return {
+				band: getComputedStyle( band ).borderBottomWidth,
+				none: getComputedStyle( none ).borderTopWidth,
+				touching: Math.abs( none.getBoundingClientRect().top - band.getBoundingClientRect().bottom ) < 1,
+			};
+		} );
+		expect( edges ).toEqual( { band: '1px', none: '0px', touching: true } );
+	} );
+
+	test( 'the home page\'s topics: a navigation landmark named "Browse by topic", 44 px square-cornered chips', async ( { page } ) => {
+		await page.goto( pages.home );
+		const topics = page.getByRole( 'navigation', { name: 'Browse by topic' } );
+		await expect( topics ).toBeVisible();
+		const chips = await topics.locator( '.tala-chips a' ).evaluateAll( ( links ) =>
+			links.map( ( a ) => [ a.getBoundingClientRect().height >= 44, getComputedStyle( a ).borderTopLeftRadius ] ),
+		);
+		expect( chips.length ).toBeGreaterThan( 0 );
+		expect( new Set( chips.map( String ) ) ).toEqual( new Set( [ 'true,2px' ] ) );
+	} );
+
+	test( 'the home page\'s display title wraps at NASH\'s measure-20 of display type (0.594em a "ch")', async ( { page } ) => {
+		await page.goto( pages.home );
+		const measure = await page.evaluate( () => parseFloat( getComputedStyle( document.querySelector( 'main .tala-intro > .tala-display' ) ).maxWidth ) );
+		// 60 px display type at 1280 px.
+		expect( measure ).toBeCloseTo( 20 * 0.594 * 60, 0 );
 	} );
 
 	test( 'the title link: heading ink, a cobalt underline on hover', async ( { page } ) => {
