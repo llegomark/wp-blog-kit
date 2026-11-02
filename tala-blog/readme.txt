@@ -6,21 +6,22 @@ Requires PHP: 8.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-A minimal, fast blog theme for long reads on phones: near-black text on a near-white page, and an automatic dark mode.
+A fast blog theme for long reads on phones, in a "drafting paper" look: dark ink on warm paper, one cobalt accent, Inter, and a Light/Dark switch.
 
 == Description ==
 
 Tala Blog is a block theme for blogs that are mostly read on phones.
 
-* A quiet reading page: near-black text on a near-white page, a 640 px column, fine dotted link underlines and hairline dividers. Dark mode is the same look inverted, chosen automatically from the reader's device setting.
-* System fonts only: nothing to download, and the theme's CSS is inlined, so a page needs no stylesheet requests.
-* Colour and typography presets (Appearance → Editor → Styles → Browse styles): Sepia, Blue and Green, each with a dark mode of its own and text contrast of at least 6:1 like the default colours, and Serif or Serif headings, with the device's own serif font.
-* A header with the site logo (when the site has one) beside the site title, and the site's menu, or its pages until there is one. On phones it folds behind a menu button and opens full screen in the page's colours, light or dark.
-* A search form at the top of every page but the home page, above the breadcrumbs, as the page's one search form (the home page has it in the footer).
-* "In this article": on an article with three sections or more, a table of contents after its opening paragraphs, folded into one line until it's opened, with each section and its subsections linked to a readable anchor ("#start-with-the-objective"). It follows Google's guidance for links and "Jump to" links: plain links named by the headings' own words, anchors that describe their section, existing anchors kept. Appearance → Customize → Table of contents turns it off or sets the number of sections; the class tala-no-contents keeps a heading (or a group's headings) out of it.
-* Article pages: breadcrumbs, "Published" and "Updated" dates with their times, the article itself (the featured image is used in lists and link previews, not repeated above the text), "Filed under" categories and tags, then "Keep reading": up to three recent articles from the same categories and the older and newer articles as cards, placed right after the article where readers decide what to read next; then an author box with biography and comments with their dates. The HTML says what each part is: the title and dates are the article's header and the categories and tags its footer, "Keep reading" is a navigation landmark of its own, and each comment is an article.
-* Article lists (home page, archives, search results): title, summary, date and a thumbnail of the featured image, with links to newer and older articles. Numbered pages are a choice in Appearance → Customize → Article lists, off by default, so the number of pages isn't on show.
-* Accessible: one H1 per page, uniquely named landmarks, one search form per page, a skip link, visible keyboard focus, text contrast of at least 6:1 and form fields of at least 3:1 in both colour schemes and with every colour preset, and long words that wrap instead of widening the page when zoomed.
+* A "drafting paper" look: dark ink on a warm paper colour, one cobalt accent used sparingly, and every section a full-width band ruled underneath, with a centred rail (60rem, so side-rail ads keep room beside it) whose side rules meet the bands at small diamond nodes. Graph paper shows only behind the title bands, the call to action and the 404 panel, never behind text.
+* Inter, self-hosted: the variable Latin font (and its Latin Extended and italic subsets only for the characters that need them) ships with the theme and is preloaded, with metric-matched fallbacks so the page barely moves when it arrives. No font service is called, and the theme's CSS is inlined, so a page needs no stylesheet requests.
+* A Light/Dark switch in the header: until the reader chooses, the page follows their device; their choice is kept in the browser and applied on every page before it paints, so it never flashes. It is a toggle button named "Dark theme", pressed in dark mode. Without JavaScript the page follows the device and the switch is hidden.
+* A header with the site logo (when the site has one) beside the site title, the site's menu (or its pages until there is one), a search button that opens into a field, and the switch. On narrow screens the menu folds behind a button and opens as a side sheet.
+* A cobalt footer: the site title and tagline, a "Footer note" template part under them, the site's menu as columns (one per item with a submenu, the other items in a last column), the copyright line, and the site title as a giant outlined wordmark (hidden from screen readers).
+* Article lists (home page, archives, search results) as ruled rows without pictures: the date and first category on the left, the title and summary on the right, then "Previous page" and "Next page". The home page opens with the site title, a search field and the top-level categories as chips. Numbered pages are a choice in Appearance → Customize → Article lists, off by default.
+* Article pages: a title band with the breadcrumbs, the first category, the title in large italic display type, the excerpt, the author, the "Published" and "Updated" dates and the reading time (220 words a minute); then the text in a 72-character column, with "On this page" after the opening paragraphs on articles with three sections or more (a closed box listing each section and its subsections, linked to readable anchors; Appearance → Customize → Table of contents turns it off or sets the number of sections; the class tala-no-contents keeps a heading out of it); then the categories and tags as chips, "Read next" (up to three recent articles from the same categories, then the older and newer articles), the author box with biography, and comments with their dates.
+* A "Call to action" template part after the content of every post, page and list, empty until it is filled in the Site Editor; the "Closing call to action" pattern gives a ready band (heading, lead, one button) to fill it with. An empty part prints nothing.
+* Accessible: one H1 per page, uniquely named landmarks, a skip link, visible keyboard focus, targets of at least 44 px, text contrast of at least 4.5:1 (body text far more) and form field edges of at least 3:1 in both colour schemes, and long words that wrap instead of widening the page when zoomed.
+* Forms and embeds follow the switch: Gravity Forms (Orbital and the 2.5 theme), the comment form, the search fields and PDF Embedder's viewer take the theme's controls in light and dark.
 * Prints just the article, with its dates and author, in black on white.
 * Translation-ready: every text in the templates comes from translatable patterns (text domain tala-blog), and translated block settings are escaped as JSON, so no translation can break a block.
 
@@ -34,32 +35,50 @@ Pairs with the Tala SEO plugin, which provides the breadcrumbs block and the str
 1. Download the zip of the latest version from https://github.com/llegomark/wp-blog-kit/releases (under Assets).
 2. In Appearance → Themes → Add New Theme → Upload Theme, choose the zip, install it and activate it.
 3. Optional: the Tala SEO plugin, from the same page, adds breadcrumbs and structured data.
+4. Optional: fill the "Call to action" and "Footer note" template parts in Appearance → Editor → Patterns.
 
 == Frequently Asked Questions ==
 
 = How many articles does a page show? =
 
-As many as Settings → Reading → "Blog pages show at most" says (10 by default). Older articles follow on numbered pages.
+As many as Settings → Reading → "Blog pages show at most" says (10 by default). Older articles follow on the next pages.
 
-= How do I change the header menu? =
+= How do I change the header menu and the footer columns? =
 
-In Appearance → Editor → Navigation. Until you make a menu, the header lists the site's pages (child pages left out), and WordPress saves that list as a menu called "Navigation" that you can edit. On phones the same menu opens from the menu button; its full-screen view is the "Menu overlay" template part in Appearance → Editor → Patterns.
+In Appearance → Editor → Navigation. The header and the footer both use the site's menu: in the footer, each top-level item with a submenu becomes a column headed by its label, and the items without a submenu share a last column. Until you make a menu, both list the site's pages (child pages left out), and WordPress saves that list as a menu called "Navigation" that you can edit. On narrow screens the header menu opens as a side sheet, the "Menu overlay" template part in Appearance → Editor → Patterns.
+
+= How do I add a closing call to action or a note in the footer? =
+
+In Appearance → Editor → Patterns, open the "Call to action" template part and insert the "Closing call to action" pattern (or any blocks), then write your own text and link; it shows after the content of every post, page and list. The "Footer note" part sits under the tagline in the footer, for a short line such as a disclaimer. Both are saved in the site's database, so theme updates leave them as they are; empty, they print nothing.
 
 = How do I add a logo? =
 
-In Appearance → Editor → Patterns → Header, select the logo placeholder beside the site title and choose an image. It appears 28 px wide in the header and in the phone menu. A square or round image works best. The logo isn't a link and screen readers skip it, because the site title beside it already names the site and links to the home page.
+In Appearance → Editor → Patterns → Header, select the logo placeholder beside the site title and choose an image. It appears 28 px wide in the header and in the menu sheet. A square or round image works best. The logo isn't a link and screen readers skip it, because the site title beside it already names the site and links to the home page.
 
-= How do I change the colours or the fonts? =
+= Can I change the colours or the font? =
 
-In Appearance → Editor → Styles → Browse styles. Under "Color variations", Sepia, Blue and Green replace the light colours and the dark-mode colours together; under "Typography", Serif sets all text in the device's serif font and Serif headings only the headings and the site title. "Default" goes back to the theme's own. Both use fonts already on the reader's device, so nothing is downloaded.
+The theme has one look on purpose: the colour presets and serif presets of version 1 are gone. Appearance → Editor → Styles still changes colours and fonts for a site, as with any block theme.
 
 = Does it work with Gravity Forms? =
 
-Yes. Forms take the page's colours, font and field style, in light and dark mode, with either of Gravity Forms' form themes (Orbital, or the Gravity Forms 2.5 theme). The rules load only on pages with a form, right after Gravity Forms' own stylesheet.
+Yes. Forms take the theme's colours, font and controls, in light and dark mode and with the Light/Dark switch, with either of Gravity Forms' form themes (Orbital, or the Gravity Forms 2.5 theme). The rules load only on pages with a form, right after Gravity Forms' own stylesheet.
 
 With Orbital, the theme's colours replace the colours set in a form block's style settings, so every form matches the page. Other form plugins that leave their fields to the browser follow the page's light or dark mode as well.
 
 == Changelog ==
+
+= 2.0.0 =
+* New look, "drafting paper": dark ink on warm paper (#393d45 on #f4f4f2; #d3d6dc on #16181d in dark mode), black headings, one cobalt accent (#1348dc, #7d9bff in dark mode), hairline rules and borders, square cards and 4 px controls with a deep-cobalt lip on buttons.
+* New: Inter, self-hosted in the theme (Inter 4.1 under the SIL Open Font License, credited below): the variable Latin font and the display italic are preloaded; the Latin Extended and italic subsets load only for the characters they cover. Metric-matched fallbacks keep the swap from moving the page. Headings are light to regular weight; titles in large italic display type.
+* New: a Light/Dark switch in the header. It follows the device until the reader chooses, keeps the choice in the browser and applies it before the page paints. A toggle button with one name, "Dark theme", pressed in dark mode; hidden without JavaScript.
+* New: every section is a full-width band ruled underneath, on a centred 60rem rail with side rules and diamond nodes; graph paper behind the title bands, the call to action and the 404 panel only.
+* New: the footer is a cobalt slab: the site title and tagline, the "Footer note" part, the site's menu as columns (one per item with a submenu, the rest in a last column), the copyright line and tagline, and the site title as a giant outlined wordmark. The footer search field is gone; search is in the header, a button that opens into a field.
+* New: the header menu opens as a side sheet on narrow screens; the home page opens with the site title, a search field and the top-level categories as chips.
+* Changed: article lists are ruled rows without thumbnails (date and first category, then title and summary), with "Previous page" and "Next page" buttons.
+* New: articles open with a title band: breadcrumbs, the first category, the title, the excerpt, the author, the dates and the reading time. "In this article" becomes "On this page", a closed box at every width. "Keep reading" becomes "Read next"; topics are chips; the author box is a card.
+* New: empty "Call to action" and "Footer note" template parts, filled per site in the Site Editor, and a "Closing call to action" pattern for the first. Empty, they print nothing.
+* Changed: Gravity Forms, the comment form, PDF Embedder's viewer and print follow the new look and the Light/Dark switch; form field edges keep 3:1 contrast.
+* Removed: the Sepia, Blue and Green colour presets and the Serif and Serif headings typography presets. One look on every site.
 
 = 1.13.0 =
 * Faster articles with a PDF: PDF Embedder's scripts (PDF.js, its viewer and the jQuery they need, about 140 KB, 490 KB unpacked) now load deferred instead of blocking the page from its head, so the article's text shows before them. Lighthouse estimated they held a phone's first paint back by up to 2.2 seconds. The viewer starts when the page is ready, as before; a script that needs jQuery at once (a Gravity Forms form) keeps it blocking.
@@ -167,6 +186,11 @@ With Orbital, the theme's colours replace the colours set in a form block's styl
 = 1.0.0 =
 * First release.
 
+== Upgrade Notice ==
+
+= 2.0.0 =
+A new look. Sites that picked a 1.x colour or typography preset lose it. The Call to action and Footer note parts are empty until filled in the Site Editor. Templates or parts customized in the Site Editor keep their old markup until their customizations are cleared.
+
 == Copyright ==
 
 Tala Blog WordPress Theme, (C) 2026 Edventure.
@@ -184,6 +208,11 @@ GNU General Public License for more details.
 
 == Resources ==
 
-The theme bundles no third-party fonts, images, scripts or icons.
+Inter (assets/fonts/*.woff2), version 4.1
+Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)
+License: SIL Open Font License, Version 1.1 (assets/fonts/OFL.txt, https://openfontlicense.org)
+Source: https://github.com/rsms/inter, subset to Latin, Latin Extended and the display italic's Latin characters.
 
-Screenshot (screenshot.png): the theme showing the kit's own demo content and a generated demo image, (C) 2026 Edventure, GPLv2 or later.
+The theme bundles no other third-party fonts, images or scripts. Its few icons (menu, search, the switch's sun and moon, chevrons, arrows) are basic line shapes written into its markup and CSS.
+
+Screenshot (screenshot.png): the theme showing the kit's own demo content, (C) 2026 Edventure, GPLv2 or later.

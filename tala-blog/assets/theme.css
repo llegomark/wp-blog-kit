@@ -74,7 +74,7 @@
 	color-scheme: light dark;
 	scrollbar-gutter: stable; /* room for the scrollbar on short pages too, so pages don't jump sideways */
 
-	/* The page frame (NASH Reviewer's): one rail every band shares, its inner padding, the diamond
+	/* The page frame (the design system's): one rail every band shares, its inner padding, the diamond
 	   nodes, the graph paper's pitch and lines, and the header's 44px controls and their gap. */
 	--tala-rail: 60rem;
 	--tala-rail-pad: clamp(1rem, 0.25rem + 3vw, 2.5rem);
@@ -85,7 +85,7 @@
 	--tala-header-gap: 0.5rem;
 	--tala-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 
-	/* Errors in forms (Gravity Forms' "Required" marks and messages): NASH's destructive red, 5:1 on
+	/* Errors in forms (Gravity Forms' "Required" marks and messages): the design system's destructive red, 5:1 on
 	   the light surface and 6:1 on the dark one. Gravity Forms' own red (#c02b0a) is 2.8:1 on the
 	   dark surface. */
 	--tala-danger: #c53b2b;
@@ -248,7 +248,7 @@ a {
 	}
 }
 
-/* Buttons, as NASH's: the accent fill with a 2px lip of the deep accent and a faint cobalt shadow
+/* Buttons, as the design system's: the accent fill with a 2px lip of the deep accent and a faint cobalt shadow
    (theme.json gives the fill). Outline buttons, and the header's icon buttons, are a hairline box
    on the surface with a faint grey lip. The lip goes on hover; a press sinks the button by 1px. */
 :where(.wp-element-button, .wp-block-button__link) {
@@ -336,7 +336,7 @@ a {
 	scroll-margin-block-start: var(--wp--preset--spacing--40);
 }
 
-/* Form fields, as NASH's controls: the surface in a 1px box, 4px corners, the text's ink. The
+/* Form fields, as the design system's controls: the surface in a 1px box, 4px corners, the text's ink. The
    surface is barely lighter than the paper, so the edge is the field's outline: muted, which keeps
    at least 3:1 against the page and the field (WCAG 1.4.11; the border colour is for cards and
    buttons). Gravity Forms' fields look the same (assets/gravity-forms-*.css). */
@@ -390,8 +390,8 @@ footer.wp-block-template-part,
 	flex-grow: 1;
 }
 
-/* The page frame, as NASH Reviewer's: every section is a full-width band ruled underneath. Inside
-   it, a centred rail (60rem, narrower than NASH's 70rem so side-rail ads keep room beside it) with
+/* The page frame, as the design system's: every section is a full-width band ruled underneath. Inside
+   it, a centred rail (60rem, narrower than the design system's 70rem so side-rail ads keep room beside it) with
    hairline side rules and a 7px diamond node where they cross the band's top rule. Bands follow
    each other with no gap, so the rails run unbroken from the header to the footer. Wide windows
    get a fainter outer pair of rules. In the editor a rail Group has no nodes: the editor draws a
@@ -462,7 +462,7 @@ footer.wp-block-template-part,
 	background-size: var(--tala-grid-pitch) var(--tala-grid-pitch);
 }
 
-/* The text column, centred in the rail: NASH's measure-72, 72 of Inter's "ch" (0.628em, written in
+/* The text column, centred in the rail: the design system's measure-72, 72 of Inter's "ch" (0.628em, written in
    em so lines don't re-wrap when Inter replaces its fallback), about 768px of 17px text. theme.json's
    content size (48rem) gives the editor the same column. */
 .tala-measure {
@@ -505,7 +505,7 @@ footer.wp-block-template-part,
 	min-block-size: 24px;
 }
 
-/* Header menu: a Navigation block with the site's menu, or its pages until there is one, as NASH's
+/* Header menu: a Navigation block with the site's menu, or its pages until there is one, as the design system's
    ghost links (15px, medium weight, heading ink, 44px tall, a wash on hover). Below 52rem it folds
    behind the menu button (WordPress folds it below 600px; the header's row needs more room) and
    opens into the menu overlay (parts/navigation-overlay.html). */
@@ -612,7 +612,7 @@ footer.wp-block-template-part,
 	transition: none;
 }
 
-/* The menu overlay, as NASH's side sheet: it covers the window and dims the page; the sheet is the
+/* The menu overlay, as the design system's side sheet: it covers the window and dims the page; the sheet is the
    full width on phones and 24rem wide from 40rem, at the right edge, in the page's colours. */
 .tala-header .wp-block-navigation__responsive-container.is-menu-open {
 	background-color: rgb(0 0 0 / 50%);
@@ -648,7 +648,7 @@ footer.wp-block-template-part,
 }
 
 /* Its top bar is the header's row: the brand exactly over the header's, the close button (a ghost
-   icon button) at the end of the row, as on NASH's sheet. */
+   icon button) at the end of the row, as on the design system's sheet. */
 .tala-overlay .wp-block-navigation-overlay-close {
 	border: 1px solid transparent;
 	background-color: transparent;
@@ -729,7 +729,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	}
 }
 
-/* The footer slab, as NASH Reviewer's: full-bleed cobalt with white text and hairlines at white
+/* The footer slab, as the design system's: full-bleed cobalt with white text and hairlines at white
    24%, the rail running on through it. A grid of cells (the brand cell, then the menu's columns),
    the bottom bar, and the hatched band with the wordmark. Its own padding sets every space in it. */
 .tala-slab {
@@ -974,12 +974,12 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	content: "© ";
 }
 
-/* The wordmark: the site title in giant outlined capitals on NASH's -45deg hatching, sized from
+/* The wordmark: the site title in giant outlined capitals on the design system's -45deg hatching, sized from
    its length (--tala-chars, set by tala_blog_wordmark()) so it spans the band whatever the title;
-   the band clips the bottoms of the letters. Inter's display cut at every size (as NASH's SVG
+   the band clips the bottoms of the letters. Inter's display cut at every size (as the design system's SVG
    wordmark, drawn at 330px), so a title's width doesn't change with the window: its capitals
    average about 0.6em, and 1.6em per character spans 92-98% of the band for most titles; a short
-   one stops at a third of the band's width (NASH's 330 in 1000), so it isn't cut off. One of
+   one stops at a third of the band's width (the design system's 330 in 1000), so it isn't cut off. One of
    unusually wide letters overflows both ends equally. The fill paints over the stroke's inner
    half, which hides the variable font's overlapping contours. */
 .tala-wordmark-band {
@@ -1005,8 +1005,8 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	user-select: none;
 }
 
-/* An article's or page's title band (its header), as NASH's: the breadcrumbs, the first category as
-   eyebrow, the title in display type (NASH's measure-24 of display type), the excerpt as lead
+/* An article's or page's title band (its header), as the design system's: the breadcrumbs, the first category as
+   eyebrow, the title in display type (the design system's measure-24 of display type), the excerpt as lead
    (measure-60, in the text's ink), then the byline over the dates and reading time. The parts sit
    1.25rem apart (.tala-intro). */
 
@@ -1090,7 +1090,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	}
 }
 
-/* The text band: NASH's padding, then the text column, its parts 2.5rem apart (the text, its
+/* The text band: the design system's padding, then the text column, its parts 2.5rem apart (the text, its
    topics, "Read next", the author box, the comments). The column is a container, so the author box
    lays out by its own width. */
 .tala-band > .tala-rail--text {
@@ -1109,7 +1109,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	margin-block-start: 2.5rem;
 }
 
-/* "On this page": the article's sections, as NASH's contents on a phone, at every width: a box on
+/* "On this page": the article's sections, as the design system's contents on a phone, at every width: a box on
    the surface, closed to one line (list icon, "On this page", the number of sections, a chevron),
    that opens into the numbered sections, each with its subsections, below a hairline. */
 .tala-contents {
@@ -1222,7 +1222,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	}
 }
 
-/* The article's text, as NASH's: 17px ink on relaxed leading, 1.25em between blocks, regular-weight
+/* The article's text, as the design system's: 17px ink on relaxed leading, 1.25em between blocks, regular-weight
    headings (sections under a hairline rule), cobalt underlined links, square bullets, quotes on the
    wash with a 2px cobalt rule, tables in a bordered box of their own. Pages get the same. The rules
    for headings reach the text's own blocks and the Groups in it, not headings inside other blocks'
@@ -1513,7 +1513,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 }
 
 /* Quotes, in articles and comments, look like the Quote block (theme.json): on the wash, square,
-   with a 2px cobalt rule at the start, as NASH's, the width of the text. A pull quote keeps its own
+   with a 2px cobalt rule at the start, as the design system's, the width of the text. A pull quote keeps its own
    look. */
 :where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not(.wp-block-pullquote > blockquote)) {
 	margin-inline: 0;
@@ -1575,7 +1575,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	margin-inline: auto;
 }
 
-/* After the text, as NASH's: each part under a hairline rule, 1.5rem above its first line. */
+/* After the text, as the design system's: each part under a hairline rule, 1.5rem above its first line. */
 
 /* "Topics": the article's categories and tags as chips (tags marked "#", for the eye only). */
 .tala-terms,
@@ -1707,7 +1707,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	}
 }
 
-/* The author box, as NASH's "About the author": a square card on the surface, the round photo
+/* The author box, as the design system's "About the author": a square card on the surface, the round photo
    (80px, on a hairline ring) beside the name from 34rem of column, above it on a phone. */
 .tala-author {
 	display: flex;
@@ -1905,7 +1905,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	font-size: var(--wp--preset--font-size--small);
 }
 
-/* The 404 page: NASH's status panel on the graph paper, centred: a large italic "404" in display
+/* The 404 page: the design system's status panel on the graph paper, centred: a large italic "404" in display
    type, the heading, the explanation, a search field and the button home. */
 .tala-status {
 	display: flex;
@@ -1942,8 +1942,8 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 }
 
 /* The closing call to action (the "Closing call to action" pattern, for the Call to action part): on
-   the graph-paper band, a square surface card with a hairline border and NASH's flat cobalt offset
-   shadow, the one raised element on the page. Eyebrow, display heading (NASH's measure-18 of display
+   the graph-paper band, a square surface card with a hairline border and the design system's flat cobalt offset
+   shadow, the one raised element on the page. Eyebrow, display heading (the design system's measure-18 of display
    type), lead (measure-44, in the text's ink), one button and a meta line, centred, 1.25rem apart. */
 .tala-cta {
 	display: flex;
@@ -1984,7 +1984,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	margin-block-start: 1.25rem;
 }
 
-/* Display type is narrower: NASH measures it in its own "ch" of 0.594em. */
+/* Display type is narrower: the design system measures it in its own "ch" of 0.594em. */
 .tala-intro > .tala-display {
 	max-inline-size: calc(20 * 0.594em);
 }
@@ -2097,7 +2097,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	}
 }
 
-/* Article lists, as NASH's: ruled rows without pictures, the rules running from side rule to side
+/* Article lists, as the design system's: ruled rows without pictures, the rules running from side rule to side
    rule (the rail adds no padding; each row pads itself). From 44rem of list the date and first
    category sit in a 9rem column beside the title and summary; narrower, above them. */
 

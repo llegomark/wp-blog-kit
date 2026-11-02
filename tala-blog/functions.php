@@ -198,7 +198,7 @@ add_filter( 'render_block_core/table', 'tala_blog_table_region' );
 /**
  * A Table block scrolls sideways in its own box when it is wider than the text column (theme.css),
  * so the page never does. Keyboard users scroll it too: the box is a region they can focus, named
- * by the table's caption, or "Table", as NASH's tables are.
+ * by the table's caption, or "Table", as the design system's tables are.
  *
  * @param string $html Rendered Table.
  * @return string
@@ -646,14 +646,16 @@ add_filter( 'styles_inline_size_limit', static fn(): int => 60000 );
 add_action( 'wp_enqueue_scripts', 'tala_blog_styles', 20 );
 
 /**
- * Inlines the theme CSS after the global styles: about 38 KB, under 10 KB once the page is
- * compressed, cheaper than another request.
+ * Inlines the theme CSS after the global styles, cheaper than another request. The comments that
+ * explain it in assets/theme.css (a quarter of the file) and the indentation stay out of the page:
+ * about 48 KB is printed, under 10 KB once the page is compressed. The editor reads the file as it is.
  */
 function tala_blog_styles(): void {
-	$css = file_get_contents( get_theme_file_path( 'assets/theme.css' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
+	$css = (string) file_get_contents( get_theme_file_path( 'assets/theme.css' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
+	$css = (string) preg_replace( array( '#/\*.*?\*/#s', '/\n\s+/' ), array( '', "\n" ), $css );
 	wp_register_style( 'tala-blog', false, array(), wp_get_theme()->get( 'Version' ) );
 	wp_enqueue_style( 'tala-blog' );
-	wp_add_inline_style( 'tala-blog', (string) $css );
+	wp_add_inline_style( 'tala-blog', trim( $css ) );
 }
 
 add_action( 'wp_head', 'tala_blog_theme_switch_script', 0 );
@@ -1218,7 +1220,7 @@ function tala_blog_reserved_ids() {
 }
 
 /**
- * The table of contents, as NASH's: a disclosure that starts closed at every width, its summary
+ * The table of contents, as the design system's: a disclosure that starts closed at every width, its summary
  * "On this page · 4 sections" between a list icon and a chevron, which opens into a navigation
  * landmark named "On this page": the sections numbered 01, 02… (numbers the eye needs, hidden from
  * screen readers, so each link is named by its heading's words alone), each with its subsections.

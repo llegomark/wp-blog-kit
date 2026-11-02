@@ -1700,6 +1700,31 @@ HTML;
 	}
 
 	/**
+	 * The theme's CSS is inlined into every page without the comments that explain it in
+	 * assets/theme.css, nor their indentation: the rules all arrive, the prose doesn't.
+	 */
+	public function test_inline_css_without_comments(): void {
+		$saved                = $GLOBALS['wp_styles'] ?? null;
+		$GLOBALS['wp_styles'] = new WP_Styles();
+		try {
+			tala_blog_styles();
+			$data = wp_styles()->get_data( 'tala-blog', 'after' );
+			$css  = implode( "\n", is_array( $data ) ? $data : array() );
+		} finally {
+			$GLOBALS['wp_styles'] = $saved;
+		}
+		$file = (string) file_get_contents( get_theme_file_path( 'assets/theme.css' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
+		$this->assertStringContainsString( '/*', $file, 'The file keeps its comments' );
+		$this->assertStringNotContainsString( '/*', $css );
+		$this->assertStringNotContainsString( '*/', $css );
+		$this->assertDoesNotMatchRegularExpression( '/\n[ \t]/', $css, 'No indentation' );
+		$this->assertLessThan( 0.8 * strlen( $file ), strlen( $css ) );
+		$this->assertStringContainsString( 'box-shadow: 6px 6px 0 color-mix(in srgb, var(--wp--preset--color--accent) 10%, transparent);', $css, 'Rules arrive as written' );
+		$rules = (string) preg_replace( '#/\*.*?\*/#s', '', $file );
+		$this->assertSame( substr_count( $rules, '{' ), substr_count( $css, '{' ), 'Every rule arrives' );
+	}
+
+	/**
 	 * The browser's theme colour and the dark-mode colours follow a chosen colour preset, also when
 	 * the person who chose it can't save unfiltered HTML: WordPress then keeps only the palette, and
 	 * the dark colours come from the preset's file. The theme ships no presets, but a child theme
