@@ -238,6 +238,36 @@ function tala_blog_gravity_forms(): void {
 	}
 }
 
+add_action( 'wp_head', 'tala_blog_pdf_viewer', 1 );
+
+/**
+ * PDF Embedder's viewer, on pages that have one (block themes have rendered the page by now):
+ *
+ * - Its scripts (PDF.js, the viewer, and the jQuery they need) load deferred instead of blocking
+ *   the page from <head>. An article's text then shows before about 140 KB of JavaScript (490 KB
+ *   unpacked) has downloaded and run; the viewer, below the opening paragraphs, starts when the page
+ *   is ready, as before. WordPress keeps a script blocking when a blocking script on the page needs
+ *   it first (a Gravity Forms form, for one), so nothing runs before what it depends on.
+ * - Its toolbar gets readable contrast (assets/pdf-embedder.css), right after its own stylesheet.
+ */
+function tala_blog_pdf_viewer(): void {
+	if ( ! wp_script_is( 'pdfemb_embed_pdf', 'enqueued' ) ) {
+		return;
+	}
+	foreach ( array( 'pdfemb_embed_pdf', 'pdfemb_pdfjs', 'jquery-core', 'jquery-migrate' ) as $handle ) { // "jquery" is an alias of these two.
+		if ( wp_script_is( $handle, 'registered' ) && ! wp_scripts()->get_data( $handle, 'strategy' ) ) {
+			wp_script_add_data( $handle, 'strategy', 'defer' );
+		}
+	}
+	if ( wp_style_is( 'pdfemb_embed_pdf_css', 'enqueued' ) ) {
+		$css   = (string) file_get_contents( get_theme_file_path( 'assets/pdf-embedder.css' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
+		$after = wp_styles()->get_data( 'pdfemb_embed_pdf_css', 'after' );
+		if ( ! is_array( $after ) || ! in_array( $css, $after, true ) ) {
+			wp_add_inline_style( 'pdfemb_embed_pdf_css', $css );
+		}
+	}
+}
+
 add_action( 'init', 'tala_blog_remove_emoji' );
 
 /**

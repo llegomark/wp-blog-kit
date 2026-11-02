@@ -1,0 +1,8 @@
+/* PDF Embedder's viewer: its toolbar's light grey text (#d3d3d3) on a mid-grey bar (#808080) is 2.6:1.
+   On the theme's text colour (#3f3f3f) as the bar it is 7:1 (WCAG 1.4.3), in light and dark mode.
+   Loaded only on pages with a viewer, right after PDF Embedder's stylesheet
+   (functions.php: tala_blog_pdf_viewer()). */
+
+.pdfemb-viewer .pdfemb-toolbar {
+	background-color: #3f3f3f;
+}

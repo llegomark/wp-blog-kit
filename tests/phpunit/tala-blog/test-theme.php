@@ -986,4 +986,78 @@ HTML;
 			$GLOBALS['wp_styles'] = $saved;
 		}
 	}
+
+	/**
+	 * The script tag with this ID in the printed HTML (its attributes in any order), or ''.
+	 *
+	 * @param string $html Printed scripts.
+	 * @param string $id   The tag's id.
+	 */
+	private function script_tag( string $html, string $id ): string {
+		return preg_match( '#<script\b[^>]*\bid="' . preg_quote( $id, '#' ) . '"[^>]*>#', $html, $m ) ? $m[0] : '';
+	}
+
+	/**
+	 * The scripts as PDF Embedder registers them: in <head>, without a loading strategy.
+	 */
+	private function register_pdf_embedder(): void {
+		wp_register_script( 'pdfemb_pdfjs', 'https://example.org/pdf.js', array( 'jquery' ), '2.16.105', false );
+		wp_register_script( 'pdfemb_embed_pdf', 'https://example.org/pdfemb.min.js', array( 'jquery', 'pdfemb_pdfjs' ), '5.0.2', false );
+		wp_localize_script( 'pdfemb_embed_pdf', 'pdfemb_trans', array( 'worker_src' => 'https://example.org/pdf.worker.js' ) );
+	}
+
+	/**
+	 * A page with a PDF viewer gets PDF Embedder's scripts and jQuery deferred, so they don't hold
+	 * back the article's text; a page without one keeps jQuery as it was, and a blocking script that
+	 * needs jQuery keeps jQuery blocking too.
+	 */
+	public function test_pdf_viewer_scripts_are_deferred(): void {
+		$saved = $GLOBALS['wp_scripts'] ?? null;
+		try {
+			// A page with the viewer.
+			$GLOBALS['wp_scripts'] = new WP_Scripts();
+			$this->register_pdf_embedder();
+			wp_enqueue_script( 'pdfemb_embed_pdf' );
+			tala_blog_pdf_viewer();
+			$head = get_echo( 'wp_print_head_scripts' );
+			foreach ( array( 'pdfemb_embed_pdf-js', 'pdfemb_pdfjs-js', 'jquery-core-js', 'jquery-migrate-js' ) as $id ) {
+				$this->assertMatchesRegularExpression( '#\sdefer[\s>]#', $this->script_tag( $head, $id ), "$id is deferred." );
+			}
+			$this->assertStringContainsString( 'var pdfemb_trans', $head, "The viewer's settings still come first." );
+
+			// Its toolbar's contrast, after PDF Embedder's own stylesheet, once.
+			$saved_styles         = $GLOBALS['wp_styles'] ?? null;
+			$GLOBALS['wp_styles'] = new WP_Styles();
+			wp_enqueue_style( 'pdfemb_embed_pdf_css', 'https://example.org/pdfemb.css', array(), '5.0.2' );
+			tala_blog_pdf_viewer();
+			tala_blog_pdf_viewer();
+			$after = wp_styles()->get_data( 'pdfemb_embed_pdf_css', 'after' );
+			$this->assertIsArray( $after );
+			$this->assertCount( 1, $after );
+			$this->assertStringContainsString( '.pdfemb-viewer .pdfemb-toolbar', $after[0] );
+			$GLOBALS['wp_styles'] = $saved_styles;
+
+			// The same page with a form whose script needs jQuery right away: jQuery stays blocking.
+			$GLOBALS['wp_scripts'] = new WP_Scripts();
+			$this->register_pdf_embedder();
+			wp_enqueue_script( 'pdfemb_embed_pdf' );
+			wp_enqueue_script( 'gform_gravityforms', 'https://example.org/gravityforms.js', array( 'jquery' ), '3.2.0', false );
+			wp_add_inline_script( 'gform_gravityforms', 'gform.initializeOnLoaded();' );
+			tala_blog_pdf_viewer();
+			$head   = get_echo( 'wp_print_head_scripts' );
+			$jquery = $this->script_tag( $head, 'jquery-core-js' );
+			$this->assertNotSame( '', $jquery );
+			$this->assertDoesNotMatchRegularExpression( '#\sdefer[\s>]#', $jquery, 'jQuery blocks when a blocking script needs it.' );
+
+			// A page without the viewer: nothing changes.
+			$GLOBALS['wp_scripts'] = new WP_Scripts();
+			$this->register_pdf_embedder();
+			wp_enqueue_script( 'jquery' );
+			tala_blog_pdf_viewer();
+			$this->assertFalse( wp_scripts()->get_data( 'jquery-core', 'strategy' ) );
+			$this->assertSame( 1, has_action( 'wp_head', 'tala_blog_pdf_viewer' ), 'Before the head scripts print (priority 9).' );
+		} finally {
+			$GLOBALS['wp_scripts'] = $saved;
+		}
+	}
 }

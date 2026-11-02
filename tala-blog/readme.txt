@@ -61,6 +61,11 @@ With Orbital, the theme's colours replace the colours set in a form block's styl
 
 == Changelog ==
 
+= 1.13.0 =
+* Faster articles with a PDF: PDF Embedder's scripts (PDF.js, its viewer and the jQuery they need, about 140 KB, 490 KB unpacked) now load deferred instead of blocking the page from its head, so the article's text shows before them. Lighthouse estimated they held a phone's first paint back by up to 2.2 seconds. The viewer starts when the page is ready, as before; a script that needs jQuery at once (a Gravity Forms form) keeps it blocking.
+* PDF Embedder's toolbar is readable: its light grey text now sits on the theme's dark grey (7:1, was 2.6:1).
+* The site title's link is at least 24 px tall, a touch target of the size WCAG 2.5.8 asks for.
+
 = 1.12.0 =
 * New: Gravity Forms support, in light and dark mode. The theme now styles Gravity Forms forms with the page's colours, font and field style.
 * Orbital forms: labels, fields, descriptions, buttons and focus rings use the theme's colour presets through Gravity Forms' CSS API, so they change with dark mode and the colour variations. Previously their dark labels disappeared on the dark page.

@@ -105,6 +105,13 @@ footer.wp-block-template-part {
 	border-bottom: 1px solid var(--wp--preset--color--rule);
 }
 
+/* The site title's link: at least 24px tall, a touch target of the size WCAG 2.5.8 asks for (its
+   line of text alone is 23px on phones). */
+.wp-block-site-title a {
+	display: inline-block;
+	min-block-size: 24px;
+}
+
 /* Header menu: a Navigation block with the site's menu, or its pages until there is one. On phones it
    folds behind a menu button and opens into the menu overlay (parts/navigation-overlay.html). */
 .tala-header .wp-block-navigation {
