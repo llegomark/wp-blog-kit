@@ -1034,7 +1034,11 @@ HTML;
 		$page = function () use ( $post ): string {
 			$this->go_to( get_permalink( $post ) );
 			$GLOBALS['_wp_current_template_content'] = get_block_template( 'tala-blog//single' )->content;
-			return get_the_block_template_html();
+			try {
+				return get_the_block_template_html();
+			} finally {
+				unset( $GLOBALS['_wp_current_template_content'] );
+			}
 		};
 		$html = $page();
 		$this->assertStringContainsString( 'The article text.', $html );
@@ -1065,6 +1069,9 @@ HTML;
 		$this->assertTrue( $pattern['inserter'] ?? true, 'In the inserter' );
 		$content = $pattern['content'];
 		$this->assertMatchesRegularExpression( '/class="wp-block-group tala-band tala-band--paper[ "]/', $content );
+		// A region landmark named for screen readers, so a filled part isn't content outside every landmark.
+		$this->assertMatchesRegularExpression( '/<section class="wp-block-group tala-band tala-band--paper" aria-label="Call to action">/', $content );
+		$this->assertStringContainsString( '"ariaLabel":"Call to action"', $content, 'The block attribute matches, so the block stays valid' );
 		$this->assertMatchesRegularExpression( '/<h2 class="wp-block-heading tala-display[ "]/', $content );
 		$this->assertMatchesRegularExpression( '/<p class="tala-eyebrow[ "]/', $content );
 		$this->assertMatchesRegularExpression( '/<p class="tala-lead[ "]/', $content );

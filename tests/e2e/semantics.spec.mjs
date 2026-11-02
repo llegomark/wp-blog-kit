@@ -170,6 +170,44 @@ test.describe( 'the 404 page', () => {
 	}
 } );
 
+// A site fills the Call to action part from the theme's "Closing call to action" pattern: it closes
+// the page between main and the footer, a region landmark of its own name, so axe finds nothing.
+test.describe( 'the call to action, filled from the pattern', () => {
+	test.use( PHONE );
+	let part;
+
+	test.beforeAll( () => {
+		const content = wp( 'eval', 'echo WP_Block_Patterns_Registry::get_instance()->get_registered( "tala-blog/call-to-action" )["content"];' );
+		part = wp( 'post', 'create', '--post_type=wp_template_part', '--post_status=publish', '--post_name=call-to-action', '--post_title=Call to action', `--post_content=${ content }`, '--porcelain' );
+		wp( 'post', 'term', 'set', part, 'wp_theme', 'tala-blog' );
+	} );
+
+	test.afterAll( () => {
+		wp( 'post', 'delete', part, '--force' );
+	} );
+
+	for ( const colorScheme of [ 'light', 'dark' ] ) {
+		test( `a named region between main and the footer, and axe finds nothing (${ colorScheme })`, async ( { page } ) => {
+			await page.emulateMedia( { colorScheme } );
+			for ( const name of [ 'article', 'home' ] ) {
+				await page.goto( pages[ name ] );
+				const region = page.getByRole( 'region', { name: 'Call to action' } );
+				await expect( region, name ).toHaveCount( 1 );
+				await expect( region.locator( '.tala-cta' ), name ).toHaveCount( 1 );
+				await expect( region.getByRole( 'heading', { level: 2, name: 'Ready for the next step?' } ), name ).toBeVisible();
+				expect(
+					await page.evaluate( () => {
+						const after = document.querySelector( '.wp-site-blocks > main' ).nextElementSibling;
+						return [ !! after.querySelector( 'section.tala-band' ), after.nextElementSibling?.tagName ];
+					} ),
+					name,
+				).toEqual( [ true, 'FOOTER' ] );
+				expect( await axeViolations( page ), name ).toEqual( [] );
+			}
+		} );
+	}
+} );
+
 for ( const colorScheme of [ 'light', 'dark' ] ) {
 	test.describe( `article, phone, ${ colorScheme }`, () => {
 		test.use( { ...PHONE, colorScheme } );
