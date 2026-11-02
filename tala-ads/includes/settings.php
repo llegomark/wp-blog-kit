@@ -33,7 +33,7 @@ function tala_ads_register_settings(): void {
  * The settings, with defaults. Each value is checked again on the way out, so a damaged or
  * hand-edited option can never print anything the form wouldn't have kept.
  *
- * @return array{adsense:string,in_article:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_channel:string,cse:string,search_page:int}
+ * @return array{adsense:string,in_article:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_desktop:string,innity_mobile:string,innity_channel:string,cse:string,search_page:int}
  */
 function tala_ads_settings() {
 	$saved = get_option( 'tala_ads', array() );
@@ -46,7 +46,7 @@ function tala_ads_settings() {
  * protection code; the stored one stays, if it still fits the publisher ID.
  *
  * @param mixed $input Submitted values.
- * @return array{adsense:string,in_article:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_channel:string,cse:string,search_page:int}
+ * @return array{adsense:string,in_article:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_desktop:string,innity_mobile:string,innity_channel:string,cse:string,search_page:int}
  */
 function tala_ads_save_settings( $input ) {
 	$clean = tala_ads_sanitize_settings( $input );
@@ -65,7 +65,7 @@ function tala_ads_save_settings( $input ) {
  * Cleans the settings: each one to its own shape.
  *
  * @param mixed $input Submitted or stored values.
- * @return array{adsense:string,in_article:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_channel:string,cse:string,search_page:int}
+ * @return array{adsense:string,in_article:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_desktop:string,innity_mobile:string,innity_channel:string,cse:string,search_page:int}
  */
 function tala_ads_sanitize_settings( $input ) {
 	$input   = is_array( $input ) ? $input : array();
@@ -78,6 +78,8 @@ function tala_ads_sanitize_settings( $input ) {
 		'gtm'              => tala_ads_sanitize_gtm( $input['gtm'] ?? '' ),
 		'innity_key'       => tala_ads_sanitize_innity_key( $input['innity_key'] ?? '' ),
 		'innity_zone'      => tala_ads_sanitize_innity_zone( $input['innity_zone'] ?? '' ),
+		'innity_desktop'   => tala_ads_sanitize_innity_zone( $input['innity_desktop'] ?? '' ),
+		'innity_mobile'    => tala_ads_sanitize_innity_zone( $input['innity_mobile'] ?? '' ),
 		'innity_channel'   => tala_ads_sanitize_innity_channel( $input['innity_channel'] ?? '' ),
 		'cse'              => tala_ads_sanitize_cse( $input['cse'] ?? '' ),
 		'search_page'      => tala_ads_sanitize_search_page( $input['search_page'] ?? 0 ),
@@ -213,7 +215,9 @@ function tala_ads_sanitize_innity_key( $value ) {
 }
 
 /**
- * An Innity zone ID (digits), entered as is or taken from the zone tag. '' when there is none.
+ * An Innity zone ID (digits), entered as is or taken from the zone tag, in its asynchronous form
+ * (innity_adZoneAsync.display( "key", "zone", … )) or its standard one (new innity_adZone( "key",
+ * "zone", … )). '' when there is none.
  *
  * @param mixed $value Value entered.
  * @return string
@@ -225,12 +229,13 @@ function tala_ads_sanitize_innity_zone( $value ) {
 	if ( preg_match( '/^\s*(\d{1,12})\s*$/', $value, $match ) ) {
 		return $match[1];
 	}
-	return preg_match( '/display\(\s*["\'][a-f0-9]{32}["\']\s*,\s*["\'](\d{1,12})["\']/i', $value, $match ) ? $match[1] : '';
+	return preg_match( '/(?:display|innity_adZone)\(\s*["\'][a-f0-9]{32}["\']\s*,\s*["\'](\d{1,12})["\']/i', $value, $match ) ? $match[1] : '';
 }
 
 /**
  * Innity's channels, the topics its zone tag lists ("TECHNOLOGY,LIFESTYLE"): capital letters, digits
- * and underscores, separated by commas. Anything else is dropped.
+ * and underscores, separated by commas, entered as is or taken from the zone tag's "channel". Anything
+ * else is dropped.
  *
  * @param mixed $value Value entered.
  * @return string
@@ -238,6 +243,9 @@ function tala_ads_sanitize_innity_zone( $value ) {
 function tala_ads_sanitize_innity_channel( $value ) {
 	if ( ! is_string( $value ) ) {
 		return '';
+	}
+	if ( preg_match( '/["\']channel["\']\s*:\s*["\']([^"\']*)["\']/i', $value, $match ) ) {
+		$value = $match[1];
 	}
 	$channels = array_filter(
 		array_map( static fn( string $channel ): string => strtoupper( trim( $channel ) ), explode( ',', $value ) ),

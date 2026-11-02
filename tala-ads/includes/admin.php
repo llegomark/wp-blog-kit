@@ -98,9 +98,11 @@ function tala_ads_settings_fields(): void {
 
 	add_settings_section( 'tala_ads_innity', __( 'Innity', 'tala-ads' ), 'tala_ads_section_innity', 'tala-ads' );
 	$innity = array(
-		'innity_key'     => array( __( 'Publisher key', 'tala-ads' ), '0123456789abcdef0123456789abcdef', __( 'The 32 letters and digits that come first in innity_adZoneAsync.display( … ). Pasting the whole zone tag works too.', 'tala-ads' ) ),
-		'innity_zone'    => array( __( 'Zone ID', 'tala-ads' ), '100000', __( 'The number that comes second, for a 300 × 250 zone. Pasting the whole zone tag works too.', 'tala-ads' ) ),
-		'innity_channel' => array( __( 'Channels', 'tala-ads' ), 'TECHNOLOGY,LIFESTYLE', __( 'Optional: the topics after "channel" in the zone tag, separated by commas.', 'tala-ads' ) ),
+		'innity_key'     => array( __( 'Publisher key', 'tala-ads' ), '0123456789abcdef0123456789abcdef', __( 'The 32 letters and digits that come first in a zone tag\'s innity_adZone( … ). Pasting the whole zone tag works too.', 'tala-ads' ) ),
+		'innity_zone'    => array( __( 'Box zone', 'tala-ads' ), '100000', __( 'Optional: the ID of a Rectangle (300 × 250) zone, the number that comes second. The box goes after the sixth paragraph of each post and page. Set the zone\'s alternate ad to "Blank Ad" in Innity: the box then closes when nothing is sold, instead of showing Innity\'s own ad. Pasting the whole zone tag works too.', 'tala-ads' ) ),
+		'innity_desktop' => array( __( 'Universal tag, wide screens', 'tala-ads' ), '100000', __( 'Optional: the ID of a Universal Tag zone, for screens 768 px wide or more. Innity picks the format: an in-read ad, placed after the fourth paragraph, two below the In-article ad, or an in-image ad. Pasting the whole zone tag works too.', 'tala-ads' ) ),
+		'innity_mobile'  => array( __( 'Universal tag, phones', 'tala-ads' ), '100000', __( 'Optional: the ID of a Mobile Universal Tag zone, for narrower screens. Its formats include full-screen ones, which cover the page and come on top of AdSense\'s vignette and anchor ads; leave it empty to keep them off.', 'tala-ads' ) ),
+		'innity_channel' => array( __( 'Channels', 'tala-ads' ), 'EDUCATION', __( 'Optional: the topics after "channel" in a zone tag (Innity allows three), separated by commas; they apply to every zone. Pasting the whole zone tag works too.', 'tala-ads' ) ),
 	);
 	foreach ( $innity as $key => list( $label, $placeholder, $help ) ) {
 		add_settings_field(
@@ -163,7 +165,7 @@ function tala_ads_field_search_page(): void {
  * The Innity section's introduction.
  */
 function tala_ads_section_innity(): void {
-	echo '<p>' . esc_html__( 'An Innity box (300 × 250) after the text of each post and page, with its space kept free while the ad loads so the page doesn\'t move. Fill in the values from the zone tag Innity gave you; leave them empty for no box. Innity\'s universal tags (full-screen phone formats) aren\'t offered: they shift the page as it loads.', 'tala-ads' ) . '</p>';
+	echo '<p>' . esc_html__( 'Innity\'s ads, from the values in the zone tags Innity gives you (Manage Ad → the zone\'s code, Standard tab); leave a zone empty to go without it. The box\'s space is kept free while its ad loads, so the page doesn\'t move. Innity\'s in-read ads open inside the article and move the text below them.', 'tala-ads' ) . '</p>';
 }
 
 /**

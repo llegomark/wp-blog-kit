@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.4.1
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -20,12 +20,14 @@ Tala Ads puts a site's ad and tracking code in one place, outside the theme, so 
 * **Google's consent and ad blocking recovery messages.** One switch loads the messages set up under Privacy & messaging in AdSense, which come from one Google tag: the consent message, which Google needs to show personalized ads to visitors from the European Economic Area, the UK and Switzerland, and the ad blocking recovery message.
 * **Error protection.** Google's optional error protection code, which asks readers to allow ads when an ad blocker stops the recovery message itself, goes on pages with ads. It is the one piece of code the settings keep: only in the shape Google gives it, for the site's own publisher ID, naming only Google's addresses, and only from people WordPress lets add scripts.
 * **Google search.** With a Programmable Search Engine ID and a results page, Google answers every search on the site: WordPress's search forms send their searches to that page, where its Search block shows Google's search box (with the block's placeholder, or "Type here to search", as its hint) and results in the theme's look: its colours (light and dark), font, links, form field and button, from the theme.json presets block themes define. Results for a search get noindex, as Google asks for internal search results.
-* **Innity.** An optional 300 × 250 box after the text of each post and page, with its height kept free while the ad loads so the page doesn't move. Innity's universal tags (full-screen phone formats) aren't offered: they shift the page as it loads.
+* **Innity.** Each part optional, from the zone IDs in Innity's zone tags:
+  * A 300 × 250 box after the sixth paragraph of each post and page (after the text of a shorter one), centred, with its height kept free while the ad loads so the page doesn't move. With the zone's alternate ad set to "Blank Ad", the box closes when Innity has nothing sold for it, instead of showing Innity's own ad.
+  * Universal tags, one for wide screens and one for phones. Innity picks the format. Its in-read ad goes after the fourth paragraph, two below the In-article ad, instead of after the second, where Innity would put it. The phones' tag also brings full-screen formats, which cover the page on top of AdSense's vignette and anchor ads; leave it empty to keep them off.
 * **IDs, not code.** Each ID field keeps just the ID it asks for, even when the whole code is pasted, so nothing typed into those fields can put a script on the site.
 * **ads.txt check.** Settings → Ads says whether the site's ads.txt lists the publisher ID, without which AdSense may hold back ads.
-* **Any theme.** Every script goes through WordPress's script loader, which keeps each one to a single copy per page, and the box is added after the post's content. A theme only needs to call `wp_body_open()`, as WordPress asks themes to.
+* **Any theme.** Every script goes through WordPress's script loader, which keeps each one to a single copy per page, and the boxes are added to the post's content. A theme only needs to call `wp_body_open()`, as WordPress asks themes to.
 
-Developers can keep ads off a page with the `tala_ads_show` filter (return false), choose which post types get the Innity box with `tala_ads_post_types` (posts and pages by default), and which get the In-article ad with `tala_ads_in_article_post_types` (posts by default).
+Developers can keep ads off a page with the `tala_ads_show` filter (return false), choose which post types get the Innity box and in-read place with `tala_ads_post_types` (posts and pages by default), and which get the In-article ad with `tala_ads_in_article_post_types` (posts by default). `tala_ads_innity_paragraphs` (6) and `tala_ads_innity_in_read_paragraphs` (4) set how many paragraphs come before the Innity box and the in-read place.
 
 == Installation ==
 
@@ -62,9 +64,15 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 
 == Screenshots ==
 
-1. Settings → Ads: the AdSense publisher ID with the ads.txt check, the In-article ad unit, Google's messages and error protection, the Tag Manager container ID, Google search and the Innity box.
+1. Settings → Ads: the AdSense publisher ID with the ads.txt check, the In-article ad unit, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.5.0 =
+* New: Innity's Universal tags, one zone for wide screens and one for phones, each optional. The browser picks the zone for its screen, as the cached page is the same for every device. Innity's in-read ad gets its own place after the fourth paragraph, two below the In-article ad, instead of after the second, on top of it.
+* Changed: the Innity box goes after the sixth paragraph, where readers still are, instead of after the whole article. It is centred, and closes when Innity sends no ad (a zone whose alternate ad is "Blank Ad") or none arrives, as behind an ad blocker.
+* Changed: Innity's zones no longer pass the "%%CLICK_URL_UNESC%%" click macro. Only Google Ad Manager fills it in; Innity's tag for direct placement has none.
+* New: the zone and channel fields also take Innity's standard zone tag (new innity_adZone), and the channels field takes a pasted zone tag.
 
 = 1.4.1 =
 * Fixed: no more "AdSense head tag doesn't support data-wp-strategy attribute" warning in the browser console on every page. AdSense reads each data- attribute on its script tag as a setting and warns about those it doesn't know; WordPress adds data-wp-strategy to scripts that load asynchronously. The note is now left off AdSense's tag, which still loads asynchronously.
@@ -89,6 +97,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 * First release: AdSense Auto ads, Google Tag Manager, Google's consent message and an Innity box after posts and pages, each loaded once, set up with IDs only.
 
 == Upgrade Notice ==
+
+= 1.5.0 =
+The Innity box moves to after the sixth paragraph and closes when no ad comes; set its zone's alternate ad to Blank Ad in Innity. Optional Universal tags (wide screens, phones) under Settings → Ads.
 
 = 1.4.0 =
 Optional AdSense In-article ad after each post's second paragraph: enter the ad unit's ID under Settings → Ads to turn it on.

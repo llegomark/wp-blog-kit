@@ -92,6 +92,10 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertSame( '103011', tala_ads_sanitize_innity_zone( ' 103011 ' ) );
 		$this->assertSame( '', tala_ads_sanitize_innity_zone( '103011"; alert(1); "' ) );
 		$this->assertSame( 'TECHNOLOGY,LIFESTYLE', tala_ads_sanitize_innity_channel( 'technology, LIFESTYLE,<b>x</b>,lifestyle' ) );
+		$this->assertSame( 'TECHNOLOGY,LIFESTYLE', tala_ads_sanitize_innity_channel( $zone_tag ), 'The channels from a pasted zone tag.' );
+		$this->assertSame( '', tala_ads_sanitize_innity_channel( 'new innity_adZone("0123456789abcdef0123456789abcdef", "120075", {"width": "300", "height": "250"});' ), 'A tag without channels has none.' );
+		// Innity's Standard tab gives the standard form of the tag.
+		$this->assertSame( '120075', tala_ads_sanitize_innity_zone( '<script type="text/javascript">new innity_adZone("773fc3013fec43c958724a25b7dcb360", "120075", {"width": "300", "height": "250"});</script>' ) ); // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript
 
 		$clean = tala_ads_sanitize_settings(
 			array(
@@ -109,6 +113,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 				'gtm'              => '',
 				'innity_key'       => '',
 				'innity_zone'      => '',
+				'innity_desktop'   => '',
+				'innity_mobile'    => '',
 				'innity_channel'   => '',
 				'cse'              => '',
 				'search_page'      => 0,
@@ -338,24 +344,128 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * The Innity box: once, after the article's text, in the main loop of the post the page shows,
-	 * with 250 px reserved; its zone and loader in the footer.
+	 * Post content with the given paragraphs, as the block editor saves it.
+	 *
+	 * @param string ...$texts Each paragraph's text.
+	 * @return string
+	 */
+	private function paragraphs( string ...$texts ): string {
+		return implode( '', array_map( static fn( string $text ): string => '<!-- wp:paragraph --><p>' . $text . '</p><!-- /wp:paragraph -->', $texts ) );
+	}
+
+	/**
+	 * The Innity box: once, after the sixth paragraph (after the text of a shorter post), in the main
+	 * loop of the post the page shows, centred, with 250 px reserved; its zone in the footer as
+	 * Innity's direct tag gives it (no Ad Manager click macro), the check that closes the box when
+	 * no ad comes, and the loader.
 	 */
 	public function test_innity_box(): void {
 		update_option( 'tala_ads', self::ALL );
-		$id = $this->post();
+		$id = $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.', 'Three.', 'Four.', 'Five.', 'Six.', 'Seven.' ) ) );
 		$this->go_to( get_permalink( $id ) );
 		$this->assertStringNotContainsString( 'tala-ads-innity', apply_filters( 'the_content', 'Text' ), 'Nothing outside the loop.' );
 		the_post();
 
 		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
-		$this->assertMatchesRegularExpression( '#</p>\s*<div class="tala-ads-innity" style="min-height:250px;[^"]*"><div id="div-ad-innity-103011/0"></div></div>$#', $content );
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Six\.</p>\s*<div class="tala-ads-innity" style="min-height:250px;[^"]*text-align:center"><div id="div-ad-innity-103011/0" style="display:inline-block"></div></div>\s*<p[^>]*>Seven\.</p>#', $content );
+		$this->assertSame( 1, substr_count( $content, 'tala-ads-innity' ) );
 		$this->assertStringNotContainsString( 'tala-ads-innity', apply_filters( 'the_content', 'Again' ), 'One box per page.' );
 
 		$footer = get_echo( 'wp_print_footer_scripts' );
 		$this->assertSame( 1, substr_count( $footer, 'cdn.innity.net/admanager-async.js' ) );
-		$this->assertStringContainsString( 'innity_adZoneAsync.display("0123456789abcdef0123456789abcdef","103011",{"target":"div-ad-innity-103011\/0","width":"300","height":"250","innity_pcu":"%%CLICK_URL_UNESC%%","channel":"TECHNOLOGY,LIFESTYLE"})', $footer );
+		$this->assertStringContainsString( 'innity_adZoneAsync.display("0123456789abcdef0123456789abcdef","103011",{"target":"div-ad-innity-103011\/0","width":"300","height":"250","channel":"TECHNOLOGY,LIFESTYLE"})', $footer );
+		$this->assertStringNotContainsString( 'CLICK_URL', $footer, 'No click macro: only Google Ad Manager fills it in.' );
+		$this->assertStringContainsString( '(document.getElementById("div-ad-innity-103011\/0"))', $footer, 'The box closes when no ad comes.' );
+		$this->assertStringContainsString( 'box.parentNode.style.display="none"', $footer );
 		$this->assertLessThan( strpos( $footer, 'admanager-async.js' ), strpos( $footer, 'innity_adZoneAsync.q.push' ), 'The zone is queued before the loader.' );
+		$this->assertStringNotContainsString( 'data-innity-slot', $content, 'No in-read place without a Universal tag.' );
+
+		$GLOBALS['wp_scripts'] = new WP_Scripts();
+		$short                 = $this->post( array( 'post_content' => $this->paragraphs( 'Only.' ) ) );
+		$this->go_to( get_permalink( $short ) );
+		the_post();
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Only\.</p>\s*<div class="tala-ads-innity"[^>]*><div id="div-ad-innity-103011/0"[^>]*></div></div>$#', apply_filters( 'the_content', get_post_field( 'post_content', $short ) ), 'After the text of a shorter post.' );
+	}
+
+	/**
+	 * Innity's Universal tags: on every page with ads, the zone for the screen (wide or phone) chosen
+	 * in the browser, as the cached page is the same for every device; one loader with the box.
+	 */
+	public function test_innity_universal(): void {
+		update_option( 'tala_ads', array_merge( self::ALL, array( 'innity_desktop' => '103008' ) ) );
+		$id = $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.', 'Three.', 'Four.', 'Five.', 'Six.', 'Seven.' ) ) );
+		$this->go_to( get_permalink( $id ) );
+		$this->page_head();
+		the_post();
+		apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
+		$footer = get_echo( 'wp_print_footer_scripts' );
+		$this->assertStringContainsString( 'innity_adZoneAsync.display("0123456789abcdef0123456789abcdef",zone,{"channel":"TECHNOLOGY,LIFESTYLE"})', $footer );
+		$this->assertStringContainsString( 'window.matchMedia("(min-width: 768px)").matches?"103008":""', $footer, 'Wide screens get the desktop zone; phones, without a zone, none.' );
+		$this->assertSame( 1, substr_count( $footer, 'cdn.innity.net/admanager-async.js' ), 'One loader for the box and the Universal tag.' );
+		$this->assertStringContainsString( 'display("0123456789abcdef0123456789abcdef","103011"', $footer, 'The box stays.' );
+
+		update_option(
+			'tala_ads',
+			array(
+				'innity_key'    => '0123456789abcdef0123456789abcdef',
+				'innity_mobile' => '103009',
+			)
+		);
+		$this->go_to( home_url( '/' ) );
+		$this->page_head();
+		$footer = get_echo( 'wp_print_footer_scripts' );
+		$this->assertStringContainsString( 'display("0123456789abcdef0123456789abcdef",zone,{})', $footer, 'On every page, without AdSense or channels.' );
+		$this->assertStringContainsString( '.matches?"":"103009"', $footer );
+
+		foreach (
+			array(
+				'Not without a zone'         => array( 'innity_key' => '0123456789abcdef0123456789abcdef' ),
+				'Not without a key'          => array( 'innity_desktop' => '103008' ),
+				'Not where ads are kept off' => array(
+					'innity_key'     => '0123456789abcdef0123456789abcdef',
+					'innity_desktop' => '103008',
+				),
+			) as $message => $settings
+		) {
+			update_option( 'tala_ads', $settings );
+			if ( 'Not where ads are kept off' === $message ) {
+				add_filter( 'tala_ads_show', '__return_false' );
+			}
+			$this->go_to( home_url( '/' ) );
+			$this->page_head();
+			$this->assertStringNotContainsString( 'innity', get_echo( 'wp_print_footer_scripts' ), $message );
+		}
+	}
+
+	/**
+	 * With a Universal tag, the place for Innity's in-read ad: once, after the fourth paragraph (two
+	 * below the In-article ad, before the box), or after the text of a shorter post, so Innity
+	 * doesn't put it on the In-article ad.
+	 */
+	public function test_innity_in_read(): void {
+		update_option( 'tala_ads', array_merge( self::ALL, array( 'innity_desktop' => '103008' ) ) );
+		$id = $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.', 'Three.', 'Four.', 'Five.', 'Six.', 'Seven.' ) ) );
+		$this->go_to( get_permalink( $id ) );
+		$this->assertStringNotContainsString( 'data-innity-slot', apply_filters( 'the_content', 'Text' ), 'Nothing outside the loop.' );
+		the_post();
+
+		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Four\.</p>\s*<div class="tala-ads-innity-in-read" data-innity-slot="in-read"></div>\s*<p[^>]*>Five\.</p>#', $content );
+		$this->assertSame( 1, substr_count( $content, 'data-innity-slot' ) );
+		$this->assertLessThan( strpos( $content, 'class="tala-ads-innity"' ), strpos( $content, 'data-innity-slot' ), 'Before the box.' );
+		$this->assertStringNotContainsString( 'data-innity-slot', apply_filters( 'the_content', 'Again' ), 'Once per page.' );
+
+		$GLOBALS['wp_scripts'] = new WP_Scripts();
+		$short                 = $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.' ) ) );
+		$this->go_to( get_permalink( $short ) );
+		the_post();
+		$this->assertMatchesRegularExpression( '#<div class="tala-ads-innity-in-read" data-innity-slot="in-read"></div>$#', apply_filters( 'the_content', get_post_field( 'post_content', $short ) ), 'After the text of a shorter post.' );
+
+		$GLOBALS['wp_scripts'] = new WP_Scripts();
+		$locked                = $this->post( array( 'post_password' => 'secret' ) );
+		$this->go_to( get_permalink( $locked ) );
+		the_post();
+		$this->assertStringNotContainsString( 'data-innity-slot', apply_filters( 'the_content', 'Text' ), 'Not before the password is entered.' );
 	}
 
 	/**
@@ -589,7 +699,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		update_option( 'tala_ads', self::ALL );
 
 		$page = get_echo( 'tala_ads_settings_page' );
-		foreach ( array( 'adsense', 'consent', 'error_protection', 'gtm', 'innity_key', 'innity_zone', 'innity_channel', 'cse', 'search_page' ) as $key ) {
+		foreach ( array( 'adsense', 'consent', 'error_protection', 'gtm', 'innity_key', 'innity_zone', 'innity_desktop', 'innity_mobile', 'innity_channel', 'cse', 'search_page' ) as $key ) {
 			$this->assertMatchesRegularExpression( '#name=["\']tala_ads\[' . $key . '\]["\']#', $page, $key );
 		}
 		$this->assertStringContainsString( 'value="ca-pub-1234567890123456"', $page );

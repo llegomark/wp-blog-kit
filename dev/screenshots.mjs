@@ -33,6 +33,7 @@ const ADS_EXAMPLE = {
 	gtm: 'GTM-ABC1234',
 	innity_key: '0123456789abcdef0123456789abcdef',
 	innity_zone: '100000',
+	innity_desktop: '100001',
 	innity_channel: 'EDUCATION,LIFESTYLE',
 	cse: '0123456789abcdef0',
 };

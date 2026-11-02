@@ -1,8 +1,8 @@
 <?php
 /**
  * What visitors get: Google Tag Manager, Google's consent message, the AdSense Auto ads code, the
- * In-article ad unit and the Innity box. Every script goes through WordPress's script loader, once per page, so it works
- * with any theme and nothing loads twice.
+ * In-article ad unit, and Innity's box and Universal tags. Every script goes through WordPress's
+ * script loader, once per page, so it works with any theme and nothing loads twice.
  *
  * @package TalaAds
  */
@@ -138,7 +138,7 @@ function tala_ads_show_ads() {
 }
 
 /**
- * Post types whose pages get the Innity box after their content.
+ * Post types whose pages get the Innity box and the place for Innity's in-read ad.
  *
  * @return string[]
  */
@@ -146,46 +146,11 @@ function tala_ads_post_types() {
 	return (array) apply_filters( 'tala_ads_post_types', array( 'post', 'page' ) );
 }
 
-add_filter( 'the_content', 'tala_ads_innity_box', 20 );
-
 /**
- * The Innity box after the article's own text, on the post or page the request shows (in the main
- * loop, once). Its 250 px are reserved before the ad arrives, so the page doesn't jump.
- *
- * @param string $content Post content.
- * @return string
+ * Innity's loader, once per page. The zones go into its queue (window.innity_adZoneAsync.q), which
+ * it works through whether it arrives before or after them.
  */
-function tala_ads_innity_box( $content ) {
-	$settings = tala_ads_settings();
-	if ( '' === $settings['innity_key'] || '' === $settings['innity_zone']
-		|| ! is_singular( tala_ads_post_types() ) || ! in_the_loop() || ! is_main_query()
-		|| get_the_ID() !== get_queried_object_id() || post_password_required()
-		|| wp_script_is( 'tala-ads-innity-zone' ) || ! tala_ads_show_ads() ) {
-		return $content;
-	}
-	$target = 'div-ad-innity-' . $settings['innity_zone'] . '/0';
-	$args   = array(
-		'target'     => $target,
-		'width'      => '300',
-		'height'     => '250',
-		'innity_pcu' => '%%CLICK_URL_UNESC%%',
-	);
-	if ( '' !== $settings['innity_channel'] ) {
-		$args['channel'] = $settings['innity_channel'];
-	}
-	// The zone goes into Innity's queue first; its loader, which may arrive before or after, works
-	// through the queue.
-	wp_register_script( 'tala-ads-innity-zone', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
-	wp_enqueue_script( 'tala-ads-innity-zone' );
-	wp_add_inline_script(
-		'tala-ads-innity-zone',
-		sprintf(
-			'window.innity_adZoneAsync=window.innity_adZoneAsync||{};innity_adZoneAsync.q=innity_adZoneAsync.q||[];innity_adZoneAsync.q.push(function(){innity_adZoneAsync.display(%s,%s,%s);});',
-			wp_json_encode( $settings['innity_key'] ),
-			wp_json_encode( $settings['innity_zone'] ),
-			wp_json_encode( $args )
-		)
-	);
+function tala_ads_innity_loader(): void {
 	wp_enqueue_script(
 		'tala-ads-innity',
 		'https://cdn.innity.net/admanager-async.js',
@@ -196,13 +161,135 @@ function tala_ads_innity_box( $content ) {
 			'in_footer' => true,
 		)
 	);
-	return $content . sprintf(
-		'<div class="tala-ads-innity" style="min-height:250px;margin:2em auto;text-align:center"><div id="%s"></div></div>',
-		esc_attr( $target )
-	);
 }
 
-// Before the Innity box (20), which then follows the article's text, not the in-article ad.
+/**
+ * The settings Innity's zone tags pass along: the site's channels, when there are any. Innity's own
+ * tags also pass a click-tracking prefix, "%%CLICK_URL_UNESC%%", but only in their Google Ad Manager
+ * version, where Ad Manager fills it in; a tag placed on the page directly has none.
+ *
+ * @param array<string, string> $args Settings of this zone.
+ * @return array<string, string>|stdClass
+ */
+function tala_ads_innity_args( array $args ) {
+	$channel = tala_ads_settings()['innity_channel'];
+	if ( '' !== $channel ) {
+		$args['channel'] = $channel;
+	}
+	return array() === $args ? new stdClass() : $args;
+}
+
+add_action( 'wp_enqueue_scripts', 'tala_ads_innity_universal' );
+
+/**
+ * Innity's Universal tags on every page with ads: one zone for screens 768 px wide or more and one
+ * for narrower ones, each optional. Innity's server picks the format (an in-read ad in the article,
+ * an in-image ad, or, on phones, full-screen ones). The page cache gives every device the same
+ * HTML, so the browser picks the zone for its screen; a screen without a zone loads none.
+ */
+function tala_ads_innity_universal(): void {
+	$settings = tala_ads_settings();
+	if ( '' === $settings['innity_key'] || ( '' === $settings['innity_desktop'] && '' === $settings['innity_mobile'] )
+		|| ! tala_ads_show_ads() ) {
+		return;
+	}
+	wp_register_script( 'tala-ads-innity-universal', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
+	wp_enqueue_script( 'tala-ads-innity-universal' );
+	wp_add_inline_script(
+		'tala-ads-innity-universal',
+		sprintf(
+			'window.innity_adZoneAsync=window.innity_adZoneAsync||{};innity_adZoneAsync.q=innity_adZoneAsync.q||[];(function(zone){if(zone){innity_adZoneAsync.q.push(function(){innity_adZoneAsync.display(%s,zone,%s);});}})(window.matchMedia("(min-width: 768px)").matches?%s:%s);',
+			wp_json_encode( $settings['innity_key'] ),
+			wp_json_encode( tala_ads_innity_args( array() ) ),
+			wp_json_encode( $settings['innity_desktop'] ),
+			wp_json_encode( $settings['innity_mobile'] )
+		)
+	);
+	tala_ads_innity_loader();
+}
+
+/**
+ * Whether the content being filtered is the post or page the request shows, in the main loop, with
+ * Innity set up and ads allowed.
+ *
+ * @return bool
+ */
+function tala_ads_innity_here() {
+	return '' !== tala_ads_settings()['innity_key'] && is_singular( tala_ads_post_types() ) && in_the_loop()
+		&& is_main_query() && get_the_ID() === get_queried_object_id() && ! post_password_required() && tala_ads_show_ads();
+}
+
+add_filter( 'the_content', 'tala_ads_innity_box', 20 );
+
+/**
+ * The Innity box (300 × 250) in the post or page the request shows, once: after its sixth
+ * paragraph, where readers still are, or after its text when it has fewer. Its 250 px are kept free
+ * while the ad loads, so the page doesn't jump, and close when Innity sends no ad (a zone whose
+ * alternate ad is "Blank Ad", when nothing is sold) or none arrives, as behind an ad blocker.
+ *
+ * @param string $content Post content.
+ * @return string
+ */
+function tala_ads_innity_box( $content ) {
+	$zone = tala_ads_settings()['innity_zone'];
+	if ( '' === $zone || wp_script_is( 'tala-ads-innity-zone' ) || ! tala_ads_innity_here() ) {
+		return $content;
+	}
+	$target = 'div-ad-innity-' . $zone . '/0';
+	$args   = array(
+		'target' => $target,
+		'width'  => '300',
+		'height' => '250',
+	);
+	wp_register_script( 'tala-ads-innity-zone', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
+	wp_enqueue_script( 'tala-ads-innity-zone' );
+	// Innity draws its ad (or nothing) in a frame of the page's own origin, so the page can look
+	// inside: no element of at least 50 × 50 once the frame has finished loading means no ad.
+	wp_add_inline_script(
+		'tala-ads-innity-zone',
+		sprintf(
+			'window.innity_adZoneAsync=window.innity_adZoneAsync||{};innity_adZoneAsync.q=innity_adZoneAsync.q||[];innity_adZoneAsync.q.push(function(){innity_adZoneAsync.display(%1$s,%2$s,%3$s);});' .
+			'(function(box){if(!box)return;var waited=0,settled=0;function hasAd(d){var e=d.body?d.body.getElementsByTagName("*"):[];for(var i=0;i<e.length;i++){var r=e[i].getBoundingClientRect();if(r.width>=50&&r.height>=50)return true}return false}function check(){var f=box.getElementsByTagName("iframe")[0],d=null;try{d=f?f.contentDocument:null}catch(x){return}if(d&&hasAd(d))return;waited++;if(d&&"complete"===d.readyState)settled++;if(settled<5&&waited<(f?40:15)){setTimeout(check,1000);return}box.parentNode.style.display="none"}setTimeout(check,1000)})(document.getElementById(%4$s));',
+			wp_json_encode( tala_ads_settings()['innity_key'] ),
+			wp_json_encode( $zone ),
+			wp_json_encode( tala_ads_innity_args( $args ) ),
+			wp_json_encode( $target )
+		)
+	);
+	tala_ads_innity_loader();
+	$box = sprintf(
+		'<div class="tala-ads-innity" style="min-height:250px;margin:2em auto;text-align:center"><div id="%s" style="display:inline-block"></div></div>',
+		esc_attr( $target )
+	);
+	return tala_ads_after_paragraphs( $content, (int) apply_filters( 'tala_ads_innity_paragraphs', 6 ), $box ) ?? $content . $box;
+}
+
+add_filter( 'the_content', 'tala_ads_innity_in_read', 21 );
+
+/**
+ * With a Universal tag set, the place for Innity's in-read ad in the post or page the request shows,
+ * once: after its fourth paragraph, two below the In-article ad, or after its text when it has
+ * fewer. Without it, Innity looks for the article itself and puts its ad after the second
+ * paragraph, on top of the In-article ad. Innity finds the place by its data-innity-slot attribute.
+ *
+ * @param string $content Post content.
+ * @return string
+ */
+function tala_ads_innity_in_read( $content ) {
+	$settings = tala_ads_settings();
+	if ( ( '' === $settings['innity_desktop'] && '' === $settings['innity_mobile'] )
+		|| wp_script_is( 'tala-ads-innity-in-read' ) || ! tala_ads_innity_here() ) {
+		return $content;
+	}
+	// A script with no code, which prints nothing: it only marks the place as taken for this page.
+	wp_register_script( 'tala-ads-innity-in-read', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
+	wp_enqueue_script( 'tala-ads-innity-in-read' );
+	$slot = '<div class="tala-ads-innity-in-read" data-innity-slot="in-read"></div>';
+	return tala_ads_after_paragraphs( $content, (int) apply_filters( 'tala_ads_innity_in_read_paragraphs', 4 ), $slot ) ?? $content . $slot;
+}
+
+// Before Innity's box (20) and in-read place (21): when a post is too short for them, they go after
+// its text, not after the in-article ad.
 add_filter( 'the_content', 'tala_ads_in_article', 19 );
 
 /**
