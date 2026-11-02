@@ -1,7 +1,7 @@
 <?php
 /**
- * What visitors get: Google Tag Manager, Google's consent message, the AdSense Auto ads code and
- * the Innity box. Every script goes through WordPress's script loader, once per page, so it works
+ * What visitors get: Google Tag Manager, Google's consent message, the AdSense Auto ads code, the
+ * In-article ad unit and the Innity box. Every script goes through WordPress's script loader, once per page, so it works
  * with any theme and nothing loads twice.
  *
  * @package TalaAds
@@ -72,7 +72,8 @@ function tala_ads_enqueue(): void {
 		// frame stays see-through, as on a light page, and an ad paints its own background.
 		wp_register_style( 'tala-ads', false, array(), TALA_ADS_VERSION );
 		wp_enqueue_style( 'tala-ads' );
-		wp_add_inline_style( 'tala-ads', 'ins.adsbygoogle[data-ad-status^="unfill"]{display:none!important}ins.adsbygoogle iframe{color-scheme:light}' );
+		// The in-article unit's reserved space closes with its slot when Google leaves it unfilled.
+		wp_add_inline_style( 'tala-ads', 'ins.adsbygoogle[data-ad-status^="unfill"]{display:none!important}ins.adsbygoogle iframe{color-scheme:light}.tala-ads-in-article:has(>ins[data-ad-status^="unfill"]){display:none}' );
 		wp_enqueue_script(
 			'tala-ads-adsense',
 			'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . $settings['adsense'],
@@ -195,4 +196,88 @@ function tala_ads_innity_box( $content ) {
 		'<div class="tala-ads-innity" style="min-height:250px;margin:2em auto;text-align:center"><div id="%s"></div></div>',
 		esc_attr( $target )
 	);
+}
+
+// Before the Innity box (20), which then follows the article's text, not the in-article ad.
+add_filter( 'the_content', 'tala_ads_in_article', 19 );
+
+/**
+ * The In-article ad unit after the post's second paragraph, where Google suggests placing it, on the
+ * post the request shows (in the main loop, once). Its space is kept free while the ad loads, about
+ * an In-article ad's height on a phone, so the text below doesn't jump. Only the article's own
+ * paragraphs count, not those in lists, quotations, tables or FAQ answers; a post with fewer than
+ * two, or nothing after its second, gets no in-article ad. Auto ads then keep their distance from it.
+ *
+ * @param string $content Post content.
+ * @return string
+ */
+function tala_ads_in_article( $content ) {
+	$settings = tala_ads_settings();
+	if ( '' === $settings['adsense'] || '' === $settings['in_article']
+		|| ! is_singular( (array) apply_filters( 'tala_ads_in_article_post_types', array( 'post' ) ) )
+		|| ! in_the_loop() || ! is_main_query() || get_the_ID() !== get_queried_object_id()
+		|| post_password_required() || wp_script_is( 'tala-ads-in-article' ) || ! tala_ads_show_ads() ) {
+		return $content;
+	}
+	$unit   = sprintf(
+		'<div class="tala-ads-in-article" style="min-height:280px;margin:2em 0"><ins class="adsbygoogle" style="display:block;text-align:center" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="%s" data-ad-slot="%s"></ins></div>',
+		esc_attr( $settings['adsense'] ),
+		esc_attr( $settings['in_article'] )
+	);
+	$placed = tala_ads_after_paragraphs( $content, 2, $unit );
+	if ( null === $placed ) {
+		return $content;
+	}
+	// AdSense fills the slot when asked; the request waits in its queue until its script has loaded.
+	wp_register_script( 'tala-ads-in-article', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
+	wp_enqueue_script( 'tala-ads-in-article' );
+	wp_add_inline_script( 'tala-ads-in-article', '(adsbygoogle=window.adsbygoogle||[]).push({});' );
+	return $placed;
+}
+
+/**
+ * The HTML with $insert after its $count-th top-level paragraph, before the element that follows it;
+ * null when there is no such place, or WordPress's HTML API can't read the HTML.
+ *
+ * @param string $html   Post content.
+ * @param int    $count  Paragraphs to pass.
+ * @param string $insert Markup to add.
+ * @return string|null
+ */
+function tala_ads_after_paragraphs( $html, $count, $insert ) {
+	$processor = WP_HTML_Processor::create_fragment( $html );
+	if ( null === $processor ) {
+		return null;
+	}
+	$base   = null; // The depth of the content's top-level elements.
+	$seen   = 0;
+	$marked = false;
+	while ( $processor->next_tag() ) {
+		$depth = $processor->get_current_depth();
+		$base  = $base ?? $depth;
+		if ( $depth !== $base ) {
+			continue;
+		}
+		if ( $seen >= $count ) {
+			$processor->set_attribute( 'data-tala-ads-here', true );
+			$marked = true;
+			break;
+		}
+		if ( 'P' === $processor->get_tag() ) {
+			++$seen;
+		}
+	}
+	if ( ! $marked || null !== $processor->get_last_error() ) {
+		return null;
+	}
+	$updated = $processor->get_updated_html();
+	$marker  = ' data-tala-ads-here';
+	$at      = strpos( $updated, $marker );
+	// A new attribute follows the tag's name, so the tag starts at the last "<" before it.
+	$start = false === $at ? false : strrpos( substr( $updated, 0, $at ), '<' );
+	if ( false === $at || false === $start ) {
+		return null;
+	}
+	$updated = substr_replace( $updated, '', $at, strlen( $marker ) );
+	return substr_replace( $updated, $insert, $start, 0 );
 }

@@ -103,6 +103,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertSame(
 			array(
 				'adsense'          => 'ca-pub-1234567890123456',
+				'in_article'       => '',
 				'consent'          => true,
 				'error_protection' => '',
 				'gtm'              => '',
@@ -374,6 +375,90 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->go_to( get_permalink( $locked ) );
 		the_post();
 		$this->assertStringNotContainsString( 'tala-ads-innity', apply_filters( 'the_content', 'Text' ), 'Not before the password is entered.' );
+	}
+
+	/**
+	 * The In-article ad unit's ID is kept from the ID or from the unit's code AdSense gives; anything
+	 * else is dropped.
+	 */
+	public function test_in_article_unit_id(): void {
+		// AdSense's ad unit code, exactly as AdSense gives it: input for the ID, never printed.
+		$code = '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" crossorigin="anonymous"></script><ins class="adsbygoogle" style="display:block; text-align:center;" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="ca-pub-1234567890123456" data-ad-slot="3203298627"></ins><script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript
+		$this->assertSame( '3203298627', tala_ads_sanitize_ad_unit( ' 3203298627 ' ) );
+		$this->assertSame( '3203298627', tala_ads_sanitize_ad_unit( $code ) );
+		foreach ( array( '', '123', '32032986270', 'data-ad-slot="320329862"', '<script>alert(1)</script>', array( '3203298627' ) ) as $bad ) {
+			$this->assertSame( '', tala_ads_sanitize_ad_unit( $bad ) );
+		}
+		update_option( 'tala_ads', array( 'in_article' => $code ) );
+		$this->assertSame( '3203298627', tala_ads_settings()['in_article'] );
+	}
+
+	/**
+	 * The In-article ad: once, after the post's second paragraph (paragraphs in quotations and lists
+	 * don't count), with its space reserved and its request in the footer.
+	 */
+	public function test_in_article_ad(): void {
+		update_option( 'tala_ads', array_merge( self::ALL, array( 'in_article' => '3203298627' ) ) );
+		$id = $this->post(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>First.</p><!-- /wp:paragraph -->'
+					. '<!-- wp:quote --><blockquote class="wp-block-quote"><!-- wp:paragraph --><p>Quoted.</p><!-- /wp:paragraph --></blockquote><!-- /wp:quote -->'
+					. '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li><p>Listed.</p></li><!-- /wp:list-item --></ul><!-- /wp:list -->'
+					. '<!-- wp:paragraph --><p>Second.</p><!-- /wp:paragraph -->'
+					. '<!-- wp:heading --><h2 class="wp-block-heading">Next</h2><!-- /wp:heading -->'
+					. '<!-- wp:paragraph --><p>Third.</p><!-- /wp:paragraph -->',
+			)
+		);
+		$this->go_to( get_permalink( $id ) );
+		the_post();
+		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
+		$this->assertMatchesRegularExpression( '#<p class="wp-block-paragraph">Second\.</p>\s*<div class="tala-ads-in-article" style="min-height:280px;[^"]*"><ins class="adsbygoogle" style="display:block;text-align:center" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="ca-pub-1234567890123456" data-ad-slot="3203298627"></ins></div><h2#', $content );
+		$this->assertSame( 1, substr_count( $content, 'tala-ads-in-article' ) );
+		$this->assertStringNotContainsString( 'data-tala-ads-here', $content );
+		$this->assertStringNotContainsString( 'tala-ads-in-article', apply_filters( 'the_content', get_post_field( 'post_content', $id ) ), 'One per page.' );
+
+		$footer = get_echo( 'wp_print_footer_scripts' );
+		$this->assertSame( 1, substr_count( $footer, '(adsbygoogle=window.adsbygoogle||[]).push({});' ) );
+		$GLOBALS['wp_styles'] = new WP_Styles();
+		$this->assertStringContainsString( '.tala-ads-in-article:has(>ins[data-ad-status^="unfill"]){display:none}', $this->page_head(), 'Its space closes when Google leaves it unfilled.' );
+	}
+
+	/**
+	 * No In-article ad without its ID, on pages, on a post with nothing after its second paragraph,
+	 * or on a password-protected post.
+	 */
+	public function test_in_article_ad_only_where_it_belongs(): void {
+		$long  = '<!-- wp:paragraph --><p>One.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Two.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Three.</p><!-- /wp:paragraph -->';
+		$check = function ( int $id, string $why ): void {
+			$GLOBALS['wp_scripts'] = new WP_Scripts();
+			$this->go_to( get_permalink( $id ) );
+			the_post();
+			$this->assertStringNotContainsString( 'tala-ads-in-article', apply_filters( 'the_content', get_post_field( 'post_content', $id ) ), $why );
+		};
+
+		update_option( 'tala_ads', self::ALL );
+		$check( $this->post( array( 'post_content' => $long ) ), 'Not without an ad unit ID.' );
+
+		update_option( 'tala_ads', array_merge( self::ALL, array( 'in_article' => '3203298627' ) ) );
+		$check( $this->post( array( 'post_content' => '<!-- wp:paragraph --><p>One.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Two.</p><!-- /wp:paragraph -->' ) ), 'Not when nothing follows the second paragraph.' );
+		$check(
+			$this->post(
+				array(
+					'post_type'    => 'page',
+					'post_content' => $long,
+				)
+			),
+			'Not on pages.'
+		);
+		$check(
+			$this->post(
+				array(
+					'post_password' => 'secret',
+					'post_content'  => $long,
+				)
+			),
+			'Not before the password is entered.'
+		);
 	}
 
 	/**

@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,6 +15,7 @@ AdSense Auto ads, Google Tag Manager, Google's consent and ad blocking recovery 
 Tala Ads puts a site's ad and tracking code in one place, outside the theme, so switching themes never takes the ads with it.
 
 * **AdSense Auto ads.** Enter the publisher ID and the AdSense code goes on every page, once. Google places the ads: you choose the formats (in-page, anchor, vignette, multiplex) and how many in AdSense. Error pages and searches that found nothing get no ads, as AdSense doesn't allow ads on pages without the site's own content. A place Google leaves without an ad is hidden, so no empty frame or blank gap shows in the text, and an ad frame waiting for its ad stays see-through in dark mode instead of showing a white box.
+* **An In-article ad unit.** Optional: enter the ID of an AdSense In-article ad unit and the ad goes after the second paragraph of each post, where Google suggests placing it. Only the article's own paragraphs count (not those in lists, quotations, tables or FAQ answers); a post with nothing after its second paragraph gets none. Its space (280 px, about an In-article ad's height on a phone) is kept free while it loads so the text doesn't jump, and closes if Google leaves it unfilled. Auto ads keep their distance from it.
 * **Google Tag Manager.** Enter the container ID: the code goes as high in the head as WordPress allows, and the fallback for browsers without JavaScript right after the opening body tag. The container then loads Google Analytics and the other tags.
 * **Google's consent and ad blocking recovery messages.** One switch loads the messages set up under Privacy & messaging in AdSense, which come from one Google tag: the consent message, which Google needs to show personalized ads to visitors from the European Economic Area, the UK and Switzerland, and the ad blocking recovery message.
 * **Error protection.** Google's optional error protection code, which asks readers to allow ads when an ad blocker stops the recovery message itself, goes on pages with ads. It is the one piece of code the settings keep: only in the shape Google gives it, for the site's own publisher ID, naming only Google's addresses, and only from people WordPress lets add scripts.
@@ -24,7 +25,7 @@ Tala Ads puts a site's ad and tracking code in one place, outside the theme, so 
 * **ads.txt check.** Settings → Ads says whether the site's ads.txt lists the publisher ID, without which AdSense may hold back ads.
 * **Any theme.** Every script goes through WordPress's script loader, which keeps each one to a single copy per page, and the box is added after the post's content. A theme only needs to call `wp_body_open()`, as WordPress asks themes to.
 
-Developers can keep ads off a page with the `tala_ads_show` filter (return false), and choose which post types get the Innity box with `tala_ads_post_types` (posts and pages by default).
+Developers can keep ads off a page with the `tala_ads_show` filter (return false), choose which post types get the Innity box with `tala_ads_post_types` (posts and pages by default), and which get the In-article ad with `tala_ads_in_article_post_types` (posts by default).
 
 == Installation ==
 
@@ -61,9 +62,12 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 
 == Screenshots ==
 
-1. Settings → Ads: the AdSense publisher ID with the ads.txt check, Google's messages and error protection, the Tag Manager container ID, Google search and the Innity box.
+1. Settings → Ads: the AdSense publisher ID with the ads.txt check, the In-article ad unit, Google's messages and error protection, the Tag Manager container ID, Google search and the Innity box.
 
 == Changelog ==
+
+= 1.4.0 =
+* New: an AdSense In-article ad unit, after the second paragraph of each post. Enter the unit's ID (or paste its code: only the ID is kept) under Settings → Ads. Only the article's own paragraphs count; its space is kept free while it loads, so the text doesn't jump, and closes if Google leaves it unfilled. The ad comes before the Innity box, which still follows the article's text.
 
 = 1.3.0 =
 * Fixed: in dark mode an ad frame no longer shows as a white box while it waits for its ad (or for Google to mark it unfilled). Browsers paint the frame of a light page white on a dark page; ad frames are now declared light, so they stay see-through as on a light page, and an ad paints its own background.
@@ -82,6 +86,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 * First release: AdSense Auto ads, Google Tag Manager, Google's consent message and an Innity box after posts and pages, each loaded once, set up with IDs only.
 
 == Upgrade Notice ==
+
+= 1.4.0 =
+Optional AdSense In-article ad after each post's second paragraph: enter the ad unit's ID under Settings → Ads to turn it on.
 
 = 1.3.0 =
 No white box in dark mode while an ad loads; a hint in Google's search box (the Search block's placeholder); one search box on the results page.

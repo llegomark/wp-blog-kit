@@ -28,6 +28,7 @@ const want = ( plugin ) => '' === ONLY || plugin === ONLY;
 // Example IDs for Settings → Ads, shaped like real ones.
 const ADS_EXAMPLE = {
 	adsense: 'ca-pub-1234567890123456',
+	in_article: '1234567890',
 	consent: true,
 	gtm: 'GTM-ABC1234',
 	innity_key: '0123456789abcdef0123456789abcdef',

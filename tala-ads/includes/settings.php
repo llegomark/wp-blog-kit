@@ -33,7 +33,7 @@ function tala_ads_register_settings(): void {
  * The settings, with defaults. Each value is checked again on the way out, so a damaged or
  * hand-edited option can never print anything the form wouldn't have kept.
  *
- * @return array{adsense:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_channel:string,cse:string,search_page:int}
+ * @return array{adsense:string,in_article:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_channel:string,cse:string,search_page:int}
  */
 function tala_ads_settings() {
 	$saved = get_option( 'tala_ads', array() );
@@ -46,7 +46,7 @@ function tala_ads_settings() {
  * protection code; the stored one stays, if it still fits the publisher ID.
  *
  * @param mixed $input Submitted values.
- * @return array{adsense:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_channel:string,cse:string,search_page:int}
+ * @return array{adsense:string,in_article:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_channel:string,cse:string,search_page:int}
  */
 function tala_ads_save_settings( $input ) {
 	$clean = tala_ads_sanitize_settings( $input );
@@ -65,13 +65,14 @@ function tala_ads_save_settings( $input ) {
  * Cleans the settings: each one to its own shape.
  *
  * @param mixed $input Submitted or stored values.
- * @return array{adsense:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_channel:string,cse:string,search_page:int}
+ * @return array{adsense:string,in_article:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_channel:string,cse:string,search_page:int}
  */
 function tala_ads_sanitize_settings( $input ) {
 	$input   = is_array( $input ) ? $input : array();
 	$adsense = tala_ads_sanitize_adsense( $input['adsense'] ?? '' );
 	return array(
 		'adsense'          => $adsense,
+		'in_article'       => tala_ads_sanitize_ad_unit( $input['in_article'] ?? '' ),
 		'consent'          => ! empty( $input['consent'] ),
 		'error_protection' => tala_ads_sanitize_error_protection( $input['error_protection'] ?? '', $adsense ),
 		'gtm'              => tala_ads_sanitize_gtm( $input['gtm'] ?? '' ),
@@ -170,6 +171,23 @@ function tala_ads_sanitize_error_protection( $value, $adsense ) {
  */
 function tala_ads_sanitize_adsense( $value ) {
 	return is_string( $value ) && preg_match( '/\bpub-(\d{10,20})\b/', $value, $match ) ? 'ca-pub-' . $match[1] : '';
+}
+
+/**
+ * An AdSense ad unit ID: the ten digits of data-ad-slot, entered as is or taken from the ad unit's
+ * code. '' when there is none.
+ *
+ * @param mixed $value Value entered.
+ * @return string
+ */
+function tala_ads_sanitize_ad_unit( $value ) {
+	if ( ! is_string( $value ) ) {
+		return '';
+	}
+	if ( preg_match( '/^\s*(\d{10})\s*$/', $value, $match ) ) {
+		return $match[1];
+	}
+	return preg_match( '/data-ad-slot\s*=\s*["\']?(\d{10})(?!\d)/', $value, $match ) ? $match[1] : '';
 }
 
 /**

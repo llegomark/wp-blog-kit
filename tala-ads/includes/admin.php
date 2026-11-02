@@ -49,6 +49,19 @@ function tala_ads_settings_fields(): void {
 			'help'        => __( 'Paste the ID, or any code AdSense gives you (the Auto ads code, an ads.txt line): only the publisher ID is kept.', 'tala-ads' ),
 		)
 	);
+	add_settings_field(
+		'tala_ads_in_article',
+		__( 'In-article ad unit', 'tala-ads' ),
+		'tala_ads_field_text',
+		'tala-ads',
+		'tala_ads_adsense',
+		array(
+			'label_for'   => 'tala-ads-in-article',
+			'key'         => 'in_article',
+			'placeholder' => '1234567890',
+			'help'        => __( 'Optional: the ID of an In-article ad unit (AdSense → Ads → By ad unit), the number after data-ad-slot. Pasting the unit\'s code works too: only the ID is kept. The ad goes after the second paragraph of each post, where Google suggests, with its space kept free while it loads so the text doesn\'t jump.', 'tala-ads' ),
+		)
+	);
 	add_settings_field( 'tala_ads_consent', __( 'Google\'s messages', 'tala-ads' ), 'tala_ads_field_consent', 'tala-ads', 'tala_ads_adsense' );
 	add_settings_field( 'tala_ads_error_protection', __( 'Error protection', 'tala-ads' ), 'tala_ads_field_error_protection', 'tala-ads', 'tala_ads_adsense', array( 'label_for' => 'tala-ads-error-protection' ) );
 
