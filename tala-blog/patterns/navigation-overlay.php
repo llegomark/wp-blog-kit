@@ -6,7 +6,7 @@
  * Block Types: core/template-part/navigation-overlay
  * Inserter: no
  * Description: What the header menu opens into on narrow screens, a side sheet in the theme's colours (light or dark): a top bar
- * laid out like the header's row, with the site logo and title and a close button in the menu button's place, then the full menu.
+ * laid out like the header's row, with the site logo and title over the header's and a close button at its end, then the full menu.
  *
  * @package TalaBlog
  */

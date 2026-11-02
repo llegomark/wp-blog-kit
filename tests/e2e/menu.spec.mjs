@@ -45,10 +45,7 @@ test.describe( 'phone', () => {
 
 	test( 'its top bar stays exactly over the header on every frame while it fades in', async ( { page } ) => {
 		await page.goto( pages.article );
-		const header = {
-			title: await box( page, '.tala-header .wp-block-site-title' ),
-			button: await box( page, '.wp-block-navigation__responsive-container-open svg' ),
-		};
+		const header = { title: await box( page, '.tala-header .wp-block-site-title' ) };
 		const frames = await page.evaluate( async () => {
 			const seen = { title: new Set(), button: new Set(), opacity: new Set() };
 			const at = ( selector ) => {
@@ -69,19 +66,33 @@ test.describe( 'phone', () => {
 			return { title: [ ...seen.title ], button: [ ...seen.button ], fades: seen.opacity.size > 1 };
 		} );
 		expect( frames.title ).toEqual( [ header.title ] );
-		expect( frames.button ).toEqual( [ header.button ] );
+		expect( frames.button, 'The close button stays put' ).toHaveLength( 1 );
 		expect( frames.fades, 'It still fades in' ).toBe( true );
 	} );
 
-	test( 'the close button is a 44 px target in the menu button\'s place', async ( { page } ) => {
+	test( 'the close button is a 44 px target on the header row\'s centre line at the sheet\'s inline end', async ( { page } ) => {
 		await page.goto( pages.home );
 		const open = await box( page, '.wp-block-navigation__responsive-container-open' );
 		expect( open, 'The menu button is a 44 px target' ).toMatch( / 44\.0x44\.0$/ );
+		const row = await page.evaluate( () => {
+			const r = document.querySelector( '.tala-header > .tala-rail' ).getBoundingClientRect();
+			return r.top + ( r.height / 2 );
+		} );
 		await openMenu( page );
-		const close = page.getByRole( 'button', { name: 'Close', exact: true } );
-		const size = await close.evaluate( ( el ) => [ el.offsetWidth, el.offsetHeight ] );
-		expect( size ).toEqual( [ 44, 44 ] );
-		expect( await box( page, '.wp-block-navigation-overlay-close' ) ).toBe( open );
+		const close = await page.evaluate( () => {
+			const button = document.querySelector( '.wp-block-navigation-overlay-close' );
+			const bar = document.querySelector( '.tala-overlay-bar' );
+			const b = button.getBoundingClientRect();
+			const s = getComputedStyle( bar );
+			return {
+				size: [ button.offsetWidth, button.offsetHeight ],
+				middle: b.top + ( b.height / 2 ),
+				gap: Math.round( ( bar.getBoundingClientRect().right - parseFloat( s.borderRightWidth ) - parseFloat( s.paddingRight ) - b.right ) * 10 ) / 10,
+			};
+		} );
+		expect( close.size ).toEqual( [ 44, 44 ] );
+		expect( close.middle ).toBeCloseTo( row, 1 );
+		expect( close.gap, 'At the end of the bar, inside its padding' ).toBeCloseTo( 0, 1 );
 	} );
 
 	test( 'a sheet the width of the screen, links at least 48 px tall with hairlines', async ( { page } ) => {
@@ -204,13 +215,17 @@ test.describe( 'desktop header', () => {
 			};
 			const header = document.querySelector( '.tala-header' );
 			const links = [ ...header.querySelectorAll( '.wp-block-navigation__responsive-container-content > ul > li > a' ) ];
-			const separator = header.querySelector( '.tala-separator' );
+			// The separator is drawn by the search form's ::before (no markup), at the start of the form.
+			const form = header.querySelector( '.wp-block-search' );
+			const line = getComputedStyle( form, '::before' );
+			const formBox = at( form );
+			const separator = { left: formBox.left + parseFloat( line.marginLeft ), right: formBox.left + parseFloat( line.marginLeft ) + parseFloat( line.width ), middle: formBox.middle, width: parseFloat( line.width ), height: parseFloat( line.height ) };
 			const search = header.querySelector( '.wp-block-search__button' );
 			const s = getComputedStyle( search );
 			return {
-				order: [ header.querySelector( '.wp-block-site-title' ), links[ 0 ], links.at( -1 ), separator, search, header.querySelector( '.tala-theme-switch' ) ].map( at ),
+				order: [ at( header.querySelector( '.wp-block-site-title' ) ), at( links[ 0 ] ), at( links.at( -1 ) ), separator, at( search ), at( header.querySelector( '.tala-theme-switch' ) ) ],
 				links: links.map( ( a ) => [ at( a ).height >= 44, getComputedStyle( a ).fontSize, getComputedStyle( a ).fontWeight ] ),
-				separator: [ at( separator ).width, at( separator ).height ],
+				separator: [ separator.width, separator.height, line.content, header.querySelectorAll( '.tala-separator' ).length ],
 				search: [ at( search ).width, at( search ).height, s.borderTopWidth, s.backgroundColor === getComputedStyle( document.body ).backgroundColor ],
 				menuButton: getComputedStyle( header.querySelector( '.wp-block-navigation__responsive-container-open' ) ).display,
 			};
@@ -223,7 +238,7 @@ test.describe( 'desktop header', () => {
 		for ( const link of row.links ) {
 			expect( link ).toEqual( [ true, '15px', '500' ] );
 		}
-		expect( row.separator ).toEqual( [ 1, 20 ] );
+		expect( row.separator ).toEqual( [ 1, 20, '""', 0 ] );
 		expect( row.search.slice( 0, 3 ) ).toEqual( [ 44, 44, '1px' ] );
 	} );
 

@@ -3,7 +3,7 @@
  * and short pages keep their footer at the bottom of the window.
  */
 import { test, expect } from '@playwright/test';
-import { demoPages, PHONE, DESKTOP } from './utils.mjs';
+import { demoPages, PHONE, DESKTOP, wp } from './utils.mjs';
 
 const pages = demoPages();
 
@@ -221,5 +221,42 @@ test.describe( 'the frame, phone', () => {
 		for ( const band of bands ) {
 			expect( band.rail ).toEqual( { left: 12, width: width - 24 } );
 		}
+	} );
+} );
+
+test.describe( 'the text column, desktop', () => {
+	test.use( DESKTOP );
+	let post;
+
+	test.beforeAll( () => {
+		const content =
+			'<!-- wp:paragraph --><p class="tala-test-before">Before the group.</p><!-- /wp:paragraph -->' +
+			'<!-- wp:group {"className":"tala-test-group","layout":{"type":"constrained"}} --><div class="wp-block-group tala-test-group"><!-- wp:paragraph --><p>In a group, as the editor makes new ones.</p><!-- /wp:paragraph --></div><!-- /wp:group -->';
+		// A page: the publish check asks posts for a featured image too. Its text sits in the same column.
+		const meta = '--meta_input={"_tala_seo_description":"A Group in the text."}';
+		post = wp( 'post', 'create', '--post_type=page', '--post_status=publish', '--post_title=Group test', meta, `--post_content=${ content }`, '--porcelain' );
+	} );
+
+	test.afterAll( () => {
+		wp( 'post', 'delete', post, '--force' );
+	} );
+
+	test( 'NASH\'s measure-72, and a Group in the text lines up with it, as in the editor', async ( { page } ) => {
+		await page.goto( new URL( wp( 'post', 'url', post ) ).pathname );
+		const column = await page.evaluate( () => {
+			const left = ( s ) => document.querySelector( s ).getBoundingClientRect().left;
+			const group = document.querySelector( '.tala-test-group' );
+			return {
+				measure: document.querySelector( '.tala-measure' ).getBoundingClientRect().width,
+				padding: getComputedStyle( group ).paddingLeft,
+				text: left( '.tala-test-group p' ) - left( '.tala-test-before' ),
+			};
+		} );
+		// 72 Inter "ch" (0.628em) of 17 px text, as NASH's measure-72.
+		expect( column.measure ).toBeCloseTo( 72 * 0.628 * 17, 0 );
+		expect( column.padding, 'No page padding added again' ).toBe( '0px' );
+		// Its text starts where the column's does (within the 0.7 px between measure-72, 768.7 px, and
+		// the 48rem content size the editor uses, which centres the Group's text in it).
+		expect( Math.abs( column.text ) ).toBeLessThan( 1 );
 	} );
 } );

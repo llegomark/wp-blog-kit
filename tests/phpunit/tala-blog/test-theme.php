@@ -438,8 +438,8 @@ HTML;
 
 	/**
 	 * The header: logo and title, the menu named "Primary" (which opens the theme's overlay on
-	 * phones), a separator, the site search as a button that opens into a field, and the Light/Dark
-	 * switch, in that order, in a band with a rail like every section of the page.
+	 * phones), the site search as a button that opens into a field (the separator before it is CSS),
+	 * and the Light/Dark switch, in that order, in a band with a rail like every section of the page.
 	 */
 	public function test_header(): void {
 		$this->publish_post( array( 'post_type' => 'page' ) );
@@ -454,17 +454,18 @@ HTML;
 		$this->assertStringContainsString( 'aria-label="Site"', $search[0] );
 
 		$order = array(
-			'brand'     => strpos( $header, 'tala-brand' ),
-			'menu'      => preg_match( '/<nav[^>]* aria-label="Primary"/', $header, $nav, PREG_OFFSET_CAPTURE ) ? $nav[0][1] : false,
-			'overlay'   => strpos( $header, 'wp-block-navigation-overlay-close' ),
-			'separator' => strpos( $header, 'tala-separator' ),
-			'search'    => strpos( $header, 'wp-block-search__button-only' ),
-			'switch'    => strpos( $header, 'class="tala-theme-switch"' ),
+			'brand'   => strpos( $header, 'tala-brand' ),
+			'menu'    => preg_match( '/<nav[^>]* aria-label="Primary"/', $header, $nav, PREG_OFFSET_CAPTURE ) ? $nav[0][1] : false,
+			'overlay' => strpos( $header, 'wp-block-navigation-overlay-close' ),
+			'search'  => strpos( $header, 'wp-block-search__button-only' ),
+			'switch'  => strpos( $header, 'class="tala-theme-switch"' ),
 		);
 		$this->assertNotContains( false, $order );
 		$sorted = $order;
 		asort( $sorted );
-		$this->assertSame( array_keys( $order ), array_keys( $sorted ), 'Brand, menu (and its overlay), separator, search, switch' );
+		$this->assertSame( array_keys( $order ), array_keys( $sorted ), 'Brand, menu (and its overlay), search, switch' );
+		// The separator is drawn by CSS: an empty Group would show its placeholder in the Site Editor.
+		$this->assertStringNotContainsString( 'tala-separator', $header );
 	}
 
 	/**
@@ -495,6 +496,8 @@ HTML;
 		$this->assertStringContainsString( 'font-synthesis: none', $find( 'html' ) );
 		$this->assertStringContainsString( 'text-wrap: balance', $find( ':where(h1, h2, h3, h4)' ) );
 		$this->assertStringContainsString( 'font-variant-numeric: tabular-nums', $find( ':where(time, td, th)' ) );
+		$this->assertStringContainsString( 'max-inline-size: calc(72 * 0.628em)', $find( '.tala-measure' ), 'NASH\'s measure-72' );
+		$this->assertSame( '48rem', wp_get_global_settings( array( 'layout', 'contentSize' ) ), 'The editor\'s column matches it' );
 		$display = $find( '.tala-display' );
 		$this->assertStringContainsString( 'font-family: var(--wp--preset--font-family--inter-display)', $display );
 		$this->assertStringContainsString( 'font-style: italic', $display );

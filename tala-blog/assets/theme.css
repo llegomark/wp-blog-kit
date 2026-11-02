@@ -442,10 +442,23 @@ footer.wp-block-template-part {
 	background-size: var(--tala-grid-pitch) var(--tala-grid-pitch);
 }
 
-/* The text column (about 72 characters of body text), centred in the rail. */
+/* The text column, centred in the rail: NASH's measure-72, 72 of Inter's "ch" (0.628em, written in
+   em so lines don't re-wrap when Inter replaces its fallback), about 768px of 17px text. theme.json's
+   content size (48rem) gives the editor the same column. */
 .tala-measure {
-	max-inline-size: var(--wp--style--global--content-size, 45rem);
+	max-inline-size: calc(72 * 0.628em);
 	margin-inline: auto;
+}
+
+/* Groups in the content (the editor makes new ones "constrained") get the page's padding only where
+   they are the outermost padded box. Here the rail pads the page, so they don't add it again, as
+   WordPress does for a padded box inside another; full-width blocks in them don't pull outwards. */
+.tala-rail :where(.has-global-padding:not(.wp-block-block, .alignfull)) {
+	padding-inline: 0;
+}
+
+.tala-rail :where(.has-global-padding:not(.wp-block-block, .alignfull)) > .alignfull {
+	margin-inline: 0;
 }
 
 /* The header: one band, at least 4rem tall, not sticky. Its row: the brand (logo and title), the
@@ -522,19 +535,28 @@ footer.wp-block-template-part {
 	color: var(--wp--preset--color--contrast);
 }
 
-/* The separator between the menu and the search: a 20px hairline, shown with the menu. */
-.tala-separator {
+/* The separator between the menu and the search: a 20px hairline at the start of the search form,
+   shown with the menu. It is drawn here, not in the pattern: an empty Group would show its
+   placeholder in the Site Editor. */
+.tala-header .wp-block-search {
+	display: flex;
+	flex: none;
+	align-items: center;
+}
+
+.tala-header .wp-block-search::before {
+	content: "";
 	flex: none;
 	inline-size: 1px;
 	block-size: 1.25rem;
-	margin-inline: 0.5rem;
+	margin-inline: 0.5rem 1rem;
 	background-color: var(--wp--preset--color--rule);
 }
 
 @media (width < 52rem) {
 
-	.tala-separator {
-		display: none;
+	.tala-header .wp-block-search::before {
+		content: none;
 	}
 }
 
@@ -551,11 +573,8 @@ footer.wp-block-template-part {
 
 /* Search: a button that opens into a field. The field opens over the row, to the left of the
    button, so nothing in the header moves: it is placed in the header's rail (the nearest
-   positioned box), between the rail's padding and the search button, at most 20rem wide. */
-.tala-header .wp-block-search {
-	flex: none;
-}
-
+   positioned box), between the rail's padding and the search button (the switch follows that
+   button, so the field ends one button and one gap before it), at most 20rem wide. */
 .tala-header .wp-block-search__input {
 	position: absolute;
 	z-index: 3;
@@ -608,12 +627,8 @@ footer.wp-block-template-part {
 	}
 }
 
-/* Its top bar is the header's row: the brand, then the close button in the menu button's place,
-   with room after it where the header has the search button and the switch. */
-.tala-overlay-bar {
-	padding-inline-end: calc(var(--tala-rail-pad) + 2 * (var(--tala-control) + var(--tala-header-gap)));
-}
-
+/* Its top bar is the header's row: the brand exactly over the header's, the close button (a ghost
+   icon button) at the end of the row, as on NASH's sheet. */
 .tala-overlay .wp-block-navigation-overlay-close {
 	border: 1px solid transparent;
 	background-color: transparent;
