@@ -1362,7 +1362,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 
 /* Tables: a bordered box on the surface that scrolls sideways on its own, never the page; hairlines
    between rows, figures lined up. A file or column name in a cell stays whole: the table scrolls
-   instead. Tables from classic content get the cells' look and a border of their own. */
+   instead. Tables from classic content get the cells' look, a border of their own, and scroll too. */
 .wp-block-post-content .wp-block-table {
 	overflow-x: auto;
 	overscroll-behavior-x: contain;
@@ -1391,7 +1391,14 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	line-height: 1.55;
 }
 
+/* A classic table has no box around it: it scrolls itself, as wide as its content and never wider
+   than the column (its rows sit in the anonymous table box inside). */
 .wp-block-post-content table:not(.wp-block-table > table) {
+	display: block;
+	inline-size: max-content;
+	max-inline-size: 100%;
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
 	border: 1px solid var(--wp--preset--color--rule);
 }
 
@@ -1600,7 +1607,8 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	margin: 0;
 }
 
-.tala-related {
+/* The Query Loop only: its Post Template has the class too (the query filters need it on both). */
+.wp-block-query.tala-related {
 	border-block: 1px solid var(--wp--preset--color--rule);
 }
 

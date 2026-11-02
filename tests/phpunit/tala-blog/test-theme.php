@@ -382,9 +382,27 @@ HTML;
 		$bound = '<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"tala-blog/reading-time"}}}} --><p></p><!-- /wp:paragraph -->';
 		$this->assertMatchesRegularExpression( '#^<p[^>]*>3 min read</p>$#', trim( $this->render( $bound, $post ) ) );
 
-		// A reading time inside the post's own text doesn't count the text again and again.
-		$loop = $this->publish_post( array( 'post_content' => $paragraph( $words( 5 ) ) . $bound ) );
+		// A reading time inside the post's own text doesn't count the text again and again: the
+		// bound paragraph measures the post being shown, this one.
+		$loop            = $this->publish_post( array( 'post_content' => $paragraph( $words( 5 ) ) . $bound ) );
+		$GLOBALS['post'] = get_post( $loop );
+		setup_postdata( $GLOBALS['post'] );
 		$this->assertSame( 1, tala_blog_reading_minutes( $loop ) );
+
+		// A post behind a password has no reading time until the password is entered.
+		$locked = $this->publish_post(
+			array(
+				'post_content'  => $paragraph( $words( 441 ) ),
+				'post_password' => 'secret',
+			)
+		);
+		$this->assertTrue( post_password_required( $locked ) );
+		$reading          = new WP_Block( parse_blocks( $bound )[0] );
+		$reading->context = array( 'postId' => $locked );
+		$this->assertSame( '', tala_blog_reading_time( array(), $reading ) );
+		$main = $this->single_main( $locked );
+		$this->assertStringNotContainsString( 'min read', $main );
+		$this->assertStringNotContainsString( 'tala-reading-time', $main, 'Nor an empty paragraph' );
 	}
 
 	/**
@@ -465,6 +483,8 @@ HTML;
 		$this->assertMatchesRegularExpression( '#<h1 class="(?=[^"]*\bwp-block-post-title\b)(?=[^"]*\btala-display\b)[^"]*">Seating plans</h1>#', $band );
 		$this->assertMatchesRegularExpression( '#class="[^"]*\btala-lead\b[^"]*"><p class="wp-block-post-excerpt__excerpt">A plan for every room. </p>#', $band );
 		$this->assertMatchesRegularExpression( '#>By <a href="' . preg_quote( get_author_posts_url( $author ), '#' ) . '" rel="author"[^>]*>Ana Reyes</a><#', $band );
+		$byline = new WP_Block( parse_blocks( '<!-- wp:post-author-name {"className":"tala-byline"} /-->' )[0], array( 'postId' => $post ) );
+		$this->assertSame( '<span>Ana Reyes</span>', tala_blog_byline( '<span>Ana Reyes</span>', $byline->parsed_block, $byline ), 'Markup of another shape (another plugin\'s) is left as it is' );
 		$this->assertMatchesRegularExpression( '#<p class="[^"]*\btala-reading-time\b[^"]*">2 min read</p>#', $band );
 
 		// After the text, its footer: "Topics", every category as a chip.

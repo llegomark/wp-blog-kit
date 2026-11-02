@@ -220,8 +220,8 @@ add_filter( 'render_block_core/post-author-name', 'tala_blog_byline', 10, 3 );
 /**
  * The byline in an article's title band (the Author Name block with the class "tala-byline"):
  * "By {author}", the name linking to the author's page as the post's author (rel="author"). Left
- * out when the author has no name, rather than an empty link. Other Author Name blocks are left
- * as they are.
+ * out when the author has no name, rather than an empty link. Other Author Name blocks, and markup
+ * not of the block's own shape, are left as they are.
  *
  * @param string               $html     Rendered Author Name.
  * @param array<string, mixed> $block    Parsed block.
@@ -234,11 +234,15 @@ function tala_blog_byline( $html, $block, $instance ) {
 	}
 	$author = (int) get_post_field( 'post_author', (int) ( $instance->context['postId'] ?? get_the_ID() ) );
 	$name   = $author ? trim( wp_strip_all_tags( (string) get_the_author_meta( 'display_name', $author ) ) ) : '';
-	$html   = trim( $html );
-	$start  = strpos( $html, '>' ); // The wrapper's start tag ends at the first ">" (WordPress escapes ">" in attributes).
-	if ( '' === $name || false === $start || ! str_ends_with( $html, '</div>' ) ) {
+	if ( '' === $name ) {
 		return '';
 	}
+	$wrapper = trim( $html );
+	$start   = strpos( $wrapper, '>' ); // The wrapper's start tag ends at the first ">" (WordPress escapes ">" in attributes).
+	if ( false === $start || ! str_starts_with( $wrapper, '<div' ) || ! str_ends_with( $wrapper, '</div>' ) ) {
+		return $html; // Markup of another shape (a plugin's) is left as it is.
+	}
+	$html = $wrapper;
 	$link = '<a href="' . esc_url( get_author_posts_url( $author ) ) . '" rel="author" class="wp-block-post-author-name__link">' . esc_html( $name ) . '</a>';
 	/* translators: %s: the author's name, linked to their page. */
 	return substr( $html, 0, $start + 1 ) . sprintf( esc_html__( 'By %s', 'tala-blog' ), $link ) . '</div>';
@@ -377,8 +381,23 @@ function tala_blog_register_bindings(): void {
 	);
 }
 
+add_filter( 'render_block_core/paragraph', 'tala_blog_empty_reading_time', 10, 2 );
+
 /**
- * "N min read" for the post a block shows (its postId context), or the current post.
+ * The title band's reading time (the paragraph with the class "tala-reading-time") is left out
+ * when it has nothing to say, as on a post behind a password: no empty paragraph in the dates.
+ *
+ * @param string               $html  Rendered Paragraph.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_empty_reading_time( $html, $block ) {
+	return tala_blog_block_has_class( $block, 'tala-reading-time' ) && '' === trim( wp_strip_all_tags( $html ) ) ? '' : $html;
+}
+
+/**
+ * "N min read" for the post a block shows (its postId context), or the current post; nothing for a
+ * post behind a password.
  *
  * @param array<string, mixed> $source_args Binding arguments (none).
  * @param WP_Block             $block       The bound block.
@@ -386,7 +405,8 @@ function tala_blog_register_bindings(): void {
  */
 function tala_blog_reading_time( $source_args, $block ) {
 	$post = get_post( (int) ( $block->context['postId'] ?? get_the_ID() ) );
-	if ( ! $post ) {
+	// Behind a password, nothing about the text shows until the password is entered.
+	if ( ! $post || post_password_required( $post ) ) {
 		return '';
 	}
 	$minutes = tala_blog_reading_minutes( $post );

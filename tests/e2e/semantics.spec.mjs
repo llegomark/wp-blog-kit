@@ -37,6 +37,12 @@ test( '"Read next" is a navigation landmark after the topics, before the author 
 	await expect( nav.getByRole( 'heading', { level: 2, name: 'Read next' } ) ).toBeVisible();
 	await expect( nav.locator( '.tala-related .tala-row h3.tala-subtitle a' ).first() ).toBeVisible();
 	await expect( nav.locator( 'img' ), 'No pictures' ).toHaveCount( 0 );
+	// One 1px rule above the rows and one below: nothing inside the list draws a second.
+	const rules = await nav.locator( '.wp-block-query.tala-related' ).evaluate( ( list ) =>
+		[ list, ...list.querySelectorAll( '*' ) ].map( ( el ) => getComputedStyle( el ) ).reduce( ( sum, s ) => [ sum[ 0 ] + parseFloat( s.borderTopWidth ), sum[ 1 ] + parseFloat( s.borderBottomWidth ) ], [ 0, 0 ] ),
+	);
+	const rows = await nav.locator( '.tala-related .wp-block-post' ).count();
+	expect( rules, 'Top rules: the list\'s and one between each pair of rows; bottom rule: the list\'s' ).toEqual( [ rows, 1 ] );
 	await expect( nav.getByRole( 'link', { name: /Older article/ } ) ).toBeVisible();
 	await expect( page.locator( 'main .tala-measure > footer.tala-terms + nav[aria-label="Read next"] + .wp-block-post-author' ) ).toHaveCount( 1 );
 
@@ -103,6 +109,45 @@ test( 'the article\'s text: h2 under a rule, blockquote on wash with a 2px cobal
 	expect( await style( text.locator( 'ul' ).first(), [ 'listStyleType' ] ) ).toBe( 'square' );
 	expect( await style( text.locator( 'table' ).first(), [ 'fontVariantNumeric' ] ) ).toBe( 'tabular-nums' );
 	expect( await style( text.locator( '.wp-block-table' ).first(), [ 'overflowX', 'borderTopWidth', 'borderTopStyle' ] ) ).toBe( 'auto | 1px | solid' );
+} );
+
+// The Theme Unit Test's "Title With Special Characters": its title, a run of symbols without a
+// space, and its classic table of characters, ten to a row, which is wider than a phone's column.
+test.describe( 'special characters (the Theme Unit Test\'s post)', () => {
+	test.use( { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true } );
+	let id;
+
+	test.beforeAll( () => {
+		const cover = wp( 'post', 'list', '--post_type=attachment', '--s=Cover illustration', '--field=ID', '--posts_per_page=1' );
+		// As agents publish (Tala SEO's readme): a draft, its description and featured image, then publish.
+		const cell = ( c ) => `<td>${ c.replace( '&', '&amp;' ).replace( '<', '&lt;' ).replace( '>', '&gt;' ) }</td>`;
+		const rows = [ '!"#$%&\'()*', '+,-./01234', '56789:;>=<' ].map( ( row ) => `<tr>${ [ ...row ].map( cell ).join( '' ) }</tr>` );
+		const title = 'Title With Special Characters ~`!@#$%^&*()-_=+{}[]/\\;:\'"?,.>';
+		id = wp( 'post', 'create', `--post_title=${ title }`, '--meta_input={"_tala_seo_description":"Symbols."}', `--post_content=<table><tbody>${ rows.join( '' ) }</tbody></table>`, '--porcelain' );
+		wp( 'post', 'meta', 'set', id, '_thumbnail_id', cover );
+		wp( 'post', 'update', id, '--post_status=publish' );
+	} );
+
+	test.afterAll( () => {
+		wp( 'post', 'delete', id, '--force' );
+	} );
+
+	test( 'at 390 px the title breaks and the table scrolls in its own box: the page doesn\'t scroll sideways', async ( { page } ) => {
+		await page.goto( `/?p=${ id }` );
+		await expect( page.locator( 'h1' ) ).toContainText( '~`!@#$%^&*()' );
+		const wide = await page.evaluate( () => {
+			const width = document.documentElement.clientWidth;
+			return {
+				scroll: document.documentElement.scrollWidth - width,
+				// Everything stays in the window, but the rows clipped inside the scrolling table.
+				over: [ ...document.querySelectorAll( 'main *' ) ]
+					.filter( ( el ) => ! el.parentElement.closest( 'table' ) && el.getBoundingClientRect().right > width + 0.5 )
+					.map( ( el ) => `${ el.tagName }.${ el.className }` ),
+				tableScrolls: ( ( table ) => table.scrollWidth > table.clientWidth )( document.querySelector( '.wp-block-post-content table' ) ),
+			};
+		} );
+		expect( wide ).toEqual( { scroll: 0, over: [], tableScrolls: true } );
+	} );
 } );
 
 test.describe( 'the 404 page', () => {
