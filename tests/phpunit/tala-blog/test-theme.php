@@ -1037,6 +1037,105 @@ HTML;
 	}
 
 	/**
+	 * A submenu's title goes nowhere: in the header it is a button that opens its submenu, and where
+	 * submenus are always open (the footer's columns, the phone menu) it is a label, not a link,
+	 * also on its own page. The items under it stay links.
+	 */
+	public function test_submenu_titles(): void {
+		self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_navigation',
+				'post_status'  => 'publish',
+				'post_title'   => 'Menu',
+				'post_content' => '<!-- wp:navigation-submenu {"label":"Resources","url":"/resources/","kind":"custom"} -->'
+					. '<!-- wp:navigation-link {"label":"DepEd Resources","url":"/category/resources/","kind":"custom"} /-->'
+					. '<!-- /wp:navigation-submenu -->',
+			)
+		);
+		$header = do_blocks( '<!-- wp:template-part {"slug":"header","theme":"tala-blog","tagName":"header"} /-->' );
+		$this->assertMatchesRegularExpression( '#<button (?=[^>]*data-wp-on--click="actions\.toggleMenuOnClick")[^>]*aria-label="Resources submenu" class="wp-block-navigation-item__content wp-block-navigation-submenu__toggle"[^>]*><span class="wp-block-navigation-item__label">Resources</span></button>#', $header, 'The header: a button that opens it.' );
+		$this->assertSame( 1, preg_match_all( '#<a class="wp-block-navigation-item__content"\s*><span class="wp-block-navigation-item__label">Resources</span>#', $header ), 'The phone menu: a label.' );
+		$this->assertStringNotContainsString( 'href="/resources/"', $header );
+		$this->assertSame( 2, substr_count( $header, 'href="/category/resources/"' ), 'Its items stay links.' );
+
+		$footer = $this->footer();
+		$this->assertMatchesRegularExpression( '#<a class="wp-block-navigation-item__content"\s*><span class="wp-block-navigation-item__label">Resources</span>#', $footer, 'The footer: a label over its column.' );
+		$this->assertStringNotContainsString( 'href="/resources/"', $footer );
+		$this->assertStringContainsString( 'href="/category/resources/"', $footer );
+	}
+
+	/**
+	 * Appearance → Customize → Header and footer menus: the footer shows the menu chosen for it, and
+	 * the header and its phone menu the one chosen for them, whichever is newer. With only the
+	 * footer's chosen, the header keeps WordPress's pick among the other menus, so a new footer menu
+	 * never takes the header over. A Navigation block with links of its own keeps them, and a choice
+	 * that isn't a published menu counts as none.
+	 */
+	public function test_header_and_footer_menus(): void {
+		$menu   = static fn( string $title, string $label, string $date ): int => self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_navigation',
+				'post_status'  => 'publish',
+				'post_title'   => $title,
+				'post_date'    => $date,
+				'post_content' => '<!-- wp:navigation-link {"label":"' . $label . '","url":"/' . strtolower( $label ) . '/","kind":"custom"} /-->',
+			)
+		);
+		$header = $menu( 'Header', 'Lessons', '2026-01-01 08:00:00' );
+		$footer = $menu( 'Footer', 'Privacy', '2026-02-01 08:00:00' );
+		$top    = static fn(): string => do_blocks( '<!-- wp:template-part {"slug":"header","theme":"tala-blog","tagName":"header"} /-->' );
+
+		$this->assertStringContainsString( '>Privacy<', $top(), 'No choice: WordPress\'s pick, its newest menu, as before.' );
+
+		set_theme_mod( 'tala_blog_footer_menu', (string) $footer );
+		$this->assertStringContainsString( '>Privacy<', $this->footer() );
+		$this->assertStringNotContainsString( '>Lessons<', $this->footer() );
+		$this->assertStringContainsString( '>Lessons<', $top(), 'The footer\'s menu, newer, doesn\'t take the header over.' );
+		$this->assertStringNotContainsString( '>Privacy<', $top() );
+
+		$newest = $menu( 'Newest', 'Archive', '2026-03-01 08:00:00' );
+		$this->assertStringContainsString( '>Archive<', $top(), 'Still WordPress\'s pick among the others.' );
+		set_theme_mod( 'tala_blog_header_menu', (string) $header );
+		$html = $top();
+		$this->assertSame( 2, substr_count( $html, '>Lessons<' ), 'Chosen: in the header and in its phone menu.' );
+		$this->assertStringNotContainsString( '>Archive<', $html );
+		$this->assertStringContainsString( '>Privacy<', $this->footer() );
+
+		$own = do_blocks( '<!-- wp:navigation {"overlayMenu":"never"} --><!-- wp:navigation-link {"label":"Own","url":"/own/","kind":"custom"} /--><!-- /wp:navigation -->' );
+		$this->assertStringContainsString( '>Own<', $own, 'Links of its own stay.' );
+		$this->assertStringNotContainsString( '>Lessons<', $own );
+
+		set_theme_mod( 'tala_blog_header_menu', (string) $this->publish_post( array( 'post_type' => 'page' ) ) );
+		$this->assertStringContainsString( '>Archive<', $top(), 'A page isn\'t a menu: no choice.' );
+		wp_update_post(
+			array(
+				'ID'          => $newest,
+				'post_status' => 'draft',
+			)
+		);
+		$this->assertSame( 0, tala_blog_sanitize_menu( $newest ), 'Nor is a draft.' );
+		$this->assertSame( $header, tala_blog_sanitize_menu( (string) $header ) );
+		remove_theme_mod( 'tala_blog_header_menu' );
+		remove_theme_mod( 'tala_blog_footer_menu' );
+
+		require_once ABSPATH . WPINC . '/class-wp-customize-manager.php';
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		$manager = new WP_Customize_Manager();
+		tala_blog_customize_register( $manager );
+		$this->assertNotNull( $manager->get_section( 'tala_blog_menus' ) );
+		foreach ( array( 'tala_blog_header_menu', 'tala_blog_footer_menu' ) as $id ) {
+			$control = $manager->get_control( $id );
+			$this->assertNotNull( $control );
+			$this->assertSame( 'select', $control->type );
+			$this->assertSame( 'Automatic', $control->choices[0] ?? null );
+			$this->assertSame( 'Header', $control->choices[ $header ] ?? null );
+			$this->assertSame( 'Footer', $control->choices[ $footer ] ?? null );
+			$this->assertArrayNotHasKey( $newest, $control->choices, 'Published menus only.' );
+			$this->assertSame( '0', $manager->get_setting( $id )->default );
+		}
+	}
+
+	/**
 	 * The wordmark: the site title in giant capitals (CSS), sized from its length (characters as
 	 * readers see them, spaces counted), hidden from screen readers and not a link. It is not a
 	 * second site title: the brand cell's is the one.

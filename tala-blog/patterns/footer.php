@@ -6,8 +6,9 @@
  * Block Types: core/template-part/footer
  * Inserter: no
  * Description: The footer slab, on every page: a grid of cells with the site title, tagline and the Footer note template part (empty until it is
- * filled in the Site Editor), then the site's menu (its pages until a menu is made) as columns, one per item with a submenu, the other items
- * gathered in a last column; the copyright line and tagline; and the site title as a giant outlined wordmark, hidden from screen readers.
+ * filled in the Site Editor), then a menu (the one chosen for the footer in Appearance → Customize, else the header's; its pages until a menu
+ * is made) as columns, one per item with a submenu under its title, the other items gathered in a last column; the copyright line and
+ * tagline; and the site title as a giant outlined wordmark, hidden from screen readers.
  *
  * @package TalaBlog
  */

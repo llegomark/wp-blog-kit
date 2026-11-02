@@ -503,6 +503,14 @@ footer.wp-block-template-part,
 	min-inline-size: 0;
 }
 
+/* The site title in the header and the phone menu's bar in capitals, slightly tracked. Only how it
+   shows: the site's name stays as written, for search results, the browser tab and link previews. */
+.tala-header .tala-brand .wp-block-site-title,
+.tala-overlay-bar .tala-brand .wp-block-site-title {
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+}
+
 /* The site title's link: at least 24px tall, a touch target of the size WCAG 2.5.8 asks for (its
    line of text alone is 23px on phones). */
 .wp-block-site-title a {
@@ -550,6 +558,19 @@ footer.wp-block-template-part,
 		transition-duration: 150ms;
 		transition-timing-function: var(--tala-ease-out);
 	}
+}
+
+/* A submenu's title opens it on click (WordPress makes it a button). Its arrow sits in the button's
+   end, above its hover colour, and lets clicks through to the button. */
+.tala-header .wp-block-navigation__responsive-container-content > .wp-block-navigation__container > .open-on-click > .wp-block-navigation-submenu__toggle {
+	padding-inline-end: 1.5rem;
+}
+
+.tala-header .wp-block-navigation__responsive-container-content > .wp-block-navigation__container > .open-on-click > .wp-block-navigation__submenu-icon {
+	position: relative;
+	z-index: 2;
+	margin-inline: -1.125rem 0.5625rem; /* the end margin gives back what the arrow overlaps, 18px less its 9px */
+	pointer-events: none;
 }
 
 /* Submenus drop down in the page's colours, light or dark (WordPress draws them black on white),
@@ -702,9 +723,18 @@ footer.wp-block-template-part,
 	color: var(--wp--preset--color--accent);
 }
 
+/* A submenu's title is a label over its items, not a link (an a without href): small capitals. */
+.tala-overlay .tala-overlay-menu a.wp-block-navigation-item__content:not([href]) {
+	color: var(--wp--preset--color--muted);
+	font-size: var(--wp--preset--font-size--x-small);
+	font-weight: 500;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
 @media (hover: hover) and (pointer: fine) {
 
-	.tala-overlay .tala-overlay-menu .wp-block-navigation-item__content:hover {
+	.tala-overlay .tala-overlay-menu .wp-block-navigation-item__content[href]:hover {
 		color: var(--wp--preset--color--accent);
 	}
 }
@@ -770,8 +800,9 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	margin-block: 0;
 }
 
-/* Links on the slab: white, underlined at white 45%, solid white on hover. */
-.tala-slab a:where(:not(.wp-element-button)) {
+/* Links on the slab: white, underlined at white 45%, solid white on hover. A menu's column title
+   (an a without href) is a label, not a link. */
+.tala-slab a:where([href]:not(.wp-element-button)) {
 	color: inherit;
 	text-decoration-line: underline;
 	text-decoration-style: solid;
@@ -782,7 +813,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 
 @media (hover: hover) and (pointer: fine) {
 
-	.tala-slab a:where(:not(.wp-element-button)):hover {
+	.tala-slab a:where([href]:not(.wp-element-button)):hover {
 		color: inherit;
 		text-decoration-line: underline;
 		text-decoration-color: var(--wp--preset--color--on-slab);

@@ -628,6 +628,104 @@ function tala_blog_footer_columns( $html, $block ) {
 	return $nav->get_updated_html();
 }
 
+add_filter( 'render_block_core/navigation-submenu', 'tala_blog_submenu_label', 10, 3 );
+
+/**
+ * In a menu whose submenus are always open (the footer's columns, the phone menu), a submenu's title
+ * is a label, not a link: its items are right under it, and a title that went somewhere else would
+ * read as one more item. (In the header its submenu opens on click: core makes the title a button.)
+ * Its own page can be one of its items.
+ *
+ * @param string               $html     Rendered Submenu.
+ * @param array<string, mixed> $block    Parsed block.
+ * @param WP_Block             $instance Block instance.
+ * @return string
+ */
+function tala_blog_submenu_label( $html, $block, $instance ) {
+	if ( 'always' !== block_core_navigation_submenu_get_submenu_visibility( $instance->context ) ) {
+		return $html;
+	}
+	$title = new WP_HTML_Tag_Processor( $html );
+	if ( ! $title->next_tag( array( 'tag_name' => 'li' ) ) || ! $title->next_tag() || 'A' !== $title->get_tag() ) {
+		return $html;
+	}
+	foreach ( array( 'href', 'target', 'rel', 'aria-current' ) as $name ) {
+		$title->remove_attribute( $name );
+	}
+	return $title->get_updated_html();
+}
+
+add_filter( 'render_block_data', 'tala_blog_area_menus' );
+
+/**
+ * The menus chosen in Appearance → Customize → Header and footer menus: the footer's Navigation block
+ * (the class "tala-footer-menu") shows the footer menu, and every other one without links of its own
+ * (the header's, the phone menu's) the header menu. Without a choice WordPress picks, as before, its
+ * newest menu; but once the footer has a menu of its own the header's pick leaves it out, so a new
+ * footer menu never takes the header over.
+ *
+ * @param array<string, mixed> $parsed_block Parsed block.
+ * @return array<string, mixed>
+ */
+function tala_blog_area_menus( $parsed_block ) {
+	if ( 'core/navigation' !== ( $parsed_block['blockName'] ?? '' ) || ! empty( $parsed_block['innerBlocks'] )
+		|| ! empty( $parsed_block['attrs']['ref'] ) || ! empty( $parsed_block['attrs']['navigationMenuId'] ) ) {
+		return $parsed_block;
+	}
+	$menu = tala_blog_area_menu( tala_blog_block_has_class( $parsed_block, 'tala-footer-menu' ) ? 'footer' : 'header' );
+	if ( $menu ) {
+		$parsed_block['attrs']['ref'] = $menu;
+	}
+	return $parsed_block;
+}
+
+/**
+ * The menu (wp_navigation post) the header or the footer shows: the one chosen for it, or for the
+ * header with none chosen while the footer has one, WordPress's pick among the others (its newest);
+ * 0 to leave the pick to WordPress.
+ *
+ * @param string $area 'header' or 'footer'.
+ * @return int
+ */
+function tala_blog_area_menu( $area ) {
+	$footer = tala_blog_sanitize_menu( get_theme_mod( 'tala_blog_footer_menu', 0 ) );
+	if ( 'footer' === $area ) {
+		return $footer;
+	}
+	$header = tala_blog_sanitize_menu( get_theme_mod( 'tala_blog_header_menu', 0 ) );
+	if ( $header || ! $footer ) {
+		return $header;
+	}
+	$others = get_posts(
+		array(
+			'post_type'      => 'wp_navigation',
+			'post_status'    => 'publish',
+			'posts_per_page' => 2,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+		)
+	);
+	foreach ( $others as $id ) {
+		if ( (int) $id !== $footer ) {
+			return (int) $id;
+		}
+	}
+	return 0;
+}
+
+/**
+ * A menu choice: the ID of a published menu (wp_navigation post), or 0.
+ *
+ * @param mixed $value Value to check.
+ * @return int
+ */
+function tala_blog_sanitize_menu( $value ) {
+	$post = is_numeric( $value ) ? get_post( (int) $value ) : null;
+	return $post && 'wp_navigation' === $post->post_type && 'publish' === $post->post_status ? $post->ID : 0;
+}
+
 add_filter( 'render_block_core/group', 'tala_blog_footer_cells', 10, 2 );
 
 /**
@@ -1554,6 +1652,51 @@ function tala_blog_customize_register( $wp_customize ): void {
 			),
 		)
 	);
+
+	$menus = array( 0 => __( 'Automatic', 'tala-blog' ) );
+	foreach ( get_posts(
+		array(
+			'post_type'      => 'wp_navigation',
+			'post_status'    => 'publish',
+			'posts_per_page' => 100,
+			'orderby'        => 'title',
+			'order'          => 'ASC',
+			'no_found_rows'  => true,
+		)
+	) as $menu ) {
+		$menus[ $menu->ID ] = '' === $menu->post_title ? '#' . $menu->ID : $menu->post_title;
+	}
+	$wp_customize->add_section(
+		'tala_blog_menus',
+		array(
+			'title'       => __( 'Header and footer menus', 'tala-blog' ),
+			'description' => __( 'Which menu the header and the footer show. Menus are made in Appearance → Editor → Navigation. "Automatic" leaves the choice to WordPress (its newest menu), but never takes the footer\'s menu for the header.', 'tala-blog' ),
+			'priority'    => 119,
+		)
+	);
+	foreach ( array(
+		'tala_blog_header_menu' => __( 'Header menu', 'tala-blog' ),
+		'tala_blog_footer_menu' => __( 'Footer menu', 'tala-blog' ),
+	) as $id => $label ) {
+		$wp_customize->add_setting(
+			$id,
+			array(
+				'default'           => '0',
+				'type'              => 'theme_mod',
+				'capability'        => 'edit_theme_options',
+				'sanitize_callback' => 'tala_blog_sanitize_menu',
+			)
+		);
+		$wp_customize->add_control(
+			$id,
+			array(
+				'section' => 'tala_blog_menus',
+				'type'    => 'select',
+				'label'   => $label,
+				'choices' => $menus,
+			)
+		);
+	}
 }
 
 add_filter( 'render_block_core/query-pagination-numbers', 'tala_blog_page_numbers' );

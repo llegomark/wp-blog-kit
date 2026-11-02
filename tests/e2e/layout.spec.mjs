@@ -120,6 +120,22 @@ const frame = ( page ) =>
 		};
 	} );
 
+test.describe( 'the site title, desktop', () => {
+	test.use( DESKTOP );
+
+	test( 'shows in capitals in the header and the phone menu\'s bar, while the name stays as written', async ( { page } ) => {
+		const name = wp( 'option', 'get', 'blogname' );
+		await page.goto( pages.article );
+		for ( const selector of [ '.tala-header .wp-block-site-title', '.tala-overlay .wp-block-site-title' ] ) {
+			const title = page.locator( selector ).first();
+			expect( await title.evaluate( ( el ) => getComputedStyle( el ).textTransform ), selector ).toBe( 'uppercase' );
+			await expect( title, 'The text itself as written' ).toHaveText( name );
+		}
+		expect( await page.title(), 'The page title as written' ).toContain( name );
+		expect( await page.locator( '.tala-footer-brand .wp-block-site-title' ).evaluate( ( el ) => getComputedStyle( el ).textTransform ), 'The footer\'s as written' ).toBe( 'none' );
+	} );
+} );
+
 test.describe( 'the frame, desktop', () => {
 	test.use( DESKTOP );
 
@@ -443,7 +459,8 @@ test.describe( 'the footer', () => {
 			};
 			const columns = [ ...document.querySelectorAll( 'footer .tala-footer-menu .wp-block-navigation__container > li' ) ];
 			const reading = document.querySelector( 'footer a[href="/?s=reading"]' );
-			const teaching = document.querySelector( 'footer a[href="/tag/teaching/"]' );
+			// A submenu's title in the footer is a label (an a without href): found by its words.
+			const teaching = [ ...document.querySelectorAll( 'footer .tala-footer-menu a' ) ].find( ( a ) => 'Teaching' === a.textContent );
 			return {
 				rail: document.querySelector( 'footer .tala-rail' ).clientWidth,
 				brand: box( document.querySelector( 'footer .tala-footer-brand' ) ),
@@ -455,7 +472,7 @@ test.describe( 'the footer', () => {
 					column: box( reading.closest( '.wp-block-navigation__container > li' ) ),
 				},
 				slab: getComputedStyle( document.querySelector( 'footer .tala-slab' ) ).backgroundColor,
-				underline: getComputedStyle( document.querySelector( 'footer .tala-footer-menu li li a' ) ).textDecorationLine,
+				underline: getComputedStyle( document.querySelector( 'footer .tala-footer-menu li li a[href]' ) ).textDecorationLine,
 			};
 		} );
 
@@ -661,7 +678,7 @@ test.describe( 'the footer', () => {
 					expect( await page.evaluate( () => document.documentElement.scrollWidth - document.documentElement.clientWidth ), 'No sideways scrolling' ).toBe( 0 );
 					expect( await axeViolations( page ), colorScheme ).toEqual( [] );
 					// The focus ring shows on the slab: white, not cobalt on cobalt.
-					const link = page.locator( 'footer .tala-footer-menu a' ).first();
+					const link = page.locator( 'footer .tala-footer-menu a[href]' ).first();
 					await link.focus();
 					expect( await link.evaluate( ( a ) => [ a.matches( ':focus-visible' ), getComputedStyle( a ).outlineColor, getComputedStyle( a ).outlineWidth ] ) ).toEqual( [ true, 'rgb(255, 255, 255)', '2px' ] );
 				}

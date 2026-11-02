@@ -19,7 +19,7 @@ defined( 'ABSPATH' ) || exit;
 <div class="wp-block-group tala-band tala-header"><!-- wp:group {"metadata":{"name":<?php echo tala_blog_block_text( _x( 'Logo, title, menu, search and switch', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-rail","layout":{"type":"flex","flexWrap":"nowrap"}} -->
 <div class="wp-block-group tala-rail"><!-- wp:pattern {"slug":"tala-blog/site-brand"} /-->
 
-<!-- wp:navigation {"ariaLabel":<?php echo tala_blog_block_text( _x( 'Primary', 'header menu label for screen readers', 'tala-blog' ) ); ?>,"overlay":"navigation-overlay","icon":"menu","layout":{"type":"flex","justifyContent":"right","flexWrap":"wrap"}} /-->
+<!-- wp:navigation {"ariaLabel":<?php echo tala_blog_block_text( _x( 'Primary', 'header menu label for screen readers', 'tala-blog' ) ); ?>,"overlay":"navigation-overlay","icon":"menu","submenuVisibility":"click","layout":{"type":"flex","justifyContent":"right","flexWrap":"wrap"}} /-->
 
 <!-- wp:search {"ariaLabel":<?php echo tala_blog_block_text( _x( 'Site', 'name of the search form in the header', 'tala-blog' ) ); ?>,"label":<?php echo tala_blog_block_text( __( 'Search', 'tala-blog' ) ); ?>,"showLabel":false,"placeholder":<?php echo tala_blog_block_text( __( 'Search articles', 'tala-blog' ) ); ?>,"buttonText":<?php echo tala_blog_block_text( _x( 'Search', 'search button', 'tala-blog' ) ); ?>,"buttonPosition":"button-only","buttonUseIcon":true} /-->
 

@@ -169,9 +169,33 @@ test.describe( 'with a saved menu that has a submenu', () => {
 				all.map( ( a ) => ( { text: a.textContent, left: a.getBoundingClientRect().left, top: a.getBoundingClientRect().top } ) ),
 			);
 			expect( links.map( ( l ) => l.text ) ).toEqual( [ 'Guides', 'About', 'Contact', 'Search' ] );
+			await expect( page.locator( '.tala-overlay-menu a:not([href])' ), 'The submenu\'s title is a label' ).toHaveText( [ 'About' ] );
 			const gaps = links.slice( 1 ).map( ( l, i ) => Math.round( l.top - links[ i ].top ) );
 			expect( Math.max( ...gaps ) - Math.min( ...gaps ), `Even spacing: ${ gaps }` ).toBeLessThanOrEqual( 1 );
 			expect( links[ 2 ].left - links[ 1 ].left, 'Contact is indented' ).toBeGreaterThan( 10 );
+		} );
+	} );
+
+	test.describe( 'desktop', () => {
+		test.use( DESKTOP );
+
+		test( 'a submenu\'s title is a button that opens it, its arrow inside', async ( { page } ) => {
+			await page.goto( pages.home );
+			const header = page.locator( '.tala-header .wp-block-navigation__responsive-container-content' );
+			await expect( header.getByRole( 'link', { name: 'About', exact: true } ) ).toHaveCount( 0 );
+			const title = header.getByRole( 'button', { name: 'About submenu' } );
+			await expect( title ).toHaveAttribute( 'aria-expanded', 'false' );
+			await title.click();
+			await expect( title ).toHaveAttribute( 'aria-expanded', 'true' );
+			await expect( header.getByRole( 'link', { name: 'Contact' } ) ).toBeVisible();
+			const boxes = await page.evaluate( () => {
+				const item = document.querySelector( '.tala-header .wp-block-navigation__responsive-container-content > ul > .open-on-click' );
+				const rect = ( el ) => el.getBoundingClientRect().toJSON();
+				return { button: rect( item.querySelector( ':scope > button' ) ), arrow: rect( item.querySelector( ':scope > .wp-block-navigation__submenu-icon' ) ), label: rect( item.querySelector( ':scope > button > span' ) ), next: rect( item.nextElementSibling ) };
+			} );
+			expect( boxes.arrow.left, 'The arrow after the title' ).toBeGreaterThanOrEqual( boxes.label.right + 4 );
+			expect( boxes.arrow.right, 'and inside its button' ).toBeLessThanOrEqual( boxes.button.right );
+			expect( boxes.next.left, 'The next item clear of the button' ).toBeGreaterThanOrEqual( boxes.button.right );
 		} );
 	} );
 
