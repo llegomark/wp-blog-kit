@@ -270,7 +270,8 @@ add_filter( 'the_content', 'tala_ads_innity_in_read', 21 );
  * With a Universal tag set, the place for Innity's in-read ad in the post or page the request shows,
  * once: after its fourth paragraph, two below the In-article ad, or after its text when it has
  * fewer. Without it, Innity looks for the article itself and puts its ad after the second
- * paragraph, on top of the In-article ad. Innity finds the place by its data-innity-slot attribute.
+ * paragraph, on top of the In-article ad. Innity's loader looks for the place by its data-innity-slot
+ * attribute or its id; its in-read ads look only for a span with the id or class innity-in-post.
  *
  * @param string $content Post content.
  * @return string
@@ -284,7 +285,7 @@ function tala_ads_innity_in_read( $content ) {
 	// A script with no code, which prints nothing: it only marks the place as taken for this page.
 	wp_register_script( 'tala-ads-innity-in-read', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
 	wp_enqueue_script( 'tala-ads-innity-in-read' );
-	$slot = '<div class="tala-ads-innity-in-read" data-innity-slot="in-read"></div>';
+	$slot = '<span id="innity-in-post" class="innity-in-post" data-innity-slot="in-read" style="display:block"></span>';
 	return tala_ads_after_paragraphs( $content, (int) apply_filters( 'tala_ads_innity_in_read_paragraphs', 4 ), $slot ) ?? $content . $slot;
 }
 

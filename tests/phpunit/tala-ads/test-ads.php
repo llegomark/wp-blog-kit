@@ -450,7 +450,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		the_post();
 
 		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
-		$this->assertMatchesRegularExpression( '#<p[^>]*>Four\.</p>\s*<div class="tala-ads-innity-in-read" data-innity-slot="in-read"></div>\s*<p[^>]*>Five\.</p>#', $content );
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Four\.</p>\s*<span id="innity-in-post" class="innity-in-post" data-innity-slot="in-read" style="display:block"></span>\s*<p[^>]*>Five\.</p>#', $content, 'A span with the id and class Innity\'s in-read ads look for.' );
 		$this->assertSame( 1, substr_count( $content, 'data-innity-slot' ) );
 		$this->assertLessThan( strpos( $content, 'class="tala-ads-innity"' ), strpos( $content, 'data-innity-slot' ), 'Before the box.' );
 		$this->assertStringNotContainsString( 'data-innity-slot', apply_filters( 'the_content', 'Again' ), 'Once per page.' );
@@ -459,7 +459,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$short                 = $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.' ) ) );
 		$this->go_to( get_permalink( $short ) );
 		the_post();
-		$this->assertMatchesRegularExpression( '#<div class="tala-ads-innity-in-read" data-innity-slot="in-read"></div>$#', apply_filters( 'the_content', get_post_field( 'post_content', $short ) ), 'After the text of a shorter post.' );
+		$this->assertMatchesRegularExpression( '#<span id="innity-in-post"[^>]*></span>$#', apply_filters( 'the_content', get_post_field( 'post_content', $short ) ), 'After the text of a shorter post.' );
 
 		$GLOBALS['wp_scripts'] = new WP_Scripts();
 		$locked                = $this->post( array( 'post_password' => 'secret' ) );

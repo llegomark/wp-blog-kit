@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.5.0
+Stable tag: 1.5.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,6 +67,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, the In-article ad unit, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.5.1 =
+* Fixed: Innity's in-read ads now open in the place Tala Ads keeps for them, after the fourth paragraph. They look only for a span with the id or class innity-in-post, which the place now is; without one, they found the article themselves and opened after its second paragraph, next to the In-article ad.
 
 = 1.5.0 =
 * New: Innity's Universal tags, one zone for wide screens and one for phones, each optional. The browser picks the zone for its screen, as the cached page is the same for every device. Innity's in-read ad gets its own place after the fourth paragraph, two below the In-article ad, instead of after the second, on top of it.
