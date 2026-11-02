@@ -158,9 +158,10 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * "In this article": after the opening paragraph, before the first section, a navigation
-	 * landmark that folds into one line and links each section (and its subsections) to an anchor
-	 * that describes it. Anchors a heading has are kept (unless used twice, or the classic editor's);
+	 * "On this page": after the opening paragraph, before the first section, a disclosure that starts
+	 * closed ("On this page", "N sections") and opens into a navigation landmark of the same name,
+	 * which links each section (numbered, the numbers hidden from screen readers) and its
+	 * subsections to an anchor that describes it. Anchors a heading has are kept (unless used twice, or the classic editor's);
 	 * new ones come from the heading's words and never repeat an id of the page; headings in answers, deeper levels and headings marked
 	 * tala-no-contents stay out.
 	 */
@@ -226,16 +227,20 @@ HTML;
 		$this->go_to( get_permalink( $post ) );
 		$html = $this->render( '<!-- wp:post-content /-->', $post );
 
-		$this->assertMatchesRegularExpression( '#Opening paragraph\.</p>\s*<nav class="tala-contents" aria-label="In this article"><details><summary><span class="tala-contents-title">In this article</span> <span class="tala-contents-count">6 sections</span></summary><ol>#', $html, 'After the opening, folded.' );
+		$this->assertSame( 1, preg_match( '#Opening paragraph\.</p>\s*<details class="tala-contents"><summary>(.*?)</summary><nav aria-label="On this page"><ol>#s', $html, $summary ), 'After the opening, closed.' );
+		$this->assertStringContainsString( '<span class="tala-contents-title">On this page</span> <span class="tala-contents-count">6 sections</span>', $summary[1] );
+		$this->assertSame( 2, preg_match_all( '#<svg[^>]* aria-hidden="true" focusable="false"#', $summary[1] ), 'A list icon and a chevron, decorative' );
+		$num = static fn( string $n ): string => '<span class="tala-contents-num" aria-hidden="true">' . $n . '</span>';
 		$this->assertStringContainsString(
-			'<ol><li><a href="#plan-the-week">Plan the week</a><ol><li><a href="#monday-tuesday">Monday &amp; Tuesday</a></li></ol></li>'
-			. '<li><a href="#kept-anchor">Check the forms</a></li>'
-			. '<li><a href="#plan-the-week-2">Plan the week</a></li>'
-			. '<li><a href="#comments-2">Comments</a></li>'
-			. '<li><a href="#left-by-the-classic-editor">Left by the classic editor</a></li>'
-			. '<li><a href="#an-id-used-twice">An id used twice</a></li></ol></details></nav>',
+			'<ol><li><a href="#plan-the-week">' . $num( '01' ) . 'Plan the week</a><ol><li><a href="#monday-tuesday">Monday &amp; Tuesday</a></li></ol></li>'
+			. '<li><a href="#kept-anchor">' . $num( '02' ) . 'Check the forms</a></li>'
+			. '<li><a href="#plan-the-week-2">' . $num( '03' ) . 'Plan the week</a></li>'
+			. '<li><a href="#comments-2">' . $num( '04' ) . 'Comments</a></li>'
+			. '<li><a href="#left-by-the-classic-editor">' . $num( '05' ) . 'Left by the classic editor</a></li>'
+			. '<li><a href="#an-id-used-twice">' . $num( '06' ) . 'An id used twice</a></li></ol></nav></details>',
 			$html
 		);
+		$this->assertStringNotContainsString( '<details class="tala-contents" open', $html, 'Closed at every width' );
 		foreach ( array( 'plan-the-week', 'monday-tuesday', 'kept-anchor', 'plan-the-week-2', 'comments-2', 'left-by-the-classic-editor', 'an-id-used-twice' ) as $id ) {
 			$this->assertSame( 1, substr_count( $html, ' id="' . $id . '"' ), $id );
 		}
@@ -259,7 +264,7 @@ HTML;
 			. $this->headings( array( 'One' ) ) . "</div>\n<!-- /wp:group -->\n\n" . $this->headings( array( 'Two', 'Three' ) );
 		$post    = $this->publish_post( array( 'post_content' => $grouped ) );
 		$this->go_to( get_permalink( $post ) );
-		$this->assertMatchesRegularExpression( '#Opening\.</p>\s*<nav class="tala-contents"[^>]*>.*</nav><div class="wp-block-group[^"]*">\s*<h2 id="one" class="wp-block-heading">One</h2>#s', $this->render( '<!-- wp:post-content /-->', $post ) );
+		$this->assertMatchesRegularExpression( '#Opening\.</p>\s*<details class="tala-contents"[^>]*>.*</details><div class="wp-block-group[^"]*">\s*<h2 id="one" class="wp-block-heading">One</h2>#s', $this->render( '<!-- wp:post-content /-->', $post ) );
 
 		$two = $this->publish_post( array( 'post_content' => $this->headings( array( 'One', 'Two' ) ) . $this->headings( array( 'A', 'B', 'C' ), 3 ) ) );
 		$this->go_to( get_permalink( $two ) );
@@ -350,6 +355,173 @@ HTML;
 		$listed = $this->render( '<!-- wp:post-date /-->', $post );
 		$this->assertStringNotContainsString( 'tala-date-label', $listed, 'In a list' );
 		$this->assertStringContainsString( '>March 1, 2026</time>', $listed, 'No time in a list' );
+	}
+
+	/**
+	 * Reading time: the words of the article as readers see it (its blocks rendered, the markup
+	 * stripped), at 220 a minute, rounded up, at least a minute. Words are split at whitespace, so a
+	 * Filipino word with "ñ" is one word. The tala-blog/reading-time binding writes it as "N min read".
+	 */
+	public function test_reading_minutes(): void {
+		$paragraph = static fn( string $words ): string => "<!-- wp:paragraph -->\n<p>" . $words . "</p>\n<!-- /wp:paragraph -->";
+		$words     = static fn( int $count, string $word = 'salita' ): string => trim( str_repeat( $word . ' ', $count ) );
+		$minutes   = function ( string $content ): int {
+			return tala_blog_reading_minutes( $this->publish_post( array( 'post_content' => $content ) ) );
+		};
+
+		$this->assertSame( 1, $minutes( '' ), 'No text: still a minute' );
+		$this->assertSame( 1, $minutes( $paragraph( $words( 220 ) ) ), '220 words, the block comments not counted' );
+		$this->assertSame( 2, $minutes( $paragraph( $words( 221 ) ) ), 'Rounded up' );
+		$this->assertSame( 3, $minutes( $paragraph( $words( 300 ) ) . $paragraph( $words( 360 ) ) ) );
+		$this->assertSame( 2, $minutes( $paragraph( $words( 221, 'niño' ) ) ), 'A word with "ñ" is one word' );
+		$this->assertSame( 1, $minutes( $paragraph( '<strong>Isa</strong>, <em>dalawa</em>' ) ), 'Markup is not text' );
+
+		$post = $this->publish_post( array( 'post_content' => $paragraph( $words( 441 ) ) ) );
+		$this->assertSame( 3, tala_blog_reading_minutes( get_post( $post ) ), 'A post object too' );
+		$this->assertTrue( get_block_bindings_source( 'tala-blog/reading-time' ) instanceof WP_Block_Bindings_Source );
+		$bound = '<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"tala-blog/reading-time"}}}} --><p></p><!-- /wp:paragraph -->';
+		$this->assertMatchesRegularExpression( '#^<p[^>]*>3 min read</p>$#', trim( $this->render( $bound, $post ) ) );
+
+		// A reading time inside the post's own text doesn't count the text again and again.
+		$loop = $this->publish_post( array( 'post_content' => $paragraph( $words( 5 ) ) . $bound ) );
+		$this->assertSame( 1, tala_blog_reading_minutes( $loop ) );
+	}
+
+	/**
+	 * The article's main element as the single template renders it, for the post being read.
+	 *
+	 * @param int $post Post.
+	 * @return string
+	 */
+	private function single_main( int $post ): string {
+		$this->go_to( get_permalink( $post ) );
+		$GLOBALS['post'] = get_post( $post );
+		setup_postdata( $GLOBALS['post'] );
+		$blocks = array_values( array_filter( parse_blocks( get_block_template( 'tala-blog//single' )->content ), static fn( $block ) => null !== $block['blockName'] ) );
+		return render_block( $blocks[1] );
+	}
+
+	/**
+	 * An article opens with its title band, as NASH's posts do: the article's header, a full-width
+	 * graph-paper band holding the breadcrumbs (Tala SEO's), the first category as eyebrow, the title
+	 * in display type, the excerpt as lead, "By {author}" and "Published · Updated · N min read".
+	 * After the text, its footer lists the topics (categories and tags) as chips.
+	 */
+	public function test_title_band(): void {
+		$teaching = self::factory()->category->create( array( 'name' => 'Teaching' ) );
+		$forms    = self::factory()->category->create( array( 'name' => 'Assessment' ) );
+		$author   = self::factory()->user->create(
+			array(
+				'role'         => 'author',
+				'display_name' => 'Ana Reyes',
+			)
+		);
+		$post     = $this->publish_post(
+			array(
+				'post_title'    => 'Seating plans',
+				'post_excerpt'  => 'A plan for every room.',
+				'post_content'  => "<!-- wp:paragraph -->\n<p>" . trim( str_repeat( 'salita ', 400 ) ) . "</p>\n<!-- /wp:paragraph -->",
+				'post_author'   => $author,
+				'post_date'     => '2026-03-01 08:00:00',
+				'post_category' => array( $teaching, $forms ),
+			)
+		);
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- a modified date WordPress itself won't write.
+		$wpdb->update(
+			$wpdb->posts,
+			array(
+				'post_modified'     => '2026-03-20 15:00:00',
+				'post_modified_gmt' => '2026-03-20 15:00:00',
+			),
+			array( 'ID' => $post )
+		);
+		clean_post_cache( $post );
+
+		$main = $this->single_main( $post );
+		$this->assertMatchesRegularExpression( '#^<main[^>]*>\s*<article class="wp-block-group tala-article[ "][^>]*>\s*<header class="wp-block-group tala-band tala-band--paper[ "]#', trim( $main ), 'The article\'s header is its first band, on graph paper' );
+		$band = substr( $main, 0, (int) strpos( $main, '</header>' ) );
+		$this->assertStringNotContainsString( 'wp-block-post-content', $band );
+		$this->assertSame( 1, substr_count( $main, '<h1' ) );
+
+		$order = array(
+			'breadcrumbs' => strpos( $band, 'wp-block-tala-seo-breadcrumbs' ),
+			'eyebrow'     => strpos( $band, 'tala-eyebrow' ),
+			'title'       => strpos( $band, '<h1' ),
+			'lead'        => strpos( $band, 'tala-lead' ),
+			'byline'      => strpos( $band, 'tala-byline' ),
+			'published'   => strpos( $band, '>Published<' ),
+			'updated'     => strpos( $band, '>Updated<' ),
+			'reading'     => strpos( $band, '2 min read' ),
+		);
+		$this->assertNotContains( false, $order, implode( ', ', array_keys( $order, false, true ) ) );
+		$sorted = $order;
+		asort( $sorted );
+		$this->assertSame( array_keys( $order ), array_keys( $sorted ), 'Breadcrumbs, eyebrow, title, lead, byline, dates, reading time' );
+
+		$this->assertSame( 1, preg_match( '#<div class="[^"]*\btala-eyebrow\b[^"]*">(.*?)</div>#s', $band, $eyebrow ) );
+		$this->assertSame( 1, substr_count( $eyebrow[1], '<a ' ), 'The first category only' );
+		$this->assertStringContainsString( '>Assessment</a>', $eyebrow[1] );
+		$this->assertMatchesRegularExpression( '#<h1 class="(?=[^"]*\bwp-block-post-title\b)(?=[^"]*\btala-display\b)[^"]*">Seating plans</h1>#', $band );
+		$this->assertMatchesRegularExpression( '#class="[^"]*\btala-lead\b[^"]*"><p class="wp-block-post-excerpt__excerpt">A plan for every room. </p>#', $band );
+		$this->assertMatchesRegularExpression( '#>By <a href="' . preg_quote( get_author_posts_url( $author ), '#' ) . '" rel="author"[^>]*>Ana Reyes</a><#', $band );
+		$this->assertMatchesRegularExpression( '#<p class="[^"]*\btala-reading-time\b[^"]*">2 min read</p>#', $band );
+
+		// After the text, its footer: "Topics", every category as a chip.
+		$this->assertSame( 1, preg_match( '#<footer class="wp-block-group tala-terms[ "].*?</footer>#s', $main, $topics ) );
+		$this->assertLessThan( strpos( $main, 'tala-terms' ), strpos( $main, 'wp-block-post-content' ), 'After the text' );
+		$this->assertMatchesRegularExpression( '#<p class="[^"]*\btala-eyebrow\b[^"]*">Topics</p>\s*<div class="wp-block-group tala-chips[ "]#', $topics[0] );
+		$this->assertStringContainsString( '>Assessment</a>', $topics[0] );
+		$this->assertStringContainsString( '>Teaching</a>', $topics[0] );
+	}
+
+	/**
+	 * A post without a category, without an excerpt (nor a description for Tala SEO to give as
+	 * one) and by an author without a name (the Theme Unit Test has such posts) gets no empty
+	 * eyebrow, lead or byline: they are left out. The text's opening isn't repeated as a lead. Without
+	 * a category or tag, the "Topics" footer is left out too.
+	 */
+	public function test_title_band_without_optional_parts(): void {
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- WordPress itself never saves an empty display name.
+		$wpdb->update( $wpdb->users, array( 'display_name' => '' ), array( 'ID' => $author ) );
+		clean_user_cache( $author );
+		$post = $this->publish_post(
+			array(
+				'post_title'   => 'Bare post',
+				'post_excerpt' => '',
+				'post_content' => "<!-- wp:paragraph -->\n<p>Opening words of the text.</p>\n<!-- /wp:paragraph -->",
+				'post_author'  => $author,
+			)
+		);
+		wp_set_object_terms( $post, array(), 'category' );
+		delete_post_meta( $post, TALA_SEO_DESCRIPTION );
+		$this->assertSame( array(), wp_get_post_categories( $post ) );
+
+		$main = $this->single_main( $post );
+		$band = substr( $main, 0, (int) strpos( $main, '</header>' ) );
+		$this->assertStringContainsString( '>Bare post</h1>', $band );
+		$this->assertStringContainsString( '>Published<', $band );
+		$this->assertStringContainsString( '1 min read', $band );
+		foreach ( array( 'tala-eyebrow', 'tala-lead', 'tala-byline', 'wp-block-post-terms', 'wp-block-post-excerpt', 'rel="author"', 'Opening words' ) as $missing ) {
+			$this->assertStringNotContainsString( $missing, $band, $missing );
+		}
+		$this->assertDoesNotMatchRegularExpression( '#<(p|div|a)\b[^>]*>\s*</\1>#', $band, 'No empty element' );
+		$this->assertStringNotContainsString( 'tala-terms', $main, 'No category or tag: no topics, label and all' );
+	}
+
+	/**
+	 * A Table block is a labelled region keyboard users can scroll, as NASH's tables are: a wide
+	 * table scrolls sideways in its own box. Named by its caption, or "Table".
+	 */
+	public function test_table_scroll_region(): void {
+		$table = '<!-- wp:table {"hasFixedLayout":false} --><figure class="wp-block-table"><table><tbody><tr><td>1</td></tr></tbody></table>%s</figure><!-- /wp:table -->';
+		$plain = trim( do_blocks( sprintf( $table, '' ) ) );
+		$this->assertMatchesRegularExpression( '#^<figure (?=[^>]*\bclass="wp-block-table")(?=[^>]*\brole="region")(?=[^>]*\baria-label="Table")(?=[^>]*\btabindex="0")[^>]*><table>#', $plain );
+		$named = trim( do_blocks( sprintf( $table, '<figcaption class="wp-element-caption">Grades <em>by</em> quarter</figcaption>' ) ) );
+		$this->assertStringContainsString( 'aria-label="Grades by quarter"', $named );
+		$this->assertStringNotContainsString( 'tabindex', do_blocks( '<!-- wp:paragraph --><p>x</p><!-- /wp:paragraph -->' ) );
 	}
 
 	/**
@@ -513,7 +685,8 @@ HTML;
 
 	/**
 	 * Template parts and their areas. Every template is the frame: the header part, then a main
-	 * element of full-width bands, each holding one rail, then the footer part (the one footer:
+	 * element of full-width bands (an article's or page's inside its article element), each holding
+	 * one rail, then the footer part (the one footer:
 	 * search lives in the header). Only search results (to refine the search, under their title) and
 	 * the home page's title band keep a search form in the page; the 404 page has one in its text
 	 * pattern (tala-blog/hidden-404).
@@ -544,7 +717,16 @@ HTML;
 			$this->assertContains( 'tala-main', $classes( $main ), $slug );
 			$this->assertSame( 'default', $main['attrs']['layout']['type'] ?? '', "$slug: bands run the full width" );
 			$this->assertNotEmpty( $main['innerBlocks'], $slug );
-			foreach ( $main['innerBlocks'] as $band ) {
+			$bands = $main['innerBlocks'];
+			if ( in_array( $slug, array( 'single', 'page' ), true ) ) {
+				// An article or page is one article element: its title band (its header), then its text.
+				$this->assertCount( 1, $bands, $slug );
+				$this->assertSame( 'article', $bands[0]['attrs']['tagName'] ?? '', "$slug: one article" );
+				$this->assertSame( 'header', $bands[0]['innerBlocks'][0]['attrs']['tagName'] ?? '', "$slug: its title band is its header" );
+				$this->assertContains( 'tala-band--paper', $classes( $bands[0]['innerBlocks'][0] ), "$slug: on graph paper" );
+				$bands = $bands[0]['innerBlocks'];
+			}
+			foreach ( $bands as $band ) {
 				$this->assertSame( 'core/group', $band['blockName'], $slug );
 				$this->assertContains( 'tala-band', $classes( $band ), "$slug: main holds bands" );
 				$this->assertCount( 1, $band['innerBlocks'], "$slug: one rail per band" );
@@ -1135,9 +1317,10 @@ HTML;
 	}
 
 	/**
-	 * "Keep reading" under an article: a navigation landmark of its own name, before the author box,
-	 * with the older and newer articles as cards whose label sits inside the link. An article with
-	 * no other article to point to (a site's only one) gets no landmark, heading included.
+	 * "Read next" under an article: a navigation landmark of its own name, before the author box,
+	 * with the older and newer articles as hairline cells whose label sits inside the link. An
+	 * article with no other article to point to (a site's only one) gets no landmark, heading
+	 * included.
 	 */
 	public function test_post_navigation_is_a_named_landmark(): void {
 		$author = self::factory()->user->create( array( 'role' => 'author' ) );
@@ -1161,9 +1344,10 @@ HTML;
 		$html = $this->render( $after, $newer );
 		$tags = new WP_HTML_Tag_Processor( $html );
 		$this->assertTrue( $tags->next_tag( array( 'tag_name' => 'nav' ) ), 'A navigation landmark' );
-		$this->assertSame( 'Keep reading', $tags->get_attribute( 'aria-label' ) );
-		$this->assertMatchesRegularExpression( '#<nav\b.*<h2[^>]*>Keep reading</h2>.*</nav>#s', $html );
-		$this->assertMatchesRegularExpression( '#<nav\b.*<a [^>]*rel="prev"[^>]*><span class="post-navigation-link__label">Older article</span> <span class="post-navigation-link__title">Seating plans</span></a>.*</nav>#s', $html, 'The label is part of the link, so the whole card is the target.' );
+		$this->assertSame( 'Read next', $tags->get_attribute( 'aria-label' ) );
+		$this->assertMatchesRegularExpression( '#<nav\b.*<h2 class="[^"]*\btala-eyebrow\b[^"]*">Read next</h2>.*</nav>#s', $html );
+		$this->assertMatchesRegularExpression( '#<nav\b.*<div class="wp-block-group tala-post-nav__links[ "][^>]*>\s*<div class="post-navigation-link-previous wp-block-post-navigation-link">.*?<a [^>]*rel="prev"[^>]*><span class="post-navigation-link__label">Older article</span> <span class="post-navigation-link__title">Seating plans</span></a>.*</nav>#s', $html, 'A cell; the label is part of the link, so the whole cell is the target.' );
+		$this->assertStringNotContainsString( '<img', substr( $html, 0, (int) strpos( $html, 'wp-block-post-author' ) ), 'No pictures' );
 		$this->assertStringNotContainsString( 'Newer article', $html, 'The newest article has no newer one.' );
 		$this->assertLessThan( strpos( $html, 'wp-block-post-author' ), strpos( $html, '<nav' ), 'Before the author box' );
 
@@ -1172,7 +1356,7 @@ HTML;
 		$html = $this->render( $after, $newer );
 		$this->assertStringContainsString( 'wp-block-post-author', $html, 'The author box stays' );
 		$this->assertStringNotContainsString( '<nav', $html, 'Nothing to link to: no landmark' );
-		$this->assertStringNotContainsString( 'Keep reading', $html, 'Nor its heading' );
+		$this->assertStringNotContainsString( 'Read next', $html, 'Nor its heading' );
 
 		$words = '<!-- wp:group {"tagName":"nav"} --><nav class="wp-block-group"><p>Soon</p></nav><!-- /wp:group -->';
 		$this->assertSame( '', do_blocks( $words ), 'A navigation landmark without links is left out, whatever it says' );
@@ -1181,9 +1365,11 @@ HTML;
 	}
 
 	/**
-	 * "Keep reading" lists up to three recent articles from the article's own categories (any of
+	 * "Read next" lists up to three recent articles from the article's own categories (any of
 	 * them), newest first, never the article itself or one from other categories; a pinned post
-	 * takes no special place. Without any, the list is left out and the cards stand alone.
+	 * takes no special place. They are ruled rows as in article lists, without pictures: the date,
+	 * then the title (subtitle type) and summary. Without any, the list is left out and the cells
+	 * stand alone.
 	 */
 	public function test_related_articles(): void {
 		$teaching = self::factory()->category->create( array( 'name' => 'Teaching' ) );
@@ -1205,10 +1391,11 @@ HTML;
 
 		$this->go_to( get_permalink( $current ) );
 		$html = $this->render( $after, $current );
-		preg_match_all( '#<h3 class="wp-block-post-title"><a href="[^"]*"[^>]*>([^<]*)</a></h3>#', $html, $titles );
+		preg_match_all( '#<div class="wp-block-group tala-row[ "].*?<time\b.*?<h3 class="(?=[^"]*\bwp-block-post-title\b)(?=[^"]*\btala-subtitle\b)[^"]*"><a href="[^"]*"[^>]*>([^<]*)</a></h3>\s*<div class="wp-block-post-excerpt\b#s', $html, $titles );
 		$this->assertSame( array( 'Homework habits', 'Forms to keep', 'Class rules' ), $titles[1], 'Newest three of its categories; the pinned oldest one takes no special place' );
 		$this->assertStringNotContainsString( '>Budget season<', substr( $html, 0, (int) strpos( $html, 'tala-post-nav__links' ) ), 'Other categories are not related (the older-article card below may still be one)' );
-		$this->assertStringContainsString( 'tala-list-thumb', $html, 'With thumbnails' );
+		$this->assertStringNotContainsString( '<img', $html, 'No thumbnails' );
+		$this->assertStringNotContainsString( 'wp-block-post-featured-image', $html );
 		$this->assertStringContainsString( 'Newer article</span> <span class="post-navigation-link__title">Homework habits', $html, 'The cards follow' );
 		$this->assertStringNotContainsString( 'wp-block-post-date__modified-date', $html );
 

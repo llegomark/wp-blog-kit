@@ -213,9 +213,9 @@
 				"typography": { "fontSize": "var:preset|font-size|small" }
 			},
 			"core/quote": {
-				"border": { "radius": "5px" },
+				"border": { "left": { "color": "var:preset|color|accent", "style": "solid", "width": "2px" } },
 				"color": { "background": "var:preset|color|wash" },
-				"spacing": { "padding": { "top": "var:preset|spacing|30", "right": "var:preset|spacing|30", "bottom": "var:preset|spacing|30", "left": "var:preset|spacing|30" } }
+				"spacing": { "padding": { "top": "0.75rem", "right": "1rem", "bottom": "0.75rem", "left": "1rem" } }
 			},
 			"core/code": {
 				"border": { "color": "var:preset|color|rule", "radius": "5px", "style": "solid", "width": "1px" },

@@ -60,7 +60,9 @@ test.describe( 'phone', () => {
 				captionText: style( '.wp-caption-text', 'fontSize' ) !== style( 'p', 'fontSize' ),
 				// Washed like the Quote block: a background of its own, not the page's.
 				quoteWashed: ! [ 'rgba(0, 0, 0, 0)', getComputedStyle( document.body ).backgroundColor ].includes( style( 'blockquote', 'backgroundColor' ) ),
-				cell: style( 'td', 'borderTopWidth' ),
+				// The Table block's look: a hairline box, hairlines between rows.
+				table: style( 'table', 'borderTopWidth' ),
+				cell: style( 'th', 'borderBottomWidth' ),
 				galleryColumns: style( '.gallery', 'gridTemplateColumns' ).split( ' ' ).length,
 			};
 		} );
@@ -71,6 +73,7 @@ test.describe( 'phone', () => {
 			fit: { caption: true, iframe: true, gallery: true },
 			captionText: true,
 			quoteWashed: true,
+			table: '1px',
 			cell: '1px',
 			galleryColumns: 3,
 		} );

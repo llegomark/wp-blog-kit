@@ -1,10 +1,10 @@
 <?php
 /**
- * Title: Article
+ * Title: Article title band
  * Slug: tala-blog/article
  * Categories: posts
  * Inserter: no
- * Description: The article on its own page: breadcrumbs, a header with the title and the "Published" and "Updated" dates, the featured image, the text, and a footer with the categories and tags.
+ * Description: The article's title band, on graph paper: breadcrumbs, the first category as eyebrow, the title in display type, the excerpt as lead (only one written for the article, or given by a plugin), "By" the author, the "Published" and "Updated" dates and the reading time. Parts the article doesn't have are left out.
  *
  * @package TalaBlog
  */
@@ -12,20 +12,24 @@
 defined( 'ABSPATH' ) || exit;
 
 ?>
-<!-- wp:group {"tagName":"article","metadata":{"name":<?php echo tala_blog_block_text( _x( 'Article', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-paper","layout":{"type":"default"}} -->
-<article class="wp-block-group tala-paper"><!-- wp:pattern {"slug":"tala-blog/breadcrumbs"} /-->
+<!-- wp:pattern {"slug":"tala-blog/breadcrumbs"} /-->
 
-<!-- wp:group {"tagName":"header","metadata":{"name":<?php echo tala_blog_block_text( _x( 'Title and dates', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-article-header","layout":{"type":"default"}} -->
-<header class="wp-block-group tala-article-header"><!-- wp:post-title {"level":1} /-->
+<!-- wp:post-terms {"term":"category","className":"tala-first-term tala-eyebrow"} /-->
 
-<!-- wp:group {"metadata":{"name":<?php echo tala_blog_block_text( _x( 'Dates', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-dates","layout":{"type":"flex","flexWrap":"wrap"}} -->
-<div class="wp-block-group tala-dates"><!-- wp:post-date /-->
+<!-- wp:post-title {"level":1,"className":"tala-display"} /-->
 
-<!-- wp:post-date {"displayType":"modified"} /--></div>
-<!-- /wp:group --></header>
-<!-- /wp:group -->
+<!-- wp:post-excerpt {"excerptLength":100,"className":"tala-lead"} /-->
 
-<!-- wp:post-content {"layout":{"type":"default"}} /-->
+<!-- wp:group {"metadata":{"name":<?php echo tala_blog_block_text( _x( 'Byline, dates and reading time', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-credits","layout":{"type":"default"}} -->
+<div class="wp-block-group tala-credits"><!-- wp:post-author-name {"isLink":true,"className":"tala-byline"} /-->
 
-<!-- wp:pattern {"slug":"tala-blog/post-terms"} /--></article>
+<!-- wp:group {"metadata":{"name":<?php echo tala_blog_block_text( _x( 'Dates and reading time', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-meta tala-article-meta","layout":{"type":"default"}} -->
+<div class="wp-block-group tala-meta tala-article-meta"><!-- wp:post-date /-->
+
+<!-- wp:post-date {"displayType":"modified"} /-->
+
+<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"tala-blog/reading-time"}}},"className":"tala-reading-time"} -->
+<p class="tala-reading-time"></p>
+<!-- /wp:paragraph --></div>
+<!-- /wp:group --></div>
 <!-- /wp:group -->

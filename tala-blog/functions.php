@@ -120,7 +120,7 @@ function tala_blog_has_link( $html ) {
 add_filter( 'render_block_core/group', 'tala_blog_empty_navigation', 10, 2 );
 
 /**
- * A Group block that is a navigation landmark, as "Keep reading" under an article is, is left out
+ * A Group block that is a navigation landmark, as "Read next" under an article is, is left out
  * when it holds no link: a site's only article has no other article to point to, and screen
  * readers would still announce the landmark, heading and all. A navigation landmark is there for
  * its links, as the Navigation block, which renders nothing without items, treats it.
@@ -179,10 +179,109 @@ function tala_blog_block_has_class( $block, $class_name ) {
 	return is_string( $classes ) && in_array( $class_name, explode( ' ', $classes ), true );
 }
 
+add_filter( 'render_block_core/group', 'tala_blog_empty_topics', 10, 2 );
+
+/**
+ * The topics at the end of an article (the Group with the class "tala-terms": its categories and
+ * tags as chips under "Topics") are left out when the post has neither, label and all.
+ *
+ * @param string               $html  Rendered Group.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_empty_topics( $html, $block ) {
+	return tala_blog_block_has_class( $block, 'tala-terms' ) && ! tala_blog_has_link( $html ) ? '' : $html;
+}
+
+add_filter( 'render_block_core/table', 'tala_blog_table_region' );
+
+/**
+ * A Table block scrolls sideways in its own box when it is wider than the text column (theme.css),
+ * so the page never does. Keyboard users scroll it too: the box is a region they can focus, named
+ * by the table's caption, or "Table", as NASH's tables are.
+ *
+ * @param string $html Rendered Table.
+ * @return string
+ */
+function tala_blog_table_region( $html ) {
+	$tags = new WP_HTML_Tag_Processor( $html );
+	if ( ! $tags->next_tag( array( 'tag_name' => 'figure' ) ) || ! $tags->has_class( 'wp-block-table' ) ) {
+		return $html;
+	}
+	$caption = preg_match( '#<figcaption\b[^>]*>(.*?)</figcaption>#s', $html, $match ) ? trim( (string) preg_replace( '/\s+/u', ' ', wp_strip_all_tags( $match[1] ) ) ) : '';
+	$tags->set_attribute( 'role', 'region' );
+	$tags->set_attribute( 'aria-label', '' !== $caption ? html_entity_decode( $caption, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) : _x( 'Table', 'name of a table\'s scrolling box for screen readers', 'tala-blog' ) );
+	$tags->set_attribute( 'tabindex', '0' );
+	return $tags->get_updated_html();
+}
+
+add_filter( 'render_block_core/post-author-name', 'tala_blog_byline', 10, 3 );
+
+/**
+ * The byline in an article's title band (the Author Name block with the class "tala-byline"):
+ * "By {author}", the name linking to the author's page as the post's author (rel="author"). Left
+ * out when the author has no name, rather than an empty link. Other Author Name blocks are left
+ * as they are.
+ *
+ * @param string               $html     Rendered Author Name.
+ * @param array<string, mixed> $block    Parsed block.
+ * @param WP_Block             $instance Block instance.
+ * @return string
+ */
+function tala_blog_byline( $html, $block, $instance ) {
+	if ( ! tala_blog_block_has_class( $block, 'tala-byline' ) ) {
+		return $html;
+	}
+	$author = (int) get_post_field( 'post_author', (int) ( $instance->context['postId'] ?? get_the_ID() ) );
+	$name   = $author ? trim( wp_strip_all_tags( (string) get_the_author_meta( 'display_name', $author ) ) ) : '';
+	$html   = trim( $html );
+	$start  = strpos( $html, '>' ); // The wrapper's start tag ends at the first ">" (WordPress escapes ">" in attributes).
+	if ( '' === $name || false === $start || ! str_ends_with( $html, '</div>' ) ) {
+		return '';
+	}
+	$link = '<a href="' . esc_url( get_author_posts_url( $author ) ) . '" rel="author" class="wp-block-post-author-name__link">' . esc_html( $name ) . '</a>';
+	/* translators: %s: the author's name, linked to their page. */
+	return substr( $html, 0, $start + 1 ) . sprintf( esc_html__( 'By %s', 'tala-blog' ), $link ) . '</div>';
+}
+
+add_filter( 'render_block_core/post-excerpt', 'tala_blog_lead', 10, 3 );
+
+/**
+ * The lead in an article's title band (the Excerpt block with the class "tala-lead"): the post's
+ * excerpt, written for it (or given by a plugin, as Tala SEO gives the meta description), never
+ * one WordPress cuts from the opening of the text, which follows right under the title band. A post
+ * without one, or hidden by a password, has no lead.
+ *
+ * @param string               $html     Rendered Excerpt.
+ * @param array<string, mixed> $block    Parsed block.
+ * @param WP_Block             $instance Block instance.
+ * @return string
+ */
+function tala_blog_lead( $html, $block, $instance ) {
+	if ( ! tala_blog_block_has_class( $block, 'tala-lead' ) ) {
+		return $html;
+	}
+	$post = get_post( (int) ( $instance->context['postId'] ?? get_the_ID() ) );
+	if ( ! $post || post_password_required( $post ) ) {
+		return '';
+	}
+	// The excerpt without WordPress's own one made from the text.
+	$priority = has_filter( 'get_the_excerpt', 'wp_trim_excerpt' );
+	remove_filter( 'get_the_excerpt', 'wp_trim_excerpt', false === $priority ? 10 : $priority );
+	try {
+		$excerpt = get_the_excerpt( $post );
+	} finally {
+		if ( false !== $priority ) {
+			add_filter( 'get_the_excerpt', 'wp_trim_excerpt', $priority, 2 );
+		}
+	}
+	return '' === trim( wp_strip_all_tags( $excerpt ) ) ? '' : $html;
+}
+
 add_filter( 'query_loop_block_query_vars', 'tala_blog_related_query', 10, 2 );
 
 /**
- * The "Keep reading" list under an article (patterns/post-footer.php): the Post Template with the
+ * The "Read next" list under an article (patterns/post-footer.php): the Post Template with the
  * class "tala-related" lists the latest articles from the article's own categories, the article
  * itself left out, however many categories it has. Pinned posts take no special place, and the
  * list needs no page count. Away from an article (the pattern placed on another page) it is empty.
@@ -211,9 +310,9 @@ function tala_blog_related_query( $query, $block ) {
 add_filter( 'render_block_core/query', 'tala_blog_empty_related', 10, 2 );
 
 /**
- * The "Keep reading" list is left out when it has no article to list (the Query Loop with the
+ * The "Read next" list is left out when it has no article to list (the Query Loop with the
  * class "tala-related"): an article in a category of its own shows the older and newer articles
- * alone, and a site's only article nothing.
+ * (as cells) alone, and a site's only article nothing.
  *
  * @param string               $html  Rendered Query Loop.
  * @param array<string, mixed> $block Parsed block.
@@ -252,9 +351,13 @@ function tala_blog_empty_part( $html, $block ) {
 add_action( 'init', 'tala_blog_register_bindings' );
 
 /**
- * The "tala-blog/year" Block Bindings source: this year, in the site's time zone. The footer's
- * copyright line binds a paragraph to it, so the year is never written into the theme or a
- * site's saved footer, and changes by itself on 1 January.
+ * The theme's Block Bindings sources:
+ *
+ * - "tala-blog/year": this year, in the site's time zone. The footer's copyright line binds a
+ *   paragraph to it, so the year is never written into the theme or a site's saved footer, and
+ *   changes by itself on 1 January.
+ * - "tala-blog/reading-time": "N min read" for the post shown (the article's title band binds a
+ *   paragraph to it), from tala_blog_reading_minutes().
  */
 function tala_blog_register_bindings(): void {
 	register_block_bindings_source(
@@ -264,6 +367,55 @@ function tala_blog_register_bindings(): void {
 			'get_value_callback' => 'tala_blog_current_year',
 		)
 	);
+	register_block_bindings_source(
+		'tala-blog/reading-time',
+		array(
+			'label'              => _x( 'Reading time', 'name of a block binding', 'tala-blog' ),
+			'get_value_callback' => 'tala_blog_reading_time',
+			'uses_context'       => array( 'postId' ),
+		)
+	);
+}
+
+/**
+ * "N min read" for the post a block shows (its postId context), or the current post.
+ *
+ * @param array<string, mixed> $source_args Binding arguments (none).
+ * @param WP_Block             $block       The bound block.
+ * @return string
+ */
+function tala_blog_reading_time( $source_args, $block ) {
+	$post = get_post( (int) ( $block->context['postId'] ?? get_the_ID() ) );
+	if ( ! $post ) {
+		return '';
+	}
+	$minutes = tala_blog_reading_minutes( $post );
+	/* translators: %d: minutes it takes to read the article, as on "5 min read". */
+	return sprintf( _n( '%d min read', '%d min read', $minutes, 'tala-blog' ), $minutes );
+}
+
+/**
+ * Minutes it takes to read a post: its words as readers see them (the blocks rendered, the markup
+ * stripped, split at whitespace, so "niño" is one word), at 220 words a minute, rounded up, and at
+ * least one. A reading time inside the post's own text doesn't count that text again.
+ *
+ * @param WP_Post|int $post Post.
+ * @return int
+ */
+function tala_blog_reading_minutes( $post ): int {
+	static $counting = array();
+	$post            = get_post( $post );
+	if ( ! $post || isset( $counting[ $post->ID ] ) ) {
+		return 1;
+	}
+	$counting[ $post->ID ] = true;
+	try {
+		$text = wp_strip_all_tags( do_blocks( $post->post_content ) );
+	} finally {
+		unset( $counting[ $post->ID ] );
+	}
+	$words = preg_split( '/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY );
+	return max( 1, (int) ceil( count( is_array( $words ) ? $words : array() ) / 220 ) );
 }
 
 /**
@@ -692,8 +844,8 @@ function tala_blog_date_with_time( $html ) {
 add_filter( 'render_block_core/post-content', 'tala_blog_contents', 10, 3 );
 
 /**
- * "In this article": on an article with enough sections, a table of contents right before its first
- * section, after the opening paragraphs. Folded into one line until the reader opens it.
+ * "On this page": on an article with enough sections, a table of contents right before its first
+ * section, after the opening paragraphs. Closed, one line, until the reader opens it.
  * Appearance → Customize → Table of contents turns it off or sets how many sections it takes.
  *
  * @param string               $html     Post Content block HTML.
@@ -980,32 +1132,37 @@ function tala_blog_reserved_ids() {
 }
 
 /**
- * The table of contents: a navigation landmark named "In this article", folded into one line
- * ("In this article · 4 sections") that opens into the list of sections and their subsections.
+ * The table of contents, as NASH's: a disclosure that starts closed at every width, its summary
+ * "On this page · 4 sections" between a list icon and a chevron, which opens into a navigation
+ * landmark named "On this page": the sections numbered 01, 02… (numbers the eye needs, hidden from
+ * screen readers, so each link is named by its heading's words alone), each with its subsections.
  *
  * @param list<array{id: string, text: string, children: list<array{id: string, text: string}>}> $sections Sections.
  * @return string
  */
 function tala_blog_contents_box( $sections ) {
 	$items = '';
-	foreach ( $sections as $section ) {
+	foreach ( $sections as $index => $section ) {
 		$children = '';
 		foreach ( $section['children'] as $child ) {
 			$children .= '<li><a href="#' . esc_attr( $child['id'] ) . '">' . esc_html( $child['text'] ) . '</a></li>';
 		}
-		$items .= '<li><a href="#' . esc_attr( $section['id'] ) . '">' . esc_html( $section['text'] ) . '</a>'
-			. ( '' !== $children ? '<ol>' . $children . '</ol>' : '' ) . '</li>';
+		$items .= '<li><a href="#' . esc_attr( $section['id'] ) . '"><span class="tala-contents-num" aria-hidden="true">' . sprintf( '%02d', $index + 1 ) . '</span>'
+			. esc_html( $section['text'] ) . '</a>' . ( '' !== $children ? '<ol>' . $children . '</ol>' : '' ) . '</li>';
 	}
-	$title = __( 'In this article', 'tala-blog' );
+	$title = __( 'On this page', 'tala-blog' );
 	$count = sprintf(
 		/* translators: %s: number of sections in the article. */
 		_n( '%s section', '%s sections', count( $sections ), 'tala-blog' ),
 		number_format_i18n( count( $sections ) )
 	);
-	return '<nav class="tala-contents" aria-label="' . esc_attr( $title ) . '"><details><summary>'
-		. '<span class="tala-contents-title">' . esc_html( $title ) . '</span> '
-		. '<span class="tala-contents-count">' . esc_html( $count ) . '</span></summary>'
-		. '<ol>' . $items . '</ol></details></nav>';
+	$svg = '<svg class="%s" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">%s</svg>';
+	return '<details class="tala-contents"><summary>'
+		. sprintf( $svg, 'tala-contents-icon', '<path d="M3 6h.01M3 12h.01M3 18h.01M8 6h13M8 12h13M8 18h13"/>' )
+		. '<span class="tala-contents-label"><span class="tala-contents-title">' . esc_html( $title ) . '</span> '
+		. '<span class="tala-contents-count">' . esc_html( $count ) . '</span></span>'
+		. sprintf( $svg, 'tala-contents-chevron', '<path d="m6 9 6 6 6-6"/>' )
+		. '</summary><nav aria-label="' . esc_attr( $title ) . '"><ol>' . $items . '</ol></nav></details>';
 }
 
 /**
@@ -1209,7 +1366,7 @@ function tala_blog_customize_register( $wp_customize ): void {
 		'tala_blog_contents',
 		array(
 			'title'       => __( 'Table of contents', 'tala-blog' ),
-			'description' => __( '"In this article": a list of the article\'s sections, after its opening paragraphs, that links to each one. It opens with a tap. To leave a heading out, give it (or a group around it) the class tala-no-contents under Advanced → Additional CSS class(es).', 'tala-blog' ),
+			'description' => __( '"On this page": a list of the article\'s sections, after its opening paragraphs, that links to each one. It opens with a tap. To leave a heading out, give it (or a group around it) the class tala-no-contents under Advanced → Additional CSS class(es).', 'tala-blog' ),
 			'priority'    => 121,
 		)
 	);

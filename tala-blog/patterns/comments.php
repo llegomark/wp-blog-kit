@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 
 ?>
 <!-- wp:comments {"className":"tala-comments"} -->
-<div class="wp-block-comments tala-comments"><!-- wp:comments-title {"level":2} /-->
+<div class="wp-block-comments tala-comments"><!-- wp:comments-title {"level":2,"className":"tala-subtitle"} /-->
 
 <!-- wp:comment-template -->
 <!-- wp:group {"tagName":"article","metadata":{"name":<?php echo tala_blog_block_text( _x( 'Comment', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-comment","layout":{"type":"default"}} -->

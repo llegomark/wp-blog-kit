@@ -1,16 +1,26 @@
 <!-- wp:template-part {"slug":"header","tagName":"header"} /-->
 
 <!-- wp:group {"tagName":"main","className":"tala-main","layout":{"type":"default"}} -->
-<main class="wp-block-group tala-main"><!-- wp:group {"className":"tala-band","layout":{"type":"default"}} -->
-<div class="wp-block-group tala-band"><!-- wp:group {"className":"tala-rail","layout":{"type":"default"}} -->
-<div class="wp-block-group tala-rail"><!-- wp:group {"className":"tala-measure","layout":{"type":"default"}} -->
-<div class="wp-block-group tala-measure"><!-- wp:pattern {"slug":"tala-blog/article"} /-->
+<main class="wp-block-group tala-main"><!-- wp:group {"tagName":"article","className":"tala-article","layout":{"type":"default"}} -->
+<article class="wp-block-group tala-article"><!-- wp:group {"tagName":"header","className":"tala-band tala-band--paper","layout":{"type":"default"}} -->
+<header class="wp-block-group tala-band tala-band--paper"><!-- wp:group {"className":"tala-rail tala-intro tala-masthead","layout":{"type":"default"}} -->
+<div class="wp-block-group tala-rail tala-intro tala-masthead"><!-- wp:pattern {"slug":"tala-blog/article"} /--></div>
+<!-- /wp:group --></header>
+<!-- /wp:group -->
+
+<!-- wp:group {"className":"tala-band","layout":{"type":"default"}} -->
+<div class="wp-block-group tala-band"><!-- wp:group {"className":"tala-rail tala-rail--text","layout":{"type":"default"}} -->
+<div class="wp-block-group tala-rail tala-rail--text"><!-- wp:group {"className":"tala-measure tala-text","layout":{"type":"default"}} -->
+<div class="wp-block-group tala-measure tala-text"><!-- wp:post-content {"layout":{"type":"default"}} /-->
+
+<!-- wp:pattern {"slug":"tala-blog/post-terms"} /-->
 
 <!-- wp:pattern {"slug":"tala-blog/post-footer"} /-->
 
 <!-- wp:pattern {"slug":"tala-blog/comments"} /--></div>
 <!-- /wp:group --></div>
 <!-- /wp:group --></div>
+<!-- /wp:group --></article>
 <!-- /wp:group --></main>
 <!-- /wp:group -->
 

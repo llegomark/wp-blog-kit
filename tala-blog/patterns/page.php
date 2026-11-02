@@ -1,10 +1,10 @@
 <?php
 /**
- * Title: Page
+ * Title: Page title band
  * Slug: tala-blog/page
  * Categories: text
  * Inserter: no
- * Description: A page on its own: breadcrumbs, the title, the featured image and the text.
+ * Description: A page's title band, on graph paper: breadcrumbs and the title in display type.
  *
  * @package TalaBlog
  */
@@ -12,10 +12,6 @@
 defined( 'ABSPATH' ) || exit;
 
 ?>
-<!-- wp:group {"tagName":"article","metadata":{"name":<?php echo tala_blog_block_text( _x( 'Page', 'name of a group in the List View', 'tala-blog' ) ); ?>},"className":"tala-paper","layout":{"type":"default"}} -->
-<article class="wp-block-group tala-paper"><!-- wp:pattern {"slug":"tala-blog/breadcrumbs"} /-->
+<!-- wp:pattern {"slug":"tala-blog/breadcrumbs"} /-->
 
-<!-- wp:post-title {"level":1} /-->
-
-<!-- wp:post-content {"layout":{"type":"default"}} /--></article>
-<!-- /wp:group -->
+<!-- wp:post-title {"level":1,"className":"tala-display"} /-->

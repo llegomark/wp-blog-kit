@@ -1,7 +1,7 @@
 /**
  * Tala SEO's FAQ, How-to, Event and Course blocks and the YouTube video dates: they are in the
  * editor's inserter and sidebar, the editor accepts what it saved, and the published page shows
- * them accessibly with matching structured data.
+ * them accessibly with matching structured data. A wide table beside them scrolls in its own box.
  */
 import { test, expect } from '@playwright/test';
 import { wp, logIn, axeViolations, PHONE } from './utils.mjs';
@@ -30,6 +30,13 @@ const CONTENT = [
 	'<!-- /wp:list-item --></ol>',
 	'<!-- /wp:list --></div>',
 	'<!-- /wp:group -->',
+	'<!-- wp:table {"hasFixedLayout":false} -->',
+	'<figure class="wp-block-table"><table><thead><tr>' +
+		Array.from( { length: 7 }, ( _, i ) => `<th>Attendancerecord${ i }</th>` ).join( '' ) +
+		'</tr></thead><tbody><tr>' +
+		Array.from( { length: 7 }, ( _, i ) => `<td>Schoolformnumber${ i }</td>` ).join( '' ) +
+		'</tr></tbody></table></figure>',
+	'<!-- /wp:table -->',
 	'<!-- wp:tala-seo/event {"startDate":"2026-11-14","startTime":"09:00","endTime":"17:00","place":"Quezon City Hall","streetAddress":"Elliptical Road","addressLocality":"Quezon City","addressCountry":"PH","price":"500","priceCurrency":"PHP","availability":"InStock","ticketUrl":"https://tickets.example.com/","organizer":"Guro Notes"} /-->',
 	'<!-- wp:tala-seo/course {"name":"Teaching early reading","description":"Plan phonics lessons that get every grade 1 learner reading.","courseMode":"Online","workload":"6","instructor":"Ana Reyes","price":"0","priceCurrency":"PHP","enrollUrl":"https://learn.example.com/"} /-->',
 ].join( '\n' );
@@ -89,6 +96,22 @@ test.describe( 'a page with the blocks', () => {
 			await expect( course.getByRole( 'heading', { level: 2, name: 'Teaching early reading' } ) ).toBeVisible();
 			await expect( course.getByRole( 'link', { name: 'Enroll' } ) ).toHaveAttribute( 'href', 'https://learn.example.com/' );
 			expect( await course.evaluate( ( el ) => el.scrollWidth <= el.clientWidth ), 'The course card fits too' ).toBe( true );
+
+			// A table wider than the phone scrolls inside its own bordered box, in the text column;
+			// the page never scrolls sideways.
+			const sizes = await page.evaluate( () => {
+				const box = document.querySelector( '.wp-block-table' );
+				return {
+					page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+					box: box.scrollWidth - box.clientWidth,
+					border: getComputedStyle( box ).borderTopWidth,
+					inside: box.getBoundingClientRect().right <= document.querySelector( '.tala-measure' ).getBoundingClientRect().right + 0.5,
+				};
+			} );
+			expect( sizes.page, 'The page doesn\'t scroll sideways' ).toBe( 0 );
+			expect( sizes.box, 'The table scrolls in its box' ).toBeGreaterThan( 0 );
+			expect( sizes.border ).toBe( '1px' );
+			expect( sizes.inside, 'The box stays in the text column' ).toBe( true );
 
 			const types = await page.locator( 'script[type="application/ld+json"]' ).evaluate( ( el ) =>
 				JSON.parse( el.textContent )[ '@graph' ].map( ( node ) => node[ '@type' ] ),

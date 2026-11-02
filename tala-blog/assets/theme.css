@@ -988,12 +988,17 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	user-select: none;
 }
 
-/* The article: on an article page its title and dates are the article's header; a page's title
-   stands on its own. */
+/* An article's or page's title band (its header), as NASH's: the breadcrumbs, the first category as
+   eyebrow, the title in display type (NASH's measure-24 of display type), the excerpt as lead
+   (measure-60, in the text's ink), then the byline over the dates and reading time. The parts sit
+   1.25rem apart (.tala-intro). */
 
-.tala-paper > .wp-block-post-title,
-.tala-paper > .tala-article-header {
-	margin-block-start: var(--wp--preset--spacing--20);
+.tala-masthead > .tala-display {
+	max-inline-size: calc(24 * 0.594em);
+}
+
+.tala-masthead .tala-lead {
+	color: var(--wp--preset--color--contrast);
 }
 
 .wp-block-tala-seo-breadcrumbs {
@@ -1007,110 +1012,420 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	color: inherit;
 }
 
-/* Dates: "Published 3 October 2026", "Updated 20 October 2026" */
-
-.tala-dates {
-	gap: 0.25rem var(--wp--preset--spacing--30);
+/* The eyebrow's category: a 24px tap target (WCAG 2.5.8), in the eyebrow's grey. */
+.tala-eyebrow a {
+	display: inline-flex;
+	min-block-size: 1.5rem;
+	align-items: center;
+	color: inherit;
+	text-decoration: none;
 }
 
-.tala-dates .wp-block-post-date time {
-	color: var(--wp--preset--color--contrast);
+/* "By {author}" over "Published …  Updated …  N min read". */
+.tala-credits {
+	display: flex;
+	flex-direction: column;
+	gap: 0.125rem;
+	padding-block-start: 0.25rem;
+}
+
+.tala-credits > *,
+.tala-article-meta > * {
+	margin: 0;
+}
+
+.tala-byline {
+	color: var(--wp--preset--color--heading);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.tala-byline a {
+	color: inherit;
+	font-weight: 500;
+	text-decoration: none;
+}
+
+.tala-article-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.125rem 1rem;
+}
+
+.tala-article-meta > * {
+	color: inherit;
+	font-size: inherit;
 }
 
 .tala-date-label {
 	margin-inline-end: 0.3em;
 }
 
-/* "In this article": the article's sections, one line ("In this article 4 sections") until it is
-   opened, then a list of links with the subsections under each, set off by a hairline. */
+@media (hover: hover) and (pointer: fine) {
 
+	.tala-eyebrow a:hover {
+		color: var(--wp--preset--color--accent);
+	}
+
+	.tala-byline a:hover {
+		color: var(--wp--preset--color--accent);
+		text-decoration: underline solid 1px;
+		text-underline-offset: 0.25em;
+	}
+}
+
+/* The text band: NASH's padding, then the text column, its parts 2.5rem apart (the text, its
+   topics, "Read next", the author box, the comments). The column is a container, so the author box
+   lays out by its own width. */
+.tala-band > .tala-rail--text {
+	padding-block: clamp(2rem, 1.5rem + 3vw, 3.5rem);
+}
+
+.tala-text {
+	container: tala-text / inline-size;
+}
+
+.tala-text > * {
+	margin-block: 0;
+}
+
+.tala-text > * + * {
+	margin-block-start: 2.5rem;
+}
+
+/* "On this page": the article's sections, as NASH's contents on a phone, at every width: a box on
+   the surface, closed to one line (list icon, "On this page", the number of sections, a chevron),
+   that opens into the numbered sections, each with its subsections, below a hairline. */
 .tala-contents {
 	border: 1px solid var(--wp--preset--color--rule);
-	border-radius: 5px;
+	background-color: var(--wp--preset--color--surface);
 }
 
-.tala-contents summary {
-	padding: 0.75rem var(--wp--preset--spacing--30);
+.tala-contents > summary {
+	display: flex;
+	min-block-size: 3rem;
+	align-items: center;
+	gap: 0.75rem;
+	padding-inline: 1rem;
+	color: var(--wp--preset--color--heading);
 	cursor: pointer;
+	list-style: none;
+	user-select: none;
 }
 
-.tala-contents summary::marker {
+.tala-contents > summary::-webkit-details-marker {
+	display: none;
+}
+
+.tala-contents svg {
+	flex: none;
+	inline-size: 1rem;
+	block-size: 1rem;
 	color: var(--wp--preset--color--muted);
 }
 
-.tala-contents details[open] > summary {
-	border-bottom: 1px solid var(--wp--preset--color--rule);
-}
-
-.tala-contents-title {
-	font-weight: 600;
+/* The label and count wrap at large text; the chevron keeps its place. */
+.tala-contents-label {
+	display: flex;
+	min-inline-size: 0;
+	flex: 1;
+	flex-wrap: wrap;
+	align-items: baseline;
+	column-gap: 0.75rem;
+	padding-block: 0.5rem;
 }
 
 .tala-contents-count {
-	margin-inline-start: 0.4em;
 	color: var(--wp--preset--color--muted);
-	font-size: var(--wp--preset--font-size--small);
+	font-size: var(--wp--preset--font-size--x-small);
+	font-variant-numeric: tabular-nums;
+}
+
+.tala-contents[open] .tala-contents-chevron {
+	rotate: 180deg;
+}
+
+.tala-contents nav {
+	padding: 0.25rem 1rem 0.75rem;
+	border-block-start: 1px solid var(--wp--preset--color--rule);
 }
 
 .tala-contents ol {
+	display: flex;
+	flex-direction: column;
 	margin: 0;
-	padding: 0.5rem var(--wp--preset--spacing--30) 0.75rem;
+	padding: 0;
 	list-style: none;
 }
 
-.tala-contents ol ol {
-	margin-block: 0 0.25rem;
-	padding-block: 0;
-	padding-inline: 0.9rem 0;
-	border-inline-start: 1px solid var(--wp--preset--color--rule);
+.tala-contents li {
+	margin: 0;
+}
+
+/* Rows of 44px, the number in its own 1.5rem column; subsections line up past the numbers. */
+.tala-contents a {
+	display: flex;
+	box-sizing: border-box;
+	min-block-size: var(--tala-control);
+	align-items: baseline;
+	gap: 0.75rem;
+	padding-block: 0.4375rem;
+	color: var(--wp--preset--color--muted);
 	font-size: var(--wp--preset--font-size--small);
-}
-
-/* Each link at least 24 px tall, a comfortable tap target (WCAG 2.5.8). */
-.tala-contents li a {
-	display: inline-block;
-	padding-block: 0.3rem;
-}
-
-/* Article body */
-
-.wp-block-post-content :where(h2, h3, h4) {
-	margin-block-start: 2em;
-}
-
-.wp-block-post-content :where(ul, ol) {
-	padding-inline-start: 1.25em;
-}
-
-.wp-block-post-content li + li {
-	margin-block-start: 0.35em;
-}
-
-/* Inline code wraps anywhere; preformatted text keeps its lines and scrolls sideways instead. */
-.wp-block-post-content :where(code) {
+	line-height: 1.45;
+	text-decoration: none;
 	overflow-wrap: anywhere;
+}
+
+.tala-contents ol ol a {
+	padding-inline-start: 2.25rem;
+}
+
+.tala-contents-num {
+	flex: none;
+	inline-size: 1.5rem;
+	font-size: var(--wp--preset--font-size--x-small);
+	font-variant-numeric: tabular-nums;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+	.tala-contents a:hover {
+		color: var(--wp--preset--color--accent);
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+
+	.tala-contents-chevron {
+		transition: rotate 150ms var(--tala-ease-out);
+	}
+
+	.tala-contents a {
+		transition: color 150ms var(--tala-ease-out);
+	}
+}
+
+/* The article's text, as NASH's: 17px ink on relaxed leading, 1.25em between blocks, regular-weight
+   headings (sections under a hairline rule), cobalt underlined links, square bullets, quotes on the
+   wash with a 2px cobalt rule, tables in a bordered box of their own. Pages get the same. The rules
+   for headings reach the text's own blocks and the Groups in it, not headings inside other blocks'
+   cards. */
+
+.wp-block-post-content {
+	line-height: 1.75;
+}
+
+.wp-block-post-content > * + * {
+	margin-block-start: 1.25em;
+}
+
+.wp-block-post-content :is(h2, h3, h4, h5, h6) {
+	color: var(--wp--preset--color--heading);
+	scroll-margin-block-start: 1.5rem;
+}
+
+.wp-block-post-content > h2,
+.wp-block-post-content > .wp-block-group > h2 {
+	margin-block-start: 2.5rem;
+	padding-block-start: 1.75rem;
+	border-block-start: 1px solid var(--wp--preset--color--rule);
+	font-size: clamp(1.375rem, 1.25rem + 0.55vw, 1.75rem);
+	font-weight: 400;
+	letter-spacing: -0.02em;
+	line-height: 1.3;
+}
+
+.wp-block-post-content > h2:first-child {
+	padding-block-start: 0;
+	border-block-start: 0;
+}
+
+.wp-block-post-content h3 {
+	margin-block-start: 2rem;
+	font-weight: 450;
+	line-height: 1.4;
+}
+
+/* Headings stay at 450 or lighter; 500 only on the small h5 and h6 labels. */
+.wp-block-post-content h4 {
+	margin-block-start: 1.75rem;
+	font-size: var(--wp--preset--font-size--medium);
+	font-weight: 450;
+	line-height: 1.5;
+}
+
+.wp-block-post-content :is(h5, h6) {
+	margin-block-start: 1.5rem;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+	line-height: 1.5;
+}
+
+.wp-block-post-content h6 {
+	color: var(--wp--preset--color--muted);
+}
+
+.wp-block-post-content > :is(h2, h3, h4, h5, h6) + * {
+	margin-block-start: 0.75em;
+}
+
+.wp-block-post-content a:where(:not(.wp-element-button, .wp-block-button__link, .tala-contents a)) {
+	color: var(--wp--preset--color--accent);
+	text-decoration-line: underline;
+	text-decoration-style: solid;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.25em;
+	overflow-wrap: anywhere;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+	.wp-block-post-content a:where(:not(.wp-element-button, .wp-block-button__link, .tala-contents a)):hover {
+		color: var(--wp--preset--color--accent);
+		text-decoration-line: underline;
+		text-decoration-thickness: 2px;
+	}
+}
+
+.wp-block-post-content :is(strong, b) {
+	color: var(--wp--preset--color--heading);
+	font-weight: 600;
+}
+
+.wp-block-post-content :where(ul:not([class]), ul.wp-block-list) {
+	padding-inline-start: 1.25rem;
+	list-style-type: square;
+}
+
+/* Room for two-digit numbers inside the text column. */
+.wp-block-post-content :where(ol:not([class]), ol.wp-block-list) {
+	padding-inline-start: 2em;
+	list-style-type: decimal;
+}
+
+.wp-block-post-content :where(li + li, li > ul, li > ol) {
+	margin-block-start: 0.5em;
+}
+
+.wp-block-post-content li::marker {
+	color: var(--wp--preset--color--muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.wp-block-post-content hr:not(.is-style-dots) {
+	margin-block: 2.5rem;
+	border: 0;
+	border-block-start: 1px solid;
+}
+
+.wp-block-post-content hr:not([class]) {
+	color: var(--wp--preset--color--rule);
+}
+
+/* Inline code and keys: small hairline boxes; preformatted text keeps its lines and scrolls sideways. */
+.wp-block-post-content :not(pre) > code {
+	padding: 0.0625em 0.375em;
+	border: 1px solid var(--wp--preset--color--border);
+	border-radius: 2px;
+	background-color: var(--wp--preset--color--wash);
+	color: var(--wp--preset--color--heading);
+	font-size: 0.9em;
+	overflow-wrap: anywhere;
+}
+
+.wp-block-post-content kbd {
+	padding: 0.0625em 0.375em;
+	border: 1px solid var(--wp--preset--color--border);
+	border-radius: 2px;
+	background-color: var(--wp--preset--color--surface);
+	box-shadow: inset 0 -2px 0 0 color-mix(in srgb, var(--wp--preset--color--muted) 14%, transparent);
+	color: var(--wp--preset--color--heading);
+	font-size: 0.875em;
+}
+
+.wp-block-post-content mark:not([style*="background"]) {
+	padding-inline: 0.125em;
+	background-color: color-mix(in srgb, var(--wp--preset--color--accent) 16%, transparent);
+	color: var(--wp--preset--color--heading);
 }
 
 :where(pre) {
 	overflow-x: auto;
 }
 
-/* Tables: hairlines in the line colour and a washed header row, in both colour schemes. Tables
-   from classic content get the Table block's lines and spacing. */
-.wp-block-post-content :where(table) {
-	border-collapse: collapse;
+.wp-block-post-content figcaption {
+	margin-block-start: 0.5rem;
+	color: var(--wp--preset--color--muted);
+	font-size: var(--wp--preset--font-size--x-small);
+	line-height: 1.45;
 }
 
-.wp-block-post-content :where(table) td,
-.wp-block-post-content :where(table) th {
-	padding: 0.5em;
+/* Tables: a bordered box on the surface that scrolls sideways on its own, never the page; hairlines
+   between rows, figures lined up. A file or column name in a cell stays whole: the table scrolls
+   instead. Tables from classic content get the cells' look and a border of their own. */
+.wp-block-post-content .wp-block-table {
+	overflow-x: auto;
+	overscroll-behavior-x: contain;
+	border: 1px solid var(--wp--preset--color--rule);
+	background-color: var(--wp--preset--color--surface);
+}
+
+.wp-block-post-content .wp-block-table:focus-visible {
+	outline: 2px solid var(--wp--preset--color--accent);
+	outline-offset: 2px;
+}
+
+.wp-block-post-content .wp-block-table > figcaption {
+	position: sticky;
+	inset-inline-start: 0;
+	margin: 0;
+	padding: 0.5rem 0.875rem;
+	border-block-start: 1px solid var(--wp--preset--color--rule);
+}
+
+.wp-block-post-content table {
+	inline-size: 100%;
+	border-collapse: collapse;
+	font-size: var(--wp--preset--font-size--small);
+	font-variant-numeric: tabular-nums;
+	line-height: 1.55;
+}
+
+.wp-block-post-content table:not(.wp-block-table > table) {
 	border: 1px solid var(--wp--preset--color--rule);
 }
 
-.wp-block-table thead,
-.wp-block-post-content :where(table) thead {
-	border-bottom: 1px solid var(--wp--preset--color--rule);
-	background-color: var(--wp--preset--color--wash);
+.wp-block-post-content table :is(thead, tfoot) {
+	border: 0;
+}
+
+.wp-block-post-content table :is(th, td) {
+	padding: 0.625rem 0.875rem;
+	border: 0;
+	border-block-end: 1px solid var(--wp--preset--color--rule);
+	text-align: start;
+	vertical-align: top;
+}
+
+.wp-block-post-content table th {
+	color: var(--wp--preset--color--heading);
+	font-weight: 500;
+}
+
+.wp-block-post-content table tbody tr:last-child td {
+	border-block-end: 0;
+}
+
+.wp-block-post-content table :is(th, td).has-text-align-center {
+	text-align: center;
+}
+
+.wp-block-post-content table :is(th, td).has-text-align-right {
+	text-align: end;
+}
+
+.wp-block-post-content tr > :is(th, td) :is(a, code) {
+	overflow-wrap: normal;
 }
 
 .wp-block-table.is-style-stripes tbody tr:nth-child(odd) {
@@ -1177,21 +1492,32 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	font-size: var(--wp--preset--font-size--small);
 }
 
-/* Quotes, in articles and comments, look like the Quote block (theme.json): washed and rounded. A
-   pull quote keeps its own look. */
+/* Quotes, in articles and comments, look like the Quote block (theme.json): on the wash, square,
+   with a 2px cobalt rule at the start, as NASH's, the width of the text. A pull quote keeps its own
+   look. */
+:where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not(.wp-block-pullquote > blockquote)) {
+	margin-inline: 0;
+}
+
 :where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not([class]):not(.wp-block-pullquote > blockquote)) {
 	margin-inline: 0;
-	padding: var(--wp--preset--spacing--30);
-	border-radius: 5px;
+	padding: 0.75rem 1rem;
+	border-inline-start: 2px solid var(--wp--preset--color--accent);
 	background-color: var(--wp--preset--color--wash);
 }
 
-:where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not([class]):not(.wp-block-pullquote > blockquote)) > :first-child {
-	margin-block-start: 0;
+:where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not(.wp-block-pullquote > blockquote)) > * {
+	margin-block: 0;
 }
 
-:where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not([class]):not(.wp-block-pullquote > blockquote)) > :last-child {
-	margin-block-end: 0;
+:where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not(.wp-block-pullquote > blockquote)) > * + * {
+	margin-block-start: 0.75em;
+}
+
+.wp-block-quote cite {
+	color: var(--wp--preset--color--muted);
+	font-size: var(--wp--preset--font-size--x-small);
+	font-style: normal;
 }
 
 /* [gallery]: a grid in the number of columns chosen (3 unless the gallery says otherwise). */
@@ -1229,102 +1555,90 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	margin-inline: auto;
 }
 
-/* Author box under the article */
+/* After the text, as NASH's: each part under a hairline rule, 1.5rem above its first line. */
 
-.tala-author {
-	align-items: flex-start;
-	gap: var(--wp--preset--spacing--30);
-	margin-block-start: var(--wp--preset--spacing--50);
-	padding-block-start: var(--wp--preset--spacing--40);
-	border-top: 1px solid var(--wp--preset--color--rule);
+/* "Topics": the article's categories and tags as chips (tags marked "#", for the eye only). */
+.tala-terms,
+.tala-post-nav,
+.tala-comments {
+	padding-block-start: 1.5rem;
+	border-block-start: 1px solid var(--wp--preset--color--rule);
 }
-
-.tala-author .wp-block-post-author__avatar {
-	margin: 0;
-}
-
-.tala-author .wp-block-post-author__avatar img {
-	border-radius: 50%;
-}
-
-.tala-author .wp-block-post-author__byline {
-	margin: 0;
-	color: var(--wp--preset--color--muted);
-	font-size: var(--wp--preset--font-size--small);
-}
-
-.tala-author .wp-block-post-author__name {
-	margin: 0;
-	font-weight: 600;
-}
-
-.tala-author .wp-block-post-author__bio {
-	margin: 0.5rem 0 0;
-	font-size: 1rem;
-}
-
-/* Categories and tags at the end of the article */
 
 .tala-terms {
-	margin-block-start: var(--wp--preset--spacing--40);
-	color: var(--wp--preset--color--muted);
-	font-size: var(--wp--preset--font-size--small);
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
 }
 
 .tala-terms > * {
-	margin-block: 0;
+	margin: 0;
 }
 
-.tala-terms > * + * {
-	margin-block-start: 0.25rem;
+.tala-chips > .wp-block-post-terms {
+	display: contents;
 }
 
+.tala-chips .wp-block-post-terms__separator {
+	display: none;
+}
+
+.tala-chips [class~="taxonomy-post_tag"] a::before {
+	content: "#" / "";
+}
+
+/* "Read next": the eyebrow, up to three articles from the same categories as ruled rows (the
+   article lists' rows, without the rail's padding), then the older and newer articles as hairline
+   cells, each cell one link. */
 .tala-post-nav {
-	margin-block-start: var(--wp--preset--spacing--50);
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
 }
 
-/* "Keep reading" under the article: a heading, up to three articles from the same categories as a
-   list (the article list's look, smaller titles), then the older and newer articles as two cards. */
-
-.tala-post-nav__title {
-	margin-block: 0 var(--wp--preset--spacing--20);
+.tala-post-nav > * {
+	margin: 0;
 }
 
-.tala-related .wp-block-post-title {
-	font-size: var(--wp--preset--font-size--medium);
+.tala-related {
+	border-block: 1px solid var(--wp--preset--color--rule);
+}
+
+.tala-related .tala-row {
+	padding-inline: 0;
 }
 
 .tala-post-nav__links {
-	margin-block-start: var(--wp--preset--spacing--30);
-	gap: var(--wp--preset--spacing--20);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1px;
+	border: 1px solid var(--wp--preset--color--rule);
+	background-color: var(--wp--preset--color--rule);
 }
 
-/* Each card is the whole tap target: the link covers it, as in the article list. */
 .tala-post-nav__links > .wp-block-post-navigation-link {
-	display: flex;
-	flex: 1 1 100%;
-	gap: 0.5em;
-	align-items: baseline;
-	box-sizing: border-box; /* the padding and border count towards the half width */
-	min-width: 0;
-	margin: 0;
-	padding: var(--wp--preset--spacing--20) var(--wp--preset--spacing--30);
-	border: 1px solid var(--wp--preset--color--rule);
-	border-radius: 5px;
 	position: relative;
+	display: flex;
+	box-sizing: border-box;
+	flex: 1 1 14rem;
+	align-items: baseline;
+	gap: 0.375rem;
+	min-inline-size: 0;
+	margin: 0;
+	padding: 1.25rem;
+	background-color: var(--wp--preset--color--base);
 	overflow-wrap: anywhere;
 }
 
-@media (min-width: 40em) {
-
-	.tala-post-nav__links > .wp-block-post-navigation-link {
-		flex-basis: calc(50% - var(--wp--preset--spacing--20));
-	}
+/* The newest article has no newer one: WordPress still writes its empty box. */
+.tala-post-nav__links > .wp-block-post-navigation-link:empty {
+	display: none;
 }
 
 .tala-post-nav__links a {
 	flex: 1 1 auto;
-	min-width: 0;
+	min-inline-size: 0;
+	color: var(--wp--preset--color--heading);
 	text-decoration: none;
 }
 
@@ -1334,35 +1648,155 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	inset: 0;
 }
 
+.tala-post-nav__links a:focus-visible {
+	outline: none;
+}
+
+.tala-post-nav__links > .wp-block-post-navigation-link:has(a:focus-visible) {
+	outline: 2px solid var(--wp--preset--color--accent);
+	outline-offset: 2px;
+}
+
 .tala-post-nav__links .post-navigation-link__label {
 	display: block;
+	margin-block-end: 0.375rem;
 	color: var(--wp--preset--color--muted);
-	font-size: var(--wp--preset--font-size--small);
+	font-size: var(--wp--preset--font-size--x-small);
 }
 
 .tala-post-nav__links .post-navigation-link__title {
-	font-weight: 600;
+	display: block;
+	font-size: 1.125rem;
+	font-weight: 450;
+	letter-spacing: -0.012em;
+	line-height: 1.35;
 }
 
-.tala-post-nav__links .wp-block-post-navigation-link__arrow-previous,
-.tala-post-nav__links .wp-block-post-navigation-link__arrow-next {
+.tala-post-nav__links :is(.wp-block-post-navigation-link__arrow-previous, .wp-block-post-navigation-link__arrow-next) {
 	color: var(--wp--preset--color--muted);
+	font-size: var(--wp--preset--font-size--x-small);
 }
 
 @media (hover: hover) and (pointer: fine) {
 
-	.tala-post-nav__links > .wp-block-post-navigation-link:hover {
-		border-color: var(--wp--preset--color--accent);
-	}
-
 	.tala-post-nav__links > .wp-block-post-navigation-link:hover .post-navigation-link__title {
 		color: var(--wp--preset--color--accent);
-		text-decoration: underline;
+		text-decoration: underline solid 1px;
+		text-underline-offset: 0.25em;
 	}
 }
 
-.tala-comments {
-	margin-block-start: var(--wp--preset--spacing--50);
+/* The author box, as NASH's "About the author": a square card on the surface, the round photo
+   (80px, on a hairline ring) beside the name from 34rem of column, above it on a phone. */
+.tala-author {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 1rem;
+	padding: 1.25rem;
+	border: 1px solid var(--wp--preset--color--rule);
+	background-color: var(--wp--preset--color--surface);
+}
+
+@container tala-text (width >= 34rem) {
+
+	.tala-author {
+		flex-direction: row;
+		gap: 1.25rem;
+		padding: 1.5rem;
+	}
+}
+
+.tala-author .wp-block-post-author__avatar {
+	flex: none;
+	margin: 0;
+}
+
+.tala-author .wp-block-post-author__avatar img {
+	display: block;
+	inline-size: 5rem;
+	block-size: 5rem;
+	border-radius: 50%;
+	box-shadow: 0 0 0 1px var(--wp--preset--color--rule);
+	object-fit: cover;
+}
+
+.tala-author .wp-block-post-author__content {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 0.5rem;
+	min-inline-size: 0;
+}
+
+.tala-author .wp-block-post-author__content > * {
+	margin: 0;
+}
+
+.tala-author .wp-block-post-author__byline {
+	color: var(--wp--preset--color--muted);
+	font-size: var(--wp--preset--font-size--x-small);
+	font-weight: 500;
+	letter-spacing: 0.08em;
+	line-height: 1.2;
+	text-transform: uppercase;
+}
+
+.tala-author .wp-block-post-author__name {
+	color: var(--wp--preset--color--heading);
+	font-size: 1.125rem;
+	font-weight: 450;
+	letter-spacing: -0.012em;
+	line-height: 1.35;
+}
+
+.tala-author .wp-block-post-author__name a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.tala-author .wp-block-post-author__bio:empty {
+	display: none;
+}
+
+.tala-author .wp-block-post-author__bio {
+	max-inline-size: calc(60 * 0.628em);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.6;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+	.tala-author .wp-block-post-author__name a:hover {
+		color: var(--wp--preset--color--accent);
+		text-decoration: underline solid 1px;
+		text-underline-offset: 0.25em;
+	}
+}
+
+/* Comments: their title and the form's in subtitle type, each comment between hairlines, the name
+   in the heading's ink, the date and links small; the form's fields 44px tall. */
+.tala-comments > * {
+	margin-block: 0;
+}
+
+.tala-comments > * + * {
+	margin-block-start: 1.5rem;
+}
+
+.tala-comments .comment-reply-title {
+	margin-block: 0 0.75rem;
+	color: var(--wp--preset--color--heading);
+	font-size: 1.125rem;
+	font-weight: 450;
+	letter-spacing: -0.012em;
+	line-height: 1.35;
+}
+
+.tala-comments .comment-reply-title small {
+	margin-inline-start: 0.5em;
+	font-size: var(--wp--preset--font-size--x-small);
+	letter-spacing: normal;
 }
 
 /* The comment form ends at its button; the paragraph margin under it would add to the footer's space. */
@@ -1370,9 +1804,30 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	margin-block-end: 0;
 }
 
+.wp-block-post-comments-form label {
+	color: var(--wp--preset--color--heading);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+}
+
+.wp-block-post-comments-form input:not([type="submit"]):not([type="checkbox"]) {
+	box-sizing: border-box;
+	min-block-size: var(--tala-control);
+	padding: 0.5rem 0.75rem;
+}
+
+.wp-block-post-comments-form textarea {
+	box-sizing: border-box;
+	padding: 0.5rem 0.75rem;
+}
+
+.wp-block-comment-template {
+	border-block-start: 1px solid var(--wp--preset--color--rule);
+}
+
 .tala-comment {
-	padding-block: var(--wp--preset--spacing--20);
-	border-bottom: 1px solid var(--wp--preset--color--rule);
+	padding-block: 1.25rem;
+	border-block-end: 1px solid var(--wp--preset--color--rule);
 }
 
 .tala-comment > * {
@@ -1380,37 +1835,89 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 }
 
 .tala-comment > * + * {
-	margin-block-start: 0.4rem;
+	margin-block-start: 0.5rem;
 }
 
 .tala-comment-meta,
 .tala-comment-actions {
-	gap: 0.25rem var(--wp--preset--spacing--20);
-	font-size: var(--wp--preset--font-size--small);
+	gap: 0.25rem 0.75rem;
+	font-size: var(--wp--preset--font-size--x-small);
 }
 
 .tala-comment-meta .wp-block-comment-author-name {
-	font-weight: 600;
+	color: var(--wp--preset--color--heading);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+}
+
+.tala-comment-meta .wp-block-comment-author-name a {
+	color: inherit;
 }
 
 .tala-comment-meta .wp-block-comment-date,
 .tala-comment-meta .wp-block-comment-date a {
 	color: var(--wp--preset--color--muted);
+	font-variant-numeric: tabular-nums;
 }
 
-/* "Author" beside the name of the article's author. */
+/* Reply and edit: 24px tap targets (WCAG 2.5.8). */
+.tala-comment-actions a {
+	display: inline-flex;
+	min-block-size: 1.5rem;
+	align-items: center;
+}
+
+/* "Author" beside the name of the article's author: a square badge. */
 .tala-comment-badge {
-	margin-inline-start: 0.4em;
-	padding-inline: 0.4em;
-	border: 1px solid var(--wp--preset--color--rule);
-	border-radius: 3px;
-	color: var(--wp--preset--color--muted);
-	font-weight: 400;
+	display: inline-block;
+	margin-inline-start: 0.5em;
+	padding-inline: 0.375rem;
+	border: 1px solid var(--wp--preset--color--border);
+	border-radius: 2px;
+	color: var(--wp--preset--color--heading);
+	font-size: var(--wp--preset--font-size--x-small);
+	font-weight: 500;
 }
 
 .tala-comments-closed {
 	color: var(--wp--preset--color--muted);
 	font-size: var(--wp--preset--font-size--small);
+}
+
+/* The 404 page: NASH's status panel on the graph paper, centred: a large italic "404" in display
+   type, the heading, the explanation, a search field and the button home. */
+.tala-status {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1.25rem;
+	text-align: center;
+}
+
+.tala-status > * {
+	margin-block: 0;
+}
+
+.tala-status > .tala-status-code {
+	font-size: clamp(4.5rem, 3rem + 8vw, 8rem);
+	letter-spacing: -0.05em;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+}
+
+.tala-status > .tala-lead {
+	max-inline-size: calc(48 * 0.628em);
+	color: var(--wp--preset--color--muted);
+}
+
+.tala-status .wp-block-search {
+	inline-size: 100%;
+	max-inline-size: 30rem;
+	text-align: start;
+}
+
+.tala-status > .wp-block-buttons {
+	margin-block-start: 0.5rem;
 }
 
 /* Title bands of the home page and the archives: the title, its lead, and on the home page a search
@@ -1461,12 +1968,15 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 }
 
 .tala-intro .wp-block-search__input,
-.tala-intro .wp-block-search__button {
+.tala-intro .wp-block-search__button,
+.tala-status .wp-block-search__input,
+.tala-status .wp-block-search__button {
 	box-sizing: border-box;
 	min-block-size: var(--tala-control);
 }
 
-.tala-intro .wp-block-search__button {
+.tala-intro .wp-block-search__button,
+.tala-status .wp-block-search__button {
 	margin-inline-start: 0.5rem;
 	padding-block: 0;
 }
@@ -1729,70 +2239,6 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	font-weight: 500;
 }
 
-/* The related articles under an article ("Keep reading") keep their own list for now: one per line,
-   divided by hairlines, a small thumbnail on the right, the title link covering the entry. */
-.tala-related .wp-block-post-template {
-	margin-block-start: 0;
-}
-
-.tala-related .wp-block-post-excerpt__excerpt {
-	margin: 0;
-}
-
-.tala-related .wp-block-post {
-	position: relative;
-	margin: 0;
-	padding-block: var(--wp--preset--spacing--30);
-	border-bottom: 1px solid var(--wp--preset--color--rule);
-}
-
-.tala-list-item {
-	gap: var(--wp--preset--spacing--30);
-}
-
-.tala-list-text {
-	flex: 1 1 auto;
-	min-width: 0;
-}
-
-.tala-list-text > * {
-	margin-block: 0;
-}
-
-.tala-list-text > * + * {
-	margin-block-start: 0.4rem;
-}
-
-.tala-related .tala-list-thumb {
-	flex: 0 0 5.5rem;
-	margin: 0;
-}
-
-.tala-related .tala-list-thumb img {
-	border-radius: 5px;
-}
-
-@media (min-width: 40em) {
-
-	.tala-related .tala-list-thumb {
-		flex-basis: 8rem;
-	}
-}
-
-.tala-related .wp-block-post-title a::after {
-	content: "";
-	position: absolute;
-	inset: 0;
-}
-
-@media (hover: hover) and (pointer: fine) {
-
-	.tala-related .wp-block-post:hover .wp-block-post-title a {
-		color: var(--wp--preset--color--accent);
-		text-decoration: underline;
-	}
-}
-
 /* Printing: just the article, with its dates and author, in black on white. */
 
 @media print {
@@ -1834,10 +2280,6 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 
 	.tala-main {
 		padding: 0;
-	}
-
-	.tala-paper .wp-block-post-featured-image {
-		max-width: 12cm;
 	}
 
 	a {
