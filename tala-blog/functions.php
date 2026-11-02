@@ -215,6 +215,71 @@ function tala_blog_table_region( $html ) {
 	return $tags->get_updated_html();
 }
 
+add_filter( 'the_content', 'tala_blog_classic_table_region', 12 );
+
+/**
+ * A classic table (from the classic editor or a paste, not a Table block) gets the region a Table
+ * block's figure is (tala_blog_table_region()): a box around it that scrolls sideways when the
+ * table is wider than the text column, which keyboard users can focus, named by the table's
+ * caption or "Table". The table itself is left exactly as it was, so it stays a table at its own
+ * width. A table in a Table block, in a region already, or inside another table isn't wrapped.
+ * Runs after the blocks, paragraphs and shortcodes of the text are rendered (priority 12); feeds
+ * keep their tables as they are.
+ *
+ * @param string $html Post content HTML.
+ * @return string
+ */
+function tala_blog_classic_table_region( $html ) {
+	if ( false === stripos( $html, '<table' ) || is_feed() ) {
+		return $html;
+	}
+	// The Tag Processor, also telling where the current tag starts and ends, so a table can be
+	// wrapped without rewriting anything around it.
+	$tags    = new class( $html ) extends WP_HTML_Tag_Processor {
+		/**
+		 * Where the current tag starts (its "<") and ends (just after its ">").
+		 *
+		 * @return array{int, int} Byte offsets.
+		 */
+		public function span(): array {
+			$this->set_bookmark( 'tala-here' );
+			return array( $this->bookmarks['tala-here']->start, $this->bookmarks['tala-here']->start + $this->bookmarks['tala-here']->length );
+		}
+	};
+	$tables  = array(); // [ start, end ] of each table to wrap.
+	$depth   = 0;       // Tables open around the current tag.
+	$figures = 0;       // Table block figures open around it.
+	$after   = false;   // Whether the last tag opened a region box.
+	$skip    = false;
+	$start   = 0;
+	while ( $tags->next_tag( array( 'tag_closers' => 'visit' ) ) ) {
+		$tag    = $tags->get_tag();
+		$closer = $tags->is_tag_closer();
+		if ( 'FIGURE' === $tag ) {
+			$figures += ! $closer && $tags->has_class( 'wp-block-table' ) ? 1 : ( $closer && $figures > 0 ? -1 : 0 );
+		} elseif ( 'TABLE' === $tag && ! $closer ) {
+			if ( 0 === $depth ) {
+				$skip  = $figures > 0 || $after;
+				$start = $tags->span()[0];
+			}
+			++$depth;
+		} elseif ( 'TABLE' === $tag && $depth > 0 ) {
+			--$depth;
+			if ( 0 === $depth && ! $skip ) {
+				$tables[] = array( $start, $tags->span()[1] );
+			}
+		}
+		$after = ! $closer && 'DIV' === $tag && $tags->has_class( 'tala-table-scroll' );
+	}
+	foreach ( array_reverse( $tables ) as list( $from, $to ) ) {
+		$table   = substr( $html, $from, $to - $from );
+		$caption = preg_match( '#<caption\b[^>]*>(.*?)</caption>#is', $table, $match ) ? trim( (string) preg_replace( '/\s+/u', ' ', wp_strip_all_tags( $match[1] ) ) ) : '';
+		$name    = '' !== $caption ? html_entity_decode( $caption, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) : _x( 'Table', 'name of a table\'s scrolling box for screen readers', 'tala-blog' );
+		$html    = substr_replace( $html, '<div class="tala-table-scroll" role="region" tabindex="0" aria-label="' . esc_attr( $name ) . '">' . $table . '</div>', $from, $to - $from );
+	}
+	return $html;
+}
+
 add_filter( 'render_block_core/post-author-name', 'tala_blog_byline', 10, 3 );
 
 /**

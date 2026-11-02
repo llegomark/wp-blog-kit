@@ -23,7 +23,8 @@ function classicContent( images ) {
 		`[caption id="" align="aligncenter" width="1200"]<img src="${ url( images[ 2 ], 'full' ) }" width="1200" height="675" alt="Wide"> A caption under a wide image[/caption]`,
 		'<iframe src="about:blank" width="560" height="315" title="A video player"></iframe>',
 		'<blockquote><p>A quote from the classic editor.</p></blockquote>',
-		'<table><thead><tr><th>Grade</th><th>Learners</th></tr></thead><tbody><tr><td>1</td><td>32</td></tr></tbody></table>',
+		// As the Advanced Editor Tools plugin and pastes from word processors write it: a width of its own.
+		'<table style="width: 100%;"><thead><tr><th>Grade</th><th>Learners</th></tr></thead><tbody><tr><td>1</td><td>32</td></tr></tbody></table>',
 		`[gallery ids="${ images.slice( 0, 3 ).join( ',' ) }"]`,
 	].join( '\n\n' );
 }
@@ -60,8 +61,8 @@ test.describe( 'phone', () => {
 				captionText: style( '.wp-caption-text', 'fontSize' ) !== style( 'p', 'fontSize' ),
 				// Washed like the Quote block: a background of its own, not the page's.
 				quoteWashed: ! [ 'rgba(0, 0, 0, 0)', getComputedStyle( document.body ).backgroundColor ].includes( style( 'blockquote', 'backgroundColor' ) ),
-				// The Table block's look: a hairline box, hairlines between rows.
-				table: style( 'table', 'borderTopWidth' ),
+				// The Table block's look: a hairline box (a region keyboard users can scroll), hairlines between rows.
+				table: style( '.tala-table-scroll[role="region"][tabindex="0"]', 'borderTopWidth' ),
 				cell: style( 'th', 'borderBottomWidth' ),
 				galleryColumns: style( '.gallery', 'gridTemplateColumns' ).split( ' ' ).length,
 			};
@@ -78,6 +79,18 @@ test.describe( 'phone', () => {
 			galleryColumns: 3,
 		} );
 		expect( await axeViolations( page ) ).toEqual( [] );
+	} );
+
+	test( 'a classic table with a width of its own fills its box on a desktop: no empty strip beside its rows', async ( { page } ) => {
+		await page.setViewportSize( { width: 1280, height: 900 } );
+		await page.goto( `/?page_id=${ page_ }` );
+		const widths = await page.locator( '.wp-block-post-content .tala-table-scroll' ).evaluate( ( box ) => ( {
+			box: box.clientWidth,
+			row: Math.round( box.querySelector( 'tr' ).getBoundingClientRect().width ),
+			display: getComputedStyle( box.querySelector( 'table' ) ).display,
+		} ) );
+		expect( widths ).toEqual( { box: widths.row, row: widths.row, display: 'table' } );
+		expect( widths.row, 'The text column\'s width' ).toBeGreaterThan( 700 );
 	} );
 
 	test( 'the password field of a protected page is a full field', async ( { page } ) => {

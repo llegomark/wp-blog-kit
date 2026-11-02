@@ -132,18 +132,18 @@ test.describe( 'special characters (the Theme Unit Test\'s post)', () => {
 		wp( 'post', 'delete', id, '--force' );
 	} );
 
-	test( 'at 390 px the title breaks and the table scrolls in its own box: the page doesn\'t scroll sideways', async ( { page } ) => {
+	test( 'at 390 px the title breaks and the classic table scrolls in its own box: the page doesn\'t scroll sideways', async ( { page } ) => {
 		await page.goto( `/?p=${ id }` );
 		await expect( page.locator( 'h1' ) ).toContainText( '~`!@#$%^&*()' );
 		const wide = await page.evaluate( () => {
 			const width = document.documentElement.clientWidth;
 			return {
 				scroll: document.documentElement.scrollWidth - width,
-				// Everything stays in the window, but the rows clipped inside the scrolling table.
+				// Everything stays in the window, but what the table's box clips as it scrolls.
 				over: [ ...document.querySelectorAll( 'main *' ) ]
-					.filter( ( el ) => ! el.parentElement.closest( 'table' ) && el.getBoundingClientRect().right > width + 0.5 )
+					.filter( ( el ) => ! el.parentElement.closest( '.tala-table-scroll' ) && el.getBoundingClientRect().right > width + 0.5 )
 					.map( ( el ) => `${ el.tagName }.${ el.className }` ),
-				tableScrolls: ( ( table ) => table.scrollWidth > table.clientWidth )( document.querySelector( '.wp-block-post-content table' ) ),
+				tableScrolls: ( ( box ) => box.scrollWidth > box.clientWidth )( document.querySelector( '.wp-block-post-content .tala-table-scroll' ) ),
 			};
 		} );
 		expect( wide ).toEqual( { scroll: 0, over: [], tableScrolls: true } );

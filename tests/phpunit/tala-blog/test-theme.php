@@ -545,6 +545,31 @@ HTML;
 	}
 
 	/**
+	 * A classic table (the classic editor's, a paste from a word processor) gets the same scrolling
+	 * region as a Table block: wrapped once in a box that keyboard users can focus, named by its
+	 * caption or "Table". The table stays a table, its own width (an inline width too) kept. A Table
+	 * block's table, already in its region, and a table inside another table aren't wrapped again.
+	 */
+	public function test_classic_table_region(): void {
+		$region = static fn( string $name ): string => '<div class="tala-table-scroll" role="region" tabindex="0" aria-label="' . $name . '">';
+		$table  = '<table style="width: 100%;"><tbody><tr><td>1</td><td><table><tbody><tr><td>2</td></tr></tbody></table></td></tr></tbody></table>';
+		$html   = apply_filters( 'the_content', "Before.\n\n" . $table . "\n\nAfter." );
+		$this->assertSame( 1, substr_count( $html, 'tala-table-scroll' ), 'Once, around the outer table only' );
+		$this->assertStringContainsString( $region( 'Table' ) . '<table style="width: 100%;">', $html, 'The table as it was, inline width and all' );
+		$this->assertSame( 1, substr_count( $html, '</table></div>' ) );
+		$this->assertSame( strrpos( $html, '</table>' ), strpos( $html, '</table></div>' ), 'Closed after the outer table, the inner one inside it' );
+		$this->assertSame( $html, tala_blog_classic_table_region( $html ), 'Never wrapped twice' );
+
+		$captioned = '<table><caption>Fees &amp; <em>dues</em></caption><tbody><tr><td>1</td></tr></tbody></table>';
+		$this->assertStringContainsString( $region( 'Fees &amp; dues' ) . $captioned . '</div>', tala_blog_classic_table_region( $captioned ) );
+
+		$block = apply_filters( 'the_content', '<!-- wp:table {"hasFixedLayout":false} --><figure class="wp-block-table"><table><tbody><tr><td>1</td></tr></tbody></table></figure><!-- /wp:table -->' );
+		$this->assertStringNotContainsString( 'tala-table-scroll', $block, 'A Table block is its own region' );
+		$this->assertSame( 1, substr_count( $block, 'role="region"' ) );
+		$this->assertSame( 'No table.', tala_blog_classic_table_region( 'No table.' ) );
+	}
+
+	/**
 	 * Article lists are ruled rows without pictures: on the left the date and the post's first
 	 * category (one link, however many it has), on the right the linked title and the summary. Only
 	 * a Categories block that asks for it (tala-first-term) is cut down to its first term.

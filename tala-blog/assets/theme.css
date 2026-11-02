@@ -1362,15 +1362,15 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 
 /* Tables: a bordered box on the surface that scrolls sideways on its own, never the page; hairlines
    between rows, figures lined up. A file or column name in a cell stays whole: the table scrolls
-   instead. Tables from classic content get the cells' look, a border of their own, and scroll too. */
-.wp-block-post-content .wp-block-table {
+   instead. A classic table gets the same box (.tala-table-scroll, from functions.php). */
+.wp-block-post-content :is(.wp-block-table, .tala-table-scroll) {
 	overflow-x: auto;
 	overscroll-behavior-x: contain;
 	border: 1px solid var(--wp--preset--color--rule);
 	background-color: var(--wp--preset--color--surface);
 }
 
-.wp-block-post-content .wp-block-table:focus-visible {
+.wp-block-post-content :is(.wp-block-table, .tala-table-scroll):focus-visible {
 	outline: 2px solid var(--wp--preset--color--accent);
 	outline-offset: 2px;
 }
@@ -1391,14 +1391,8 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	line-height: 1.55;
 }
 
-/* A classic table has no box around it: it scrolls itself, as wide as its content and never wider
-   than the column (its rows sit in the anonymous table box inside). */
-.wp-block-post-content table:not(.wp-block-table > table) {
-	display: block;
-	inline-size: max-content;
-	max-inline-size: 100%;
-	overflow-x: auto;
-	overscroll-behavior-x: contain;
+/* A classic table outside a region box (functions.php wraps those in the text) has a border of its own. */
+.wp-block-post-content table:not(.wp-block-table > table, .tala-table-scroll > table) {
 	border: 1px solid var(--wp--preset--color--rule);
 }
 
