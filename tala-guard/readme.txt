@@ -4,7 +4,7 @@ Tags: comments, spam, anti-spam, turnstile, captcha
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,9 @@ Yes, with Cloudflare's test keys (developers.cloudflare.com/turnstile/troublesho
 2. Settings → Discussion: the Turnstile keys, with the secret key saved and not shown.
 
 == Changelog ==
+
+= 1.1.0 =
+* The widget follows the page's colour scheme: light or dark when the page declares one (as a theme's Light/Dark switch does), the device's otherwise, and it switches with the page when a reader changes it.
 
 = 1.0.0 =
 * First release: Cloudflare Turnstile in the comment form, confirmed with Cloudflare's Siteverify (success, the "comment" action and the site's hostname) before a comment is saved, failing closed; the script loads as the form comes near; keys on Settings → Discussion or in wp-config.php.

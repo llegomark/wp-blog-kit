@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Tala Guard
  * Description:       Keeps spam bots out of the comments with Cloudflare Turnstile: a check in the comment form that people rarely notice, confirmed with Cloudflare on the server before WordPress saves a comment. Works with any theme.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 7.0
  * Requires PHP:      8.5
  * Author:            Edventure
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const TALA_GUARD_VERSION = '1.0.0';
+const TALA_GUARD_VERSION = '1.1.0';
 const TALA_GUARD_FILE    = __FILE__;
 
 require __DIR__ . '/includes/settings.php';

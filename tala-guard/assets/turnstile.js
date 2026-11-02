@@ -7,6 +7,11 @@
  * token is ready waits for it, then goes. A token can be used once: when the browser shows the page
  * again from its back/forward cache (after a comment was turned away), each widget starts over for a
  * new one.
+ *
+ * The widget takes the colour scheme the page declares for it (CSS color-scheme, as a theme's
+ * Light/Dark switch sets it): dark or light when the page declares only that one, and otherwise
+ * Turnstile's "auto", which follows the device. When the scheme changes after the widget is shown,
+ * it is shown again in the new one, unless its token is already on its way with the comment.
  */
 ( function() {
 	const forms = [ ...document.querySelectorAll( '.tala-guard-turnstile' ) ]
@@ -15,7 +20,9 @@
 			form: container.closest( 'form' ),
 			status: container.nextElementSibling,
 			id: null,
+			theme: null,
 			pending: false,
+			sending: false,
 		} ) )
 		.filter( ( entry ) => entry.form && entry.status?.classList.contains( 'tala-guard-status' ) );
 	if ( ! forms.length ) {
@@ -36,28 +43,71 @@
 		}
 	};
 
-	const render = () => {
+	/**
+	 * The widget theme for the colour scheme computed on its container: "dark" or "light" when that
+	 * is the only scheme declared ("only dark" included), and "auto" for "normal" or both.
+	 *
+	 * @param {Element} container Widget container.
+	 * @return {string} "dark", "light" or "auto".
+	 */
+	const themeOf = ( container ) => {
+		const schemes = ( window.getComputedStyle( container ).colorScheme || '' )
+			.split( /\s+/ )
+			.filter( ( word ) => 'light' === word || 'dark' === word );
+		return 1 === schemes.length ? schemes[ 0 ] : 'auto';
+	};
+
+	const renderOne = ( entry ) => {
+		entry.theme = themeOf( entry.container );
+		entry.id = window.turnstile.render( entry.container, {
+			sitekey: entry.container.dataset.sitekey,
+			action: entry.container.dataset.action,
+			theme: entry.theme,
+			size: 'flexible',
+			callback: () => {
+				if ( entry.pending ) {
+					send( entry );
+				} else {
+					say( entry, '' );
+				}
+			},
+			'error-callback': () => {
+				say( entry, entry.status.dataset.failed );
+			},
+		} );
+	};
+
+	// Shows each widget again when the page's colour scheme has changed since it was shown. A form
+	// waiting for its token gets it from the new widget; one whose token is being sent keeps it.
+	const follow = () => {
 		forms.forEach( ( entry ) => {
-			if ( null !== entry.id ) {
+			if ( null === entry.id || entry.sending || themeOf( entry.container ) === entry.theme ) {
 				return;
 			}
-			entry.id = window.turnstile.render( entry.container, {
-				sitekey: entry.container.dataset.sitekey,
-				action: entry.container.dataset.action,
-				theme: 'auto',
-				size: 'flexible',
-				callback: () => {
-					if ( entry.pending ) {
-						send( entry );
-					} else {
-						say( entry, '' );
-					}
-				},
-				'error-callback': () => {
-					say( entry, entry.status.dataset.failed );
-				},
-			} );
+			window.turnstile.remove( entry.id );
+			entry.id = null;
+			renderOne( entry );
 		} );
+	};
+
+	let following = false;
+	const render = () => {
+		forms.forEach( ( entry ) => {
+			if ( null === entry.id ) {
+				renderOne( entry );
+			}
+		} );
+		if ( following ) {
+			return;
+		}
+		following = true;
+		if ( 'MutationObserver' in window ) {
+			const observer = new window.MutationObserver( follow );
+			observer.observe( document.documentElement, { attributes: true } );
+			observer.observe( document.body, { attributes: true } );
+		}
+		// A page may declare a single scheme only for dark or light devices.
+		window.matchMedia?.( '(prefers-color-scheme: dark)' ).addEventListener?.( 'change', follow );
 	};
 
 	let requested = false;
@@ -83,6 +133,7 @@
 		entry.form.addEventListener( 'focusin', load, { once: true } );
 		entry.form.addEventListener( 'submit', ( event ) => {
 			if ( hasToken( entry ) ) {
+				entry.sending = true;
 				return;
 			}
 			event.preventDefault();
@@ -112,6 +163,7 @@
 			forms.forEach( ( entry ) => {
 				if ( null !== entry.id ) {
 					entry.pending = false;
+					entry.sending = false;
 					say( entry, '' );
 					window.turnstile.reset( entry.id );
 				}

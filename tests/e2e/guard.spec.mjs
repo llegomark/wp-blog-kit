@@ -49,6 +49,60 @@ async function fillComment( page ) {
 const commentsWith = ( text ) =>
 	wp( 'comment', 'list', `--search=${ text }`, '--status=all', '--format=ids' ).split( /\s+/ ).filter( Boolean );
 
+/**
+ * Stands in for Turnstile's script in this test only: the stub records each render's options and
+ * each removal, gives no token, and calls the page's onload callback. Turnstile's script is held
+ * until `release` is called, so the page can be set up before the widget renders.
+ *
+ * @param {import('@playwright/test').Page} page Page.
+ * @return {Promise<() => void>} Lets the script load.
+ */
+async function stubTurnstile( page ) {
+	let release;
+	const held = new Promise( ( resolve ) => {
+		release = resolve;
+	} );
+	await page.route( 'https://challenges.cloudflare.com/turnstile/v0/api.js*', async ( route ) => {
+		await held;
+		const onload = new URL( route.request().url() ).searchParams.get( 'onload' );
+		await route.fulfill( {
+			contentType: 'text/javascript',
+			body: `( () => {
+				window.stubRenders = [];
+				window.stubRemoved = [];
+				let next = 0;
+				window.turnstile = {
+					render( el, opts ) {
+						next += 1;
+						window.stubRenders.push( { id: 'w' + next, theme: opts.theme } );
+						return 'w' + next;
+					},
+					remove( id ) {
+						window.stubRemoved.push( id );
+					},
+					reset() {},
+					getResponse() {
+						return '';
+					},
+					isExpired() {
+						return false;
+					},
+				};
+				window[ ${ JSON.stringify( onload ) } ]();
+			} )();`,
+		} );
+	} );
+	return release;
+}
+
+/**
+ * The themes the stub's widgets were rendered with, in order.
+ *
+ * @param {import('@playwright/test').Page} page Page.
+ * @return {Promise<string[]>} Themes.
+ */
+const renderedThemes = ( page ) => page.evaluate( () => ( window.stubRenders || [] ).map( ( r ) => r.theme ) );
+
 test.describe( 'Turnstile on the comment form', () => {
 	test.beforeAll( () => {
 		try {
@@ -129,6 +183,80 @@ test.describe( 'Turnstile on the comment form', () => {
 
 		release();
 		await page.waitForURL( /#comment-\d+$/, { timeout: 20_000 } );
+		const ids = commentsWith( text );
+		expect( ids ).toHaveLength( 1 );
+		wp( 'comment', 'delete', ...ids, '--force' );
+	} );
+
+	test( 'the widget follows the page\'s colour scheme, as Tala Blog\'s Light/Dark switch sets it', async ( { page } ) => {
+		setKeys( PASSES );
+		const release = await stubTurnstile( page );
+		await page.goto( pages.withComments );
+		await page.evaluate( () => {
+			document.documentElement.dataset.theme = 'light';
+		} );
+		release();
+		await page.locator( '.tala-guard-turnstile' ).scrollIntoViewIfNeeded();
+		await expect.poll( () => renderedThemes( page ) ).toEqual( [ 'light' ] );
+
+		await page.evaluate( () => {
+			document.documentElement.dataset.theme = 'dark';
+		} );
+		await expect.poll( () => renderedThemes( page ) ).toEqual( [ 'light', 'dark' ] );
+		expect( await page.evaluate( () => window.stubRemoved ) ).toEqual( [ 'w1' ] );
+	} );
+
+	test( 'the widget follows any page\'s declared color-scheme, and "auto" when none is declared', async ( { page } ) => {
+		setKeys( PASSES );
+		const release = await stubTurnstile( page );
+		await page.goto( pages.withComments );
+		await page.evaluate( () => {
+			document.documentElement.style.colorScheme = 'normal';
+		} );
+		release();
+		await page.locator( '.tala-guard-turnstile' ).scrollIntoViewIfNeeded();
+		await expect.poll( () => renderedThemes( page ) ).toEqual( [ 'auto' ] );
+
+		await page.evaluate( () => {
+			document.documentElement.style.colorScheme = 'dark';
+		} );
+		await expect.poll( () => renderedThemes( page ) ).toEqual( [ 'auto', 'dark' ] );
+		await page.evaluate( () => {
+			document.documentElement.style.colorScheme = 'only light';
+		} );
+		await expect.poll( () => renderedThemes( page ) ).toEqual( [ 'auto', 'dark', 'light' ] );
+		await page.evaluate( () => {
+			document.documentElement.style.colorScheme = 'light dark';
+		} );
+		await expect.poll( () => renderedThemes( page ) ).toEqual( [ 'auto', 'dark', 'light', 'auto' ] );
+		// A change that leaves the scheme as it was doesn't render the widget again.
+		await page.evaluate( () => document.body.classList.add( 'unrelated-change' ) );
+		await page.waitForTimeout( 200 );
+		expect( await renderedThemes( page ) ).toHaveLength( 4 );
+		expect( await page.evaluate( () => window.stubRemoved ) ).toEqual( [ 'w1', 'w2', 'w3' ] );
+	} );
+
+	test( 'after switching to dark, the widget renders again, gives a new token and the comment is saved', async ( { page } ) => {
+		setKeys( PASSES );
+		await page.goto( pages.withComments );
+		const widget = page.locator( '.tala-guard-turnstile' );
+		await widget.scrollIntoViewIfNeeded();
+		const token = widget.locator( 'input[name="cf-turnstile-response"]' );
+		await expect( token ).toHaveValue( 'XXXX.DUMMY.TOKEN.XXXX', { timeout: 20_000 } );
+		await page.evaluate( () => {
+			window.removedWidgets = 0;
+			const remove = window.turnstile.remove.bind( window.turnstile );
+			window.turnstile.remove = ( id ) => {
+				window.removedWidgets += 1;
+				remove( id );
+			};
+			document.documentElement.dataset.theme = 'dark';
+		} );
+		await expect.poll( () => page.evaluate( () => window.removedWidgets ) ).toBe( 1 );
+		await expect( token ).toHaveValue( 'XXXX.DUMMY.TOKEN.XXXX', { timeout: 20_000 } );
+
+		const text = await fillComment( page );
+		await Promise.all( [ page.waitForURL( /#comment-\d+$/, { timeout: 20_000 } ), page.locator( '#submit' ).click() ] );
 		const ids = commentsWith( text );
 		expect( ids ).toHaveLength( 1 );
 		wp( 'comment', 'delete', ...ids, '--force' );
