@@ -178,8 +178,7 @@
 			"button": {
 				"border": { "radius": "4px" },
 				"color": { "background": "var:preset|color|accent", "text": "var:preset|color|on-accent" },
-				"typography": { "fontSize": "var:preset|font-size|small", "fontWeight": "500" },
-				":hover": { "color": { "background": "var:preset|color|accent-deep", "text": "var:preset|color|on-accent" } }
+				"typography": { "fontSize": "var:preset|font-size|small", "fontWeight": "500" }
 			},
 			"caption": {
 				"color": { "text": "var:preset|color|muted" },

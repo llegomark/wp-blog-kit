@@ -843,6 +843,17 @@ HTML;
 	}
 
 	/**
+	 * Buttons keep their accent fill on hover: the deep accent is only the button's lower edge (text
+	 * on it falls below 4.5:1 in dark mode), and hover styles belong under the CSS media query for
+	 * devices that hover, which theme.json can't express.
+	 */
+	public function test_buttons_keep_their_colours_on_hover(): void {
+		$button = (array) wp_get_global_styles( array( 'elements', 'button' ) );
+		$this->assertSame( 'var(--wp--preset--color--accent)', $button['color']['background'] ?? null );
+		$this->assertArrayNotHasKey( ':hover', $button );
+	}
+
+	/**
 	 * The type scale: six sizes from meta text to display titles, as written (WordPress doesn't make
 	 * them fluid; the two largest are fluid already).
 	 */
