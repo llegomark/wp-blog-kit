@@ -752,6 +752,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertMatchesRegularExpression( '#<script[^>]+\basync\b[^>]+cse\.google\.com#', $head );
 		$this->assertMatchesRegularExpression( '#<style id=["\']tala-ads-google-search-inline-css["\']>#', $head, 'The theme-matching styles, inline (no request).' );
 		$this->assertStringContainsString( 'var(--wp--preset--color--contrast, currentcolor)', $head );
+		$this->assertMatchesRegularExpression( '#\.tala-ads-google-search \.gsc-table-cell-thumbnail\s*\{\s*display:\s*none#', $head, 'Results without Google\'s thumbnails.' );
 		$this->assertStringNotContainsString( 'noindex', $head, 'The page itself may be indexed.' );
 
 		$this->assertMatchesRegularExpression( '#<script(?=[^>]*\sdefer\b)[^>]*/assets/google-search\.js\?ver=#', get_echo( 'wp_print_footer_scripts' ), 'The hint for Google\'s box.' );

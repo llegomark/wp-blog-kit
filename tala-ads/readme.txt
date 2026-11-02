@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.7.0
+Stable tag: 1.7.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, the In-article ad unit, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.7.1 =
+* Changed: Google's search results on the results page show no thumbnails beside each result, like the theme's lists of articles; the title and summary take the full width.
 
 = 1.7.0 =
 * New: with a Universal tag set, Innity's in-image ads stay off the site's images, which carry data-innity-allow-in-image="false": those in posts and pages and those printed from the media library, such as featured images. Innity's image finder and its in-image ads both skip them. The `tala_ads_innity_in_image` filter allows them again.

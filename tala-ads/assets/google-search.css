@@ -174,10 +174,10 @@
 	line-height: 1.6;
 }
 
-.tala-ads-google-search .gs-image-box img,
-.tala-ads-google-search img.gs-image {
-	border: 0 !important;
-	border-radius: 5px;
+/* No thumbnails beside the results, as in the theme's lists of articles: the title and summary take
+   the full width. */
+.tala-ads-google-search .gsc-table-cell-thumbnail {
+	display: none !important;
 }
 
 /* Pages of results: small numbered links, the current one in the accent colour. */
