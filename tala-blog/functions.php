@@ -330,11 +330,39 @@ function tala_blog_lead( $html, $block, $instance ) {
 	if ( ! tala_blog_block_has_class( $block, 'tala-lead' ) ) {
 		return $html;
 	}
-	$post = get_post( (int) ( $instance->context['postId'] ?? get_the_ID() ) );
-	if ( ! $post || post_password_required( $post ) ) {
-		return '';
+	return tala_blog_has_lead( get_post( (int) ( $instance->context['postId'] ?? get_the_ID() ) ) ) ? $html : '';
+}
+
+add_filter( 'pre_render_block', 'tala_blog_skip_lead', 10, 2 );
+
+/**
+ * Leaves out the lead before it renders when the post has none of its own: rendering the Excerpt
+ * block would have WordPress cut one from the text, putting the whole text through the_content (and
+ * whatever plugins add to it, such as ads) a second time, only for it to be left out.
+ *
+ * @param string|null          $pre_render   Content to use instead of rendering, or null.
+ * @param array<string, mixed> $parsed_block Parsed block.
+ * @return string|null
+ */
+function tala_blog_skip_lead( $pre_render, $parsed_block ) {
+	if ( null !== $pre_render || 'core/post-excerpt' !== ( $parsed_block['blockName'] ?? '' )
+		|| ! tala_blog_block_has_class( $parsed_block, 'tala-lead' ) ) {
+		return $pre_render;
 	}
-	// The excerpt without WordPress's own one made from the text.
+	return tala_blog_has_lead( get_post() ) ? null : '';
+}
+
+/**
+ * Whether a post has a lead: an excerpt written for it, or given by a plugin, not WordPress's own one
+ * made from the text; none when a password hides it.
+ *
+ * @param WP_Post|null $post Post.
+ * @return bool
+ */
+function tala_blog_has_lead( $post ) {
+	if ( ! $post || post_password_required( $post ) ) {
+		return false;
+	}
 	$priority = has_filter( 'get_the_excerpt', 'wp_trim_excerpt' );
 	remove_filter( 'get_the_excerpt', 'wp_trim_excerpt', false === $priority ? 10 : $priority );
 	try {
@@ -344,7 +372,7 @@ function tala_blog_lead( $html, $block, $instance ) {
 			add_filter( 'get_the_excerpt', 'wp_trim_excerpt', $priority, 2 );
 		}
 	}
-	return '' === trim( wp_strip_all_tags( $excerpt ) ) ? '' : $html;
+	return '' !== trim( wp_strip_all_tags( $excerpt ) );
 }
 
 add_filter( 'query_loop_block_query_vars', 'tala_blog_related_query', 10, 2 );
@@ -931,6 +959,30 @@ function tala_blog_date_with_time( $html ) {
 		$html,
 		1
 	);
+}
+
+add_filter( 'render_block_core/image', 'tala_blog_hide_featured_image', 10, 2 );
+
+/**
+ * The templates don't show an article's or page's featured image on its own page, so an Image block
+ * in its text that shows the same image is left out there too: many articles open with their
+ * featured image as their first block. The text's other images stay, and so does the featured image
+ * everywhere else (the text shown in any other place, link previews, structured data).
+ *
+ * @param string               $html  Image block HTML.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_hide_featured_image( $html, $block ) {
+	$image = (int) ( $block['attrs']['id'] ?? 0 );
+	if ( ! $image || ! doing_filter( 'the_content' ) || ! is_singular() || is_attachment() ) {
+		return $html;
+	}
+	$post_id = (int) get_the_ID();
+	if ( get_queried_object_id() !== $post_id || (int) get_post_thumbnail_id( $post_id ) !== $image ) {
+		return $html;
+	}
+	return '';
 }
 
 add_filter( 'render_block_core/post-content', 'tala_blog_contents', 10, 3 );

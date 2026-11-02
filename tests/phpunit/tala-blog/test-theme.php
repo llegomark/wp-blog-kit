@@ -310,6 +310,50 @@ HTML;
 	}
 
 	/**
+	 * The featured image isn't shown on its own article or page, also when the text repeats it in an
+	 * Image block (at the top, further down or in a gallery). The text's other images stay, and the
+	 * same text shown anywhere else keeps it.
+	 */
+	public function test_featured_image_is_not_repeated_in_the_text(): void {
+		$other    = self::upload_image( self::factory(), 'cover-2.jpg', 'Another picture' );
+		$image    = static fn( int $id ): string => sprintf(
+			"<!-- wp:image {\"id\":%1\$d,\"sizeSlug\":\"large\",\"linkDestination\":\"none\"} -->\n<figure class=\"wp-block-image size-large\"><img src=\"%2\$s\" alt=\"\" class=\"wp-image-%1\$d\"/><figcaption class=\"wp-element-caption\">Caption %1\$d</figcaption></figure>\n<!-- /wp:image -->\n\n",
+			$id,
+			wp_get_attachment_image_url( $id, 'large' )
+		);
+		$featured = self::$image_id;
+		$content  = $image( $featured ) . "<!-- wp:paragraph -->\n<p>Opening.</p>\n<!-- /wp:paragraph -->\n\n" . $image( $other )
+			. "<!-- wp:gallery {\"linkTo\":\"none\"} -->\n<figure class=\"wp-block-gallery has-nested-images columns-default is-cropped\">" . $image( $featured ) . $image( $other ) . "</figure>\n<!-- /wp:gallery -->\n\n"
+			. "<!-- wp:paragraph -->\n<p>Closing.</p>\n<!-- /wp:paragraph -->";
+		$post     = $this->publish_post( array( 'post_content' => $content ) );
+		$this->assertSame( $featured, (int) get_post_thumbnail_id( $post ) );
+
+		$this->go_to( get_permalink( $post ) );
+		$html = $this->render( '<!-- wp:post-content /-->', $post );
+		$this->assertStringNotContainsString( 'wp-image-' . $featured, $html, 'Its own article: not at the top, not in the gallery.' );
+		$this->assertStringNotContainsString( 'Caption ' . $featured, $html, 'Its caption goes with it.' );
+		$this->assertSame( 2, substr_count( $html, 'wp-image-' . $other ), 'The other images stay.' );
+		$this->assertMatchesRegularExpression( '#^<div[^>]*class="[^"]*wp-block-post-content[^"]*"[^>]*>\s*<p(?: [^>]*)?>Opening\.</p>#', $html, 'The text starts with its first paragraph.' );
+		$this->assertStringContainsString( 'Closing.</p>', $html );
+
+		$page = $this->publish_post(
+			array(
+				'post_type'    => 'page',
+				'post_content' => $content,
+				'meta_input'   => array( '_thumbnail_id' => $featured ),
+			)
+		);
+		$this->go_to( get_permalink( $page ) );
+		$this->assertStringNotContainsString( 'wp-image-' . $featured, $this->render( '<!-- wp:post-content /-->', $page ), 'A page too.' );
+
+		$another = $this->publish_post( array( 'post_content' => $image( $featured ) . "<!-- wp:paragraph -->\n<p>Text.</p>\n<!-- /wp:paragraph -->" ) );
+		$this->go_to( get_permalink( $post ) );
+		$this->assertStringContainsString( 'wp-image-' . $featured, $this->render( '<!-- wp:post-content /-->', $another ), 'Another post\'s text, shown on this article, keeps it.' );
+		$this->go_to( home_url( '/' ) );
+		$this->assertStringContainsString( 'wp-image-' . $featured, $this->render( '<!-- wp:post-content /-->', $post ), 'Not on its own page: as it is.' );
+	}
+
+	/**
 	 * The article's dates read "Published" and "Updated"; an update on the publishing day isn't
 	 * shown; dates in lists stay unlabelled.
 	 */
@@ -543,6 +587,37 @@ HTML;
 		}
 		$this->assertDoesNotMatchRegularExpression( '#<(p|div|a)\b[^>]*>\s*</\1>#', $band, 'No empty element' );
 		$this->assertStringNotContainsString( 'tala-terms', $main, 'No category or tag: no topics, label and all' );
+	}
+
+	/**
+	 * Without a lead of its own, WordPress doesn't cut one from the text just to leave it out: the
+	 * text goes through the_content once, for the article, so what plugins add to it (ads) runs once.
+	 * With one, the lead shows and the text still goes through once.
+	 */
+	public function test_lead_reads_the_text_once(): void {
+		$post = $this->publish_post(
+			array(
+				'post_excerpt' => '',
+				'post_content' => "<!-- wp:paragraph -->\n<p>Opening words of the text.</p>\n<!-- /wp:paragraph -->",
+			)
+		);
+		delete_post_meta( $post, TALA_SEO_DESCRIPTION );
+		$calls = 0;
+		$count = static function ( $content ) use ( &$calls ) {
+			++$calls;
+			return $content;
+		};
+		add_filter( 'the_content', $count );
+		$main = $this->single_main( $post );
+		$this->assertSame( 1, $calls, 'No lead: once, for the article.' );
+		$this->assertStringNotContainsString( 'tala-lead', $main );
+
+		update_post_meta( $post, TALA_SEO_DESCRIPTION, 'A lead from the description.' );
+		$calls = 0;
+		$main  = $this->single_main( $post );
+		remove_filter( 'the_content', $count );
+		$this->assertSame( 1, $calls, 'A lead: still once.' );
+		$this->assertStringContainsString( 'A lead from the description.', $main );
 	}
 
 	/**

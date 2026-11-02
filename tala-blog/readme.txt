@@ -67,6 +67,10 @@ With Orbital, the theme's colours replace the colours set in a form block's styl
 
 == Changelog ==
 
+= 2.0.2 =
+* Fixed: an article or page whose text repeats its featured image in an Image block (often as its first block) no longer shows that image on its own page, as the templates already leave the featured image out. Its other images stay, and the featured image is still used in link previews and structured data.
+* Fixed: an article without an excerpt of its own no longer has its text run a second time to make one for the title band, only to leave it out; what plugins add to the text (such as ads) now runs once.
+
 = 2.0.1 =
 * Fixed: the header menu keeps its row when the site title grows wider (a long name, or a link an ad network adds inside it); the title wraps instead.
 
