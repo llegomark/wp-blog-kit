@@ -54,3 +54,30 @@ test( 'the editor parses the theme\'s templates, parts and patterns without prob
 	expect( result.problems ).toEqual( [] );
 	expect( logged.filter( ( text ) => /^Block (successfully updated|validation)/.test( text ) ) ).toEqual( [] );
 } );
+
+/*
+ * The editor draws a selected block's outline with its ::after, which the frame also uses for a
+ * band's diamond node: in the editor a rail Group has no nodes, so its outline stays an outline.
+ */
+test( 'a selected rail Group keeps the editor\'s outline, not a diamond node', async ( { page } ) => {
+	await logIn( page );
+	await page.goto( '/wp-admin/post-new.php' );
+	await page.waitForFunction( () => window.wp?.blocks?.getBlockTypes().length > 50 && window.wp.data.select( 'core/block-editor' ) );
+	const rail = await page.evaluate( () => {
+		const { createBlock } = window.wp.blocks;
+		const railBlock = createBlock( 'core/group', { className: 'tala-rail' }, [ createBlock( 'core/paragraph', { content: 'Rail' } ) ] );
+		const band = createBlock( 'core/group', { className: 'tala-band' }, [ railBlock ] );
+		window.wp.data.dispatch( 'core/block-editor' ).insertBlocks( band );
+		window.wp.data.dispatch( 'core/block-editor' ).selectBlock( railBlock.clientId );
+		return railBlock.clientId;
+	} );
+	const canvas = page.frameLocator( 'iframe[name="editor-canvas"]' );
+	const block = canvas.locator( `[data-block="${ rail }"]` );
+	await expect( block ).toHaveClass( /is-selected/ );
+	const after = await block.evaluate( ( el ) => {
+		const s = getComputedStyle( el, '::after' );
+		return { rotate: s.rotate, width: s.width };
+	} );
+	expect( after.rotate ).toBe( 'none' );
+	expect( after.width ).not.toBe( '7px' );
+} );

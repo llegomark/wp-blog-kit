@@ -24,7 +24,7 @@ body [data-parent-form]:not(#tala-blog-gravity-forms) {
 	--gf-ctrl-outline-width-focus: 2px;
 	--gf-ctrl-outline-offset: 2px;
 	--gf-ctrl-outline-color-focus: var(--wp--preset--color--accent);
-	--gf-ctrl-border-color-focus: var(--wp--preset--color--border);
+	--gf-ctrl-border-color-focus: var(--wp--preset--color--muted);
 
 	/* Buttons, as the theme's: the cobalt fill with a 2px lip of the deep cobalt, which goes on hover
 	   (the fill stays); the secondary ("Previous") an outline button on the surface. */
@@ -61,9 +61,9 @@ body [data-parent-form]:not(#tala-blog-gravity-forms) {
 	--gf-color-in-ctrl-dark: var(--wp--preset--color--muted);
 	--gf-color-in-ctrl-dark-darker: var(--wp--preset--color--contrast);
 	--gf-color-in-ctrl-dark-lighter: var(--wp--preset--color--muted);
-	--gf-ctrl-border-color: var(--wp--preset--color--border);
+	--gf-ctrl-border-color: var(--wp--preset--color--muted);
 
-	/* Around the fields: labels in the heading's ink, descriptions muted. */
+	/* Around the fields: labels in the text's ink, descriptions muted. */
 	--gf-color-out-ctrl-dark: var(--wp--preset--color--muted);
 	--gf-color-out-ctrl-dark-darker: var(--wp--preset--color--contrast);
 	--gf-color-out-ctrl-dark-lighter: var(--wp--preset--color--muted);

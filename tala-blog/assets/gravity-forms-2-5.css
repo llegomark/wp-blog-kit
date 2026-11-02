@@ -8,11 +8,12 @@
    outranks Gravity Forms' rule of the same shape; the fields' :where() keeps them below its rule for
    an invalid field, whose red border stays. */
 
-/* Fields, as the theme's own (the comment and search fields): the surface in a 1px border box, 4px
-   corners, 44px tall. An invalid field keeps the red border. */
+/* Fields, as the theme's own (the comment and search fields): the surface in a 1px muted box (at
+   least 3:1 against the page and the field, WCAG 1.4.11), 4px corners, 44px tall. An invalid field
+   keeps the red border. */
 body .gform_wrapper.gravity-theme .gfield :where(input:not([type="checkbox"], [type="radio"], [type="file"], [type="image"], [type="submit"], [type="button"], [type="reset"], [type="hidden"]), select, textarea) {
 	box-sizing: border-box;
-	border: 1px solid var(--wp--preset--color--border);
+	border: 1px solid var(--wp--preset--color--muted);
 	border-radius: 4px;
 	background-color: var(--wp--preset--color--surface);
 	color: var(--wp--preset--color--contrast);
@@ -35,6 +36,11 @@ body .gform_wrapper.gravity-theme .gfield :where(input[type="checkbox"], input[t
 
 body .gform_wrapper.gravity-theme .gfield_description {
 	color: var(--wp--preset--color--muted);
+}
+
+/* Labels at the weight of the theme's form labels (500): the 2.5 theme makes them bold. */
+body .gform_wrapper.gravity-theme .gfield_label {
+	font-weight: 500;
 }
 
 /* Buttons, as the theme's: the cobalt fill with a 2px lip of the deep cobalt, 4px corners, 44px tall;
@@ -76,14 +82,15 @@ body .gform_wrapper.gravity-theme :is(.gform_footer, .gform_page_footer) :is(inp
 }
 
 /* Errors: the "Required" marks, the error summary and messages, and the labels of fields with an
-   error in the danger red; Gravity Forms' pale error boxes a tint of it on the surface. */
+   error in the danger red; Gravity Forms' pale error boxes a 5% tint of it on the surface, on which
+   the red keeps 4.5:1 (10% would be 4.3:1 in light). */
 body .gform_wrapper.gravity-theme :is(.gfield_required, .gfield_error label, .gfield_error legend, .gfield_validation_message, .validation_message, .validation_error, .gform_validation_errors > h2, .gform_validation_errors > ol li, .gform_validation_errors > ol a, .gfield_creditcard_warning_message) {
 	color: var(--tala-danger);
 }
 
 body .gform_wrapper.gravity-theme :is(.gform_validation_errors, .gfield_validation_message, .validation_message, .validation_error, .gfield_creditcard_warning) {
 	border-color: var(--tala-danger);
-	background: color-mix(in srgb, var(--tala-danger) 10%, var(--wp--preset--color--surface));
+	background: color-mix(in srgb, var(--tala-danger) 5%, var(--wp--preset--color--surface));
 }
 
 body .gform_wrapper.gravity-theme .gfield_error [aria-invalid="true"],

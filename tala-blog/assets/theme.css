@@ -86,7 +86,8 @@
 	--tala-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 
 	/* Errors in forms (Gravity Forms' "Required" marks and messages): NASH's destructive red, 5:1 on
-	   the light surface and 6:1 on the dark one, where Gravity Forms' own red (#c02b0a) is 3.2:1. */
+	   the light surface and 6:1 on the dark one. Gravity Forms' own red (#c02b0a) is 2.8:1 on the
+	   dark surface. */
 	--tala-danger: #c53b2b;
 }
 
@@ -335,13 +336,15 @@ a {
 	scroll-margin-block-start: var(--wp--preset--spacing--40);
 }
 
-/* Form fields, as NASH's controls: the surface in a 1px border box, 4px corners, the text's ink.
-   Gravity Forms' fields look the same (assets/gravity-forms-*.css). */
+/* Form fields, as NASH's controls: the surface in a 1px box, 4px corners, the text's ink. The
+   surface is barely lighter than the paper, so the edge is the field's outline: muted, which keeps
+   at least 3:1 against the page and the field (WCAG 1.4.11; the border colour is for cards and
+   buttons). Gravity Forms' fields look the same (assets/gravity-forms-*.css). */
 .wp-block-search__input,
 .wp-block-post-comments-form input:not([type="submit"]):not([type="checkbox"]),
 .wp-block-post-comments-form textarea,
 .post-password-form input[type="password"] {
-	border: 1px solid var(--wp--preset--color--border);
+	border: 1px solid var(--wp--preset--color--muted);
 	border-radius: 4px;
 	background-color: var(--wp--preset--color--surface);
 	color: var(--wp--preset--color--contrast);

@@ -1,9 +1,10 @@
 /* PDF Embedder's viewer in the page's look, light and dark (Light/Dark switch included): its grey bar
    with light grey text (#d3d3d3 on #808080, 2.6:1) becomes a surface bar with the text's ink and a
    hairline under it; its buttons are outline buttons (a 1px border box, 4px corners, the wash on
-   hover where a pointer hovers), and the page sits on the wash. Its icons are white pictures: black
-   on the light bar, as they are on the dark one. Loaded only on pages with a viewer, right after PDF
-   Embedder's stylesheet (functions.php: tala_blog_pdf_viewer()), whose selectors these match. */
+   hover where a pointer hovers); the page sits on the wash, and the loading and error messages on
+   the surface. Its icons are white pictures: black on the light bar, as they are on the dark one.
+   Loaded only on pages with a viewer, right after PDF Embedder's stylesheet
+   (functions.php: tala_blog_pdf_viewer()), whose selectors these match. */
 
 .pdfemb-viewer {
 	border-color: var(--wp--preset--color--border);
@@ -13,6 +14,18 @@
 .pdfemb-viewer .pdfemb-pagescontainer,
 .pdfemb-viewer .pdfemb-pagescontainer .pdfemb-inner-div {
 	background-color: var(--wp--preset--color--wash);
+}
+
+/* "Loading…" (white in PDF Embedder) and its error message (pink) on the surface in the text's ink;
+   the error on a 5% tint of the danger red (theme.css). */
+.pdfemb-loadingmsg,
+div.pdfemb-errormsg {
+	background-color: var(--wp--preset--color--surface);
+	color: var(--wp--preset--color--contrast);
+}
+
+div.pdfemb-errormsg {
+	background-color: color-mix(in srgb, var(--tala-danger) 5%, var(--wp--preset--color--surface));
 }
 
 .pdfemb-viewer .pdfemb-toolbar {
@@ -36,7 +49,7 @@
 }
 
 .pdfemb-viewer .pdfemb-toolbar input.pdfemb-page-num {
-	border: 1px solid var(--wp--preset--color--border);
+	border: 1px solid var(--wp--preset--color--muted);
 	border-radius: 4px;
 	background-color: var(--wp--preset--color--surface);
 	color: var(--wp--preset--color--contrast);
