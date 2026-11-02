@@ -242,6 +242,35 @@ test.describe( 'desktop header', () => {
 		expect( row.search.slice( 0, 3 ) ).toEqual( [ 44, 44, '1px' ] );
 	} );
 
+	test( 'a wider site title wraps before the menu does', async ( { page } ) => {
+		await page.goto( pages.article );
+		const header = await page.evaluate( () => {
+			const head = document.querySelector( '.tala-header' );
+			// A menu of about 470 px, like a five-item menu with submenus, and a 170 px box at the end
+			// of the title, like the keyword link an ad network can add inside it.
+			const menu = head.querySelector( '.wp-block-navigation__responsive-container-content > ul' );
+			const items = [ ...menu.children ];
+			for ( let i = 0; menu.getBoundingClientRect().width < 470 && i < 12; i++ ) {
+				menu.append( items[ i % items.length ].cloneNode( true ) );
+			}
+			const extra = document.createElement( 'span' );
+			extra.style.cssText = 'display: inline-block; inline-size: 170px; block-size: 28px';
+			head.querySelector( '.wp-block-site-title' ).append( extra );
+			const tops = [ ...menu.children ].map( ( li ) => Math.round( li.getBoundingClientRect().top ) );
+			return {
+				menuWidth: menu.getBoundingClientRect().width,
+				rows: new Set( tops ).size,
+				extraEnd: extra.getBoundingClientRect().right,
+				navStart: head.querySelector( 'nav.wp-block-navigation' ).getBoundingClientRect().left,
+				overflow: document.documentElement.scrollWidth - innerWidth,
+			};
+		} );
+		expect( header.menuWidth, 'The menu is wide enough to test' ).toBeGreaterThanOrEqual( 470 );
+		expect( header.rows, 'The menu on one row' ).toBe( 1 );
+		expect( header.extraEnd, 'The title stays clear of the menu' ).toBeLessThanOrEqual( header.navStart );
+		expect( header.overflow, 'Nothing wider than the window' ).toBeLessThanOrEqual( 0 );
+	} );
+
 	test( 'the search button opens a field over the header without moving anything', async ( { page } ) => {
 		await page.goto( pages.article );
 		const where = () =>

@@ -494,9 +494,12 @@ footer.wp-block-template-part,
 	padding-block: 0;
 }
 
+/* The brand starts from 10rem, not from its own width, so the title wraps before the menu does when
+   something makes it wider (a long name, or a link an ad network adds inside it); with no room left
+   it gives way as before. */
 .tala-header .tala-brand,
 .tala-overlay-bar .tala-brand {
-	flex: 1 1 auto;
+	flex: 1 1 10rem;
 	min-inline-size: 0;
 }
 

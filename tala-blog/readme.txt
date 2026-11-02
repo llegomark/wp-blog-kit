@@ -67,6 +67,9 @@ With Orbital, the theme's colours replace the colours set in a form block's styl
 
 == Changelog ==
 
+= 2.0.1 =
+* Fixed: the header menu keeps its row when the site title grows wider (a long name, or a link an ad network adds inside it); the title wraps instead.
+
 = 2.0.0 =
 * New look, "drafting paper": dark ink on warm paper (#393d45 on #f4f4f2; #d3d6dc on #16181d in dark mode), black headings, one cobalt accent (#1348dc, #7d9bff in dark mode), hairline rules and borders, square cards and 4 px controls with a deep-cobalt lip on buttons.
 * New: Inter, self-hosted in the theme (Inter 4.1 under the SIL Open Font License, credited below): the variable Latin font and the display italic are preloaded; the Latin Extended and italic subsets load only for the characters they cover. Metric-matched fallbacks keep the swap from moving the page. Headings are light to regular weight; titles in large italic display type.
