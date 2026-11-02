@@ -49,13 +49,13 @@ test.describe( 'light device', () => {
 		await page.goto( pages.article );
 		const button = page.locator( '.tala-theme-switch' );
 		await expect( button ).toHaveAttribute( 'aria-pressed', 'false' );
-		await expect( button ).toHaveAccessibleName( 'Switch to dark theme' );
+		await expect( button ).toHaveAccessibleName( 'Dark theme' );
 
 		await button.click();
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
 		expect( await background( page ) ).toBe( paper.dark );
 		await expect( button ).toHaveAttribute( 'aria-pressed', 'true' );
-		await expect( button ).toHaveAccessibleName( 'Switch to light theme' );
+		await expect( button ).toHaveAccessibleName( 'Dark theme' );
 		expect( await themeColors( page ), 'The browser\'s colour follows' ).toEqual( [ themeColor.dark, themeColor.dark ] );
 		expect( await page.evaluate( () => window.localStorage.getItem( 'tala-theme' ) ) ).toBe( 'dark' );
 
@@ -63,7 +63,7 @@ test.describe( 'light device', () => {
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
 		expect( await background( page ) ).toBe( paper.dark );
 		await expect( button ).toHaveAttribute( 'aria-pressed', 'true' );
-		await expect( button ).toHaveAccessibleName( 'Switch to light theme' );
+		await expect( button ).toHaveAccessibleName( 'Dark theme' );
 		expect( await themeColors( page ) ).toEqual( [ themeColor.dark, themeColor.dark ] );
 
 		await page.goto( pages.home );
@@ -73,7 +73,7 @@ test.describe( 'light device', () => {
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'light' );
 		expect( await background( page ) ).toBe( paper.light );
 		await expect( button ).toHaveAttribute( 'aria-pressed', 'false' );
-		await expect( button ).toHaveAccessibleName( 'Switch to dark theme' );
+		await expect( button ).toHaveAccessibleName( 'Dark theme' );
 		expect( await themeColors( page ) ).toEqual( [ themeColor.light, themeColor.light ] );
 		expect( await page.evaluate( () => window.localStorage.getItem( 'tala-theme' ) ) ).toBe( 'light' );
 	} );
@@ -131,6 +131,8 @@ test.describe( 'light device', () => {
 		await button.click();
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'light' );
 		expect( await background( page ) ).toBe( paper.light );
+		await expect( button ).toHaveAttribute( 'aria-pressed', 'false' );
+		await expect( button ).toHaveAccessibleName( 'Dark theme' );
 		expect( errors ).toEqual( [] );
 	} );
 
@@ -174,7 +176,7 @@ test.describe( 'dark device', () => {
 		await expect( page.locator( 'html' ) ).not.toHaveAttribute( 'data-theme' );
 		const button = page.locator( '.tala-theme-switch' );
 		await expect( button ).toHaveAttribute( 'aria-pressed', 'true' );
-		await expect( button ).toHaveAccessibleName( 'Switch to light theme' );
+		await expect( button ).toHaveAccessibleName( 'Dark theme' );
 		expect( await themeColors( page ), 'The browser picks its colour by the device' ).toEqual( [ themeColor.light, themeColor.dark ] );
 	} );
 

@@ -96,11 +96,11 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 	/**
 	 * The Light/Dark switch. A small script in <head>, printed before any CSS, applies the reader's
 	 * stored choice (only "light" or "dark", read inside try: storage can be blocked) and marks the
-	 * page as running JavaScript; it has the button's two labels, translated. The header has the
-	 * button, with its state, its label and two decorative icons.
+	 * page as running JavaScript; it sets the button's state (aria-pressed) and never its name. The
+	 * header has the button: one name, "Dark theme" (translatable), its state and two decorative icons.
 	 */
 	public function test_theme_switch(): void {
-		add_filter( 'gettext_tala-blog', static fn( $translation, $text ) => str_starts_with( $text, 'Switch to ' ) ? "($text)" : $translation, 10, 2 );
+		add_filter( 'gettext_with_context_tala-blog', static fn( $translation, $text ) => 'Dark theme' === $text ? "($text)" : $translation, 10, 2 );
 
 		// A fresh style queue, so the theme's styles print in this <head> whatever printed before.
 		$styles               = $GLOBALS['wp_styles'] ?? null;
@@ -123,7 +123,9 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 		$this->assertMatchesRegularExpression( '/try\s*\{\s*localStorage\.setItem\("tala-theme",/', $js, 'Stores the choice inside try' );
 		$this->assertMatchesRegularExpression( '/if\s*\(\s*"light"\s*===\s*(\w+)\s*\|\|\s*"dark"\s*===\s*\1\s*\)\s*\{?\s*\w+\.dataset\.theme\s*=\s*\1\b/', $js, 'Only "light" or "dark" becomes the theme' );
 		$this->assertMatchesRegularExpression( '/\.add\("tala-js"\)/', $js, '<html> gets the class tala-js' );
-		$this->assertStringContainsString( '["(Switch to dark theme)","(Switch to light theme)"]', $js, 'Both labels, translated' );
+		$this->assertMatchesRegularExpression( '/\.setAttribute\("aria-pressed",/', $js, 'Sets the state' );
+		$this->assertStringNotContainsString( 'aria-label', $js, 'Never changes the name' );
+		$this->assertStringNotContainsString( 'Dark theme', $js );
 
 		// The pattern file itself: rendering the header here would leave its translated text in the
 		// pattern registry's cache, and number the next "Primary" menu "Primary 2", for later tests.
@@ -133,7 +135,7 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 			}
 		);
 		$this->assertStringContainsString( "<!-- wp:html -->\n<button", $header, 'An HTML block' );
-		$this->assertSame( 1, preg_match( '#<button type="button" class="tala-theme-switch" aria-pressed="false" aria-label="\(Switch to dark theme\)">(.*?)</button>#s', $header, $button ), 'The switch, labelled for a light page until the script knows the theme' );
+		$this->assertSame( 1, preg_match( '#<button type="button" class="tala-theme-switch" aria-pressed="false" aria-label="\(Dark theme\)">(.*?)</button>#s', $header, $button ), 'The switch, named once, not pressed until the script knows the theme' );
 		$this->assertSame( 2, preg_match_all( '#<svg[^>]* aria-hidden="true" focusable="false"#', $button[1] ), 'A sun and a moon, decorative' );
 		$this->assertStringContainsString( 'tala-theme-switch__sun', $button[1] );
 		$this->assertStringContainsString( 'tala-theme-switch__moon', $button[1] );
