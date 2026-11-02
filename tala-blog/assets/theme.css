@@ -251,7 +251,8 @@ a {
 .wp-block-button.is-style-outline > .wp-block-button__link,
 .tala-header .wp-block-search__button,
 .tala-header .wp-block-navigation__responsive-container-open,
-.tala-theme-switch {
+.tala-theme-switch,
+.tala-rows :is(.wp-block-query-pagination-previous, .wp-block-query-pagination-next) {
 	border: 1px solid var(--wp--preset--color--border);
 	background-color: color-mix(in srgb, var(--wp--preset--color--surface) 60%, transparent);
 	box-shadow: inset 0 -2px 0 0 color-mix(in srgb, var(--wp--preset--color--muted) 14%, transparent);
@@ -289,6 +290,7 @@ a {
 	}
 
 	.wp-block-button.is-style-outline > .wp-block-button__link:hover,
+	.tala-rows :is(.wp-block-query-pagination-previous, .wp-block-query-pagination-next):hover,
 	.tala-header .wp-block-search__button:hover,
 	.tala-header .wp-block-navigation__responsive-container-open:hover,
 	.tala-theme-switch:hover,
@@ -303,7 +305,8 @@ a {
 	:where(.wp-element-button, .wp-block-button__link),
 	.tala-header .wp-block-navigation__responsive-container-open,
 	.tala-theme-switch,
-	.tala-overlay .wp-block-navigation-overlay-close {
+	.tala-overlay .wp-block-navigation-overlay-close,
+	.tala-rows :is(.wp-block-query-pagination-previous, .wp-block-query-pagination-next) {
 		transition-property: color, background-color, border-color, box-shadow, scale, translate;
 		transition-duration: 150ms;
 		transition-timing-function: var(--tala-ease-out);
@@ -995,7 +998,8 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 
 .wp-block-tala-seo-breadcrumbs {
 	color: var(--wp--preset--color--muted);
-	font-size: var(--wp--preset--font-size--small);
+	font-size: var(--wp--preset--font-size--x-small);
+	font-variant-numeric: tabular-nums;
 }
 
 /* Links are underlined in the text colour, so they stand apart from the current page (no link). */
@@ -1409,10 +1413,31 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	font-size: var(--wp--preset--font-size--small);
 }
 
-/* Post lists: one entry per line, divided by hairlines */
+/* Title bands of the home page and the archives: the title, its lead, and on the home page a search
+   field and the top-level categories as chips, 1.25rem apart. */
 
-.tala-intro {
-	padding-block-end: var(--wp--preset--spacing--20);
+.tala-intro > * {
+	margin-block: 0;
+}
+
+.tala-intro > * + * {
+	margin-block-start: 1.25rem;
+}
+
+.tala-intro > .tala-display {
+	max-inline-size: calc(20 * 0.628em);
+}
+
+.tala-intro .tala-lead {
+	max-inline-size: calc(60 * 0.628em);
+}
+
+.tala-intro .tala-lead > * {
+	margin-block: 0;
+}
+
+.tala-intro .tala-lead > * + * {
+	margin-block-start: 0.75em;
 }
 
 .tala-intro .wp-block-post-author-biography,
@@ -1420,18 +1445,285 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	color: var(--wp--preset--color--muted);
 }
 
-.tala-list .wp-block-post-template {
+.tala-intro .wp-block-search {
+	max-inline-size: 30rem;
+}
+
+.tala-intro .wp-block-search__input,
+.tala-intro .wp-block-search__button {
+	box-sizing: border-box;
+	min-block-size: var(--tala-control);
+}
+
+.tala-intro .wp-block-search__button {
+	margin-inline-start: 0.5rem;
+	padding-block: 0;
+}
+
+/* Chips: square (2px), a hairline box on the surface, 44px tall; cobalt on hover. */
+.tala-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	padding: 0;
+	list-style: none;
+}
+
+.tala-intro > .tala-chips {
+	margin-block-start: 1.75rem;
+}
+
+.tala-chips li {
+	margin: 0;
+}
+
+.tala-chips a {
+	display: inline-flex;
+	box-sizing: border-box;
+	min-block-size: var(--tala-control);
+	align-items: center;
+	padding-inline: 0.75rem;
+	border: 1px solid var(--wp--preset--color--border);
+	border-radius: 2px;
+	background-color: color-mix(in srgb, var(--wp--preset--color--surface) 60%, transparent);
+	color: var(--wp--preset--color--heading);
+	font-size: var(--wp--preset--font-size--small);
+	text-decoration: none;
+	overflow-wrap: anywhere;
+}
+
+.tala-chips .cat-item-none {
+	color: var(--wp--preset--color--muted);
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+	.tala-chips a:hover {
+		border-color: var(--wp--preset--color--accent);
+		color: var(--wp--preset--color--accent);
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+
+	.tala-chips a {
+		transition-property: color, border-color;
+		transition-duration: 150ms;
+		transition-timing-function: var(--tala-ease-out);
+	}
+}
+
+/* Article lists, as NASH's: ruled rows without pictures, the rules running from side rule to side
+   rule (the rail adds no padding; each row pads itself). From 44rem of list the date and first
+   category sit in a 9rem column beside the title and summary; narrower, above them. */
+
+.tala-band > .tala-rail--rows {
+	padding: 0;
+}
+
+.tala-rows,
+.tala-rows .wp-block-post-template,
+.tala-rows .wp-block-post {
+	margin: 0;
+}
+
+.tala-rows .wp-block-post-template {
+	container: tala-rows / inline-size;
+}
+
+.tala-rows .wp-block-post + .wp-block-post {
+	border-block-start: 1px solid var(--wp--preset--color--rule);
+}
+
+.tala-row {
+	display: grid;
+	gap: 0.375rem 2rem;
+	padding: 1.25rem var(--tala-rail-pad);
+}
+
+.tala-rows .tala-row > *,
+.tala-rows .tala-row__meta > *,
+.tala-rows .tala-row__text > * {
+	margin-block: 0;
+}
+
+.tala-row__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 0.75rem;
+	align-items: center;
+	color: var(--wp--preset--color--muted);
+	font-size: var(--wp--preset--font-size--x-small);
+	font-variant-numeric: tabular-nums;
+	line-height: 1.4;
+}
+
+.tala-row__meta > * {
+	font-size: inherit;
+}
+
+.tala-row__meta time {
+	white-space: nowrap;
+}
+
+/* The category: a 24px tap target (WCAG 2.5.8). */
+.tala-row__meta .tala-first-term a {
+	display: inline-flex;
+	min-block-size: 1.5rem;
+	align-items: center;
+	color: inherit;
+}
+
+.tala-row__text {
+	display: flex;
+	min-inline-size: 0;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+.tala-rows .tala-row__text > * + * {
 	margin-block-start: 0;
 }
 
-.tala-list .wp-block-post {
+@container tala-rows (width >= 44rem) {
+
+	.tala-row {
+		grid-template-columns: 9rem minmax(0, 1fr);
+	}
+
+	.tala-row__meta {
+		flex-direction: column;
+		align-items: flex-start;
+		padding-block-start: 0.25rem;
+	}
+
+	/* In the 9rem column "Pinned" takes its own line, so the date doesn't break. */
+	.tala-row__meta .tala-pinned {
+		display: block;
+		inline-size: fit-content;
+		margin-block-end: 0.25rem;
+	}
+}
+
+.tala-rows .wp-block-post-title a {
+	color: inherit;
+	text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+	.tala-rows .wp-block-post-title a:hover {
+		color: var(--wp--preset--color--accent);
+		text-decoration: underline solid 1px;
+		text-underline-offset: 0.25em;
+	}
+}
+
+/* The summary: 15px, about 68 characters a line. */
+.tala-rows .wp-block-post-excerpt {
+	max-inline-size: calc(68 * 0.628em);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.6;
+	text-wrap: pretty;
+}
+
+.tala-rows .wp-block-post-excerpt__excerpt {
+	margin: 0;
+}
+
+/* "Pinned" before the date of a sticky post at the top of the home page: a square badge. */
+.tala-pinned {
+	display: inline-block;
+	margin-inline-end: 0.5em;
+	padding-inline: 0.375rem;
+	border: 1px solid var(--wp--preset--color--border);
+	border-radius: 2px;
+	color: var(--wp--preset--color--heading);
+	font-weight: 500;
+}
+
+/* "Previous page" and "Next page": outline buttons with arrows, under a rule across the rail. */
+.tala-rows .wp-block-query-pagination,
+.tala-rows .wp-block-query-no-results {
+	margin: 0;
+	padding: clamp(2rem, 1.5rem + 2vw, 3rem) var(--tala-rail-pad);
+	border-block-start: 1px solid var(--wp--preset--color--rule);
+}
+
+.tala-rows .wp-block-query-no-results > * {
+	margin: 0;
+}
+
+.tala-rows .wp-block-query-pagination {
+	gap: 0.75rem;
+}
+
+.tala-rows :is(.wp-block-query-pagination-previous, .wp-block-query-pagination-next) {
+	display: inline-flex;
+	box-sizing: border-box;
+	min-block-size: var(--tala-control);
+	align-items: center;
+	gap: 0.375rem;
+	margin: 0;
+	padding: 0.375rem 0.625rem;
+	border-radius: 4px;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+	text-decoration: none;
+}
+
+.tala-rows :is(.wp-block-query-pagination-previous-arrow, .wp-block-query-pagination-next-arrow) {
+	margin: 0;
+}
+
+/* "Next page" stays on the right, also on the first page, where it is the only link. */
+.tala-rows .wp-block-query-pagination-next {
+	margin-inline-start: auto;
+}
+
+/* Numbered pages (when Appearance → Customize → Article lists asks for them): 44px targets, the
+   current page marked by a 2px cobalt rule. */
+.tala-rows .wp-block-query-pagination-numbers {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem;
+	margin: 0;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.tala-rows .wp-block-query-pagination-numbers .page-numbers {
+	display: inline-flex;
+	box-sizing: border-box;
+	min-inline-size: var(--tala-control);
+	min-block-size: var(--tala-control);
+	align-items: center;
+	justify-content: center;
+	margin: 0;
+	color: var(--wp--preset--color--heading);
+}
+
+.tala-rows .wp-block-query-pagination-numbers .current {
+	box-shadow: inset 0 -2px 0 0 var(--wp--preset--color--accent);
+	font-weight: 500;
+}
+
+/* The related articles under an article ("Keep reading") keep their own list for now: one per line,
+   divided by hairlines, a small thumbnail on the right, the title link covering the entry. */
+.tala-related .wp-block-post-template {
+	margin-block-start: 0;
+}
+
+.tala-related .wp-block-post-excerpt__excerpt {
+	margin: 0;
+}
+
+.tala-related .wp-block-post {
 	position: relative;
 	margin: 0;
 	padding-block: var(--wp--preset--spacing--30);
 	border-bottom: 1px solid var(--wp--preset--color--rule);
 }
 
-/* Text on the left, the featured image as a small thumbnail on the right (when there is one). */
 .tala-list-item {
 	gap: var(--wp--preset--spacing--30);
 }
@@ -1449,30 +1741,23 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	margin-block-start: 0.4rem;
 }
 
-/* Thumbnail widths: keep them in step with tala_blog_list_thumb_sizes() in functions.php. */
-.tala-list-thumb {
+.tala-related .tala-list-thumb {
 	flex: 0 0 5.5rem;
 	margin: 0;
 }
 
-.tala-list-thumb img {
+.tala-related .tala-list-thumb img {
 	border-radius: 5px;
 }
 
 @media (min-width: 40em) {
 
-	.tala-list-thumb {
+	.tala-related .tala-list-thumb {
 		flex-basis: 8rem;
 	}
 }
 
-.tala-list .wp-block-post-title {
-	font-size: var(--wp--preset--font-size--large);
-}
-
-/* One link per entry: the title link covers the whole entry, thumbnail included, so screen
-   readers and keyboards meet each article once. */
-.tala-list .wp-block-post-title a::after {
+.tala-related .wp-block-post-title a::after {
 	content: "";
 	position: absolute;
 	inset: 0;
@@ -1480,31 +1765,10 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 
 @media (hover: hover) and (pointer: fine) {
 
-	.tala-list .wp-block-post:hover .wp-block-post-title a {
+	.tala-related .wp-block-post:hover .wp-block-post-title a {
 		color: var(--wp--preset--color--accent);
 		text-decoration: underline;
 	}
-}
-
-.tala-list .wp-block-post-excerpt__excerpt {
-	margin: 0;
-}
-
-/* "Pinned" before the date of a sticky post at the top of the home page. */
-.tala-pinned {
-	margin-inline-end: 0.5em;
-	color: var(--wp--preset--color--contrast);
-	font-weight: 600;
-}
-
-.tala-list .wp-block-query-pagination {
-	margin-block-start: var(--wp--preset--spacing--40);
-	font-size: var(--wp--preset--font-size--small);
-}
-
-/* "Older articles" stays on the right, also on the first page, where it is the only link. */
-.tala-list .wp-block-query-pagination-next {
-	margin-inline-start: auto;
 }
 
 /* Printing: just the article, with its dates and author, in black on white. */

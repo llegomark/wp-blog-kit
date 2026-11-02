@@ -977,9 +977,6 @@ function tala_blog_contents_box( $sections ) {
 		. '<ol>' . $items . '</ol></details></nav>';
 }
 
-// Priority 20: after Enhanced Responsive Images (10), which doesn't see the CSS width either.
-add_filter( 'render_block_core/post-featured-image', 'tala_blog_list_thumb_sizes', 20, 2 );
-
 /**
  * A block's HTML with some HTML inserted just before its first <time> tag. Inserted as it is, so a
  * label's translation holding "$1" or a backslash stays text.
@@ -995,31 +992,46 @@ function tala_blog_before_time( $html, $insert ) {
 	return substr_replace( $html, $insert, $match[0][1], 0 );
 }
 
+add_filter( 'render_block_core/post-terms', 'tala_blog_first_term', 10, 2 );
+
 /**
- * Gives article-list thumbnails their real width in `sizes`: 5.5rem, and 8rem from 40em up, as in
- * assets/theme.css. WordPress says 300px (the "medium" image), so phones with 2× or 3× screens
- * downloaded the 768 or 1024 px file for an 88 px thumbnail. Keeps a leading "auto".
+ * A Categories or Tags block with the class "tala-first-term" shows only the post's first term,
+ * as the category beside a row's date in article lists: its wrapper and first link, without the
+ * other links, the separators, or a prefix or suffix. Other term blocks keep every term.
  *
- * @param string               $html  Block HTML.
+ * @param string               $html  Rendered Post Terms block.
  * @param array<string, mixed> $block Parsed block.
  * @return string
  */
-function tala_blog_list_thumb_sizes( $html, $block ) {
-	$class = $block['attrs']['className'] ?? '';
-	if ( ! is_string( $class ) || ! in_array( 'tala-list-thumb', explode( ' ', $class ), true ) ) {
+function tala_blog_first_term( string $html, array $block ): string {
+	if ( ! tala_blog_block_has_class( $block, 'tala-first-term' ) ) {
 		return $html;
 	}
-	$tags = new WP_HTML_Tag_Processor( $html );
-	if ( ! $tags->next_tag( array( 'tag_name' => 'img' ) ) ) {
+	$tags = WP_HTML_Processor::create_fragment( $html );
+	if ( null === $tags || ! $tags->next_tag() ) {
 		return $html;
 	}
-	$sizes = $tags->get_attribute( 'sizes' );
-	if ( ! is_string( $sizes ) ) {
-		return $html;
+	// A closing tag reports the depth around it: the links' at the wrapper's, the wrapper's one less.
+	$wrapper = $tags->get_current_depth();
+	$out     = $tags->serialize_token();
+	$link    = 'before';
+	while ( $tags->next_token() ) {
+		$depth  = $tags->get_current_depth();
+		$closer = $tags->is_tag_closer();
+		if ( $closer && $depth < $wrapper ) {
+			return 'after' === $link && null === $tags->get_last_error() ? $out . $tags->serialize_token() : $html;
+		}
+		if ( 'before' === $link && ! $closer && 'A' === $tags->get_token_name() && $wrapper + 1 === $depth ) {
+			$link = 'in';
+		}
+		if ( 'in' === $link ) {
+			$out .= $tags->serialize_token();
+			if ( $closer && 'A' === $tags->get_token_name() && $wrapper === $depth ) {
+				$link = 'after';
+			}
+		}
 	}
-	$auto = 'auto' === strtolower( trim( explode( ',', $sizes, 2 )[0] ) ) ? 'auto, ' : '';
-	$tags->set_attribute( 'sizes', $auto . '(min-width: 40em) 8rem, 5.5rem' );
-	return $tags->get_updated_html();
+	return $html;
 }
 
 add_filter( 'render_block_core/post-title', 'tala_blog_untitled_post', 10, 3 );

@@ -8,13 +8,14 @@ import { demoPages } from './utils.mjs';
 const pages = demoPages();
 
 // What each kind of page should have: HTTP status, the names of its search forms (the site search
-// in the header of every page; search results and the 404 page also have one in the page) and its
-// structured data. WebSite and Organization belong to the home page (its first page) only.
+// in the header of every page; the home page's title band, search results and the 404 page also
+// have one in the page) and its structured data. WebSite and Organization belong to the home page
+// (its first page) only.
 const site = [ 'Site' ];
 const both = [ 'Site', 'Articles' ];
 const expected = {
-	home: [ 200, site, [ 'WebSite', 'Organization' ] ],
-	page2: [ 200, site, [] ],
+	home: [ 200, both, [ 'WebSite', 'Organization' ] ],
+	page2: [ 200, both, [] ],
 	article: [ 200, site, [ 'BlogPosting', 'BreadcrumbList' ] ],
 	withComments: [ 200, site, [ 'BlogPosting', 'BreadcrumbList' ] ],
 	page: [ 200, site, [ 'BreadcrumbList' ] ],

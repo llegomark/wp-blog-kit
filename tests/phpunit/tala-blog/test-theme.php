@@ -353,15 +353,131 @@ HTML;
 	}
 
 	/**
-	 * List thumbnails tell the browser their real width, so phones load a small file.
+	 * Article lists are ruled rows without pictures: on the left the date and the post's first
+	 * category (one link, however many it has), on the right the linked title and the summary. Only
+	 * a Categories block that asks for it (tala-first-term) is cut down to its first term.
 	 */
-	public function test_list_thumbnail_sizes(): void {
-		$post  = $this->publish_post();
-		$thumb = $this->render( '<!-- wp:post-featured-image {"sizeSlug":"medium","className":"tala-list-thumb"} /-->', $post );
-		$this->assertMatchesRegularExpression( '/sizes="(auto, )?\(min-width: 40em\) 8rem, 5\.5rem"/', $thumb );
+	public function test_list_rows(): void {
+		$names = array( 'Curriculum', 'Assessment', 'Budget' );
+		$cats  = array_map( static fn( string $name ): int => self::factory()->category->create( array( 'name' => $name ) ), $names );
+		$three = $this->publish_post(
+			array(
+				'post_title'    => 'Seating plans',
+				'post_date'     => '2026-02-05 08:00:00',
+				'post_category' => $cats,
+			)
+		);
+		$this->publish_post(
+			array(
+				'post_title' => 'Reading corners',
+				'post_date'  => '2026-01-05 08:00:00',
+			)
+		);
+		$this->assertTrue( has_post_thumbnail( $three ), 'The posts have featured images' );
 
-		$other = $this->render( '<!-- wp:post-featured-image /-->', $post );
-		$this->assertStringNotContainsString( '5.5rem', $other );
+		$this->go_to( home_url( '/' ) );
+		$blocks = array_values( array_filter( parse_blocks( get_block_template( 'tala-blog//home' )->content ), static fn( $block ) => null !== $block['blockName'] ) );
+		$main   = render_block( $blocks[1] );
+		$this->assertStringStartsWith( '<main', trim( $main ) );
+		$this->assertStringNotContainsString( '<img', $main, 'No thumbnails' );
+		$this->assertStringNotContainsString( 'wp-block-post-featured-image', $main );
+
+		$tags = WP_HTML_Processor::create_fragment( $main );
+		$this->assertNotNull( $tags );
+		$rows  = array();
+		$depth = 0;
+		while ( $tags->next_tag() ) {
+			if ( $rows && $tags->get_current_depth() <= $depth ) {
+				$depth = PHP_INT_MAX; // Out of the row: wait for the next one.
+			}
+			if ( $tags->has_class( 'tala-row' ) ) {
+				$rows[] = array(
+					'time'  => 0,
+					'terms' => array(),
+					'title' => 0,
+				);
+				$depth  = $tags->get_current_depth();
+				continue;
+			}
+			if ( ! $rows || PHP_INT_MAX === $depth ) {
+				continue;
+			}
+			$row = count( $rows ) - 1;
+			if ( 'TIME' === $tags->get_tag() ) {
+				++$rows[ $row ]['time'];
+			}
+			if ( 'H2' === $tags->get_tag() && $tags->has_class( 'wp-block-post-title' ) ) {
+				++$rows[ $row ]['title'];
+			}
+			$href = 'A' === $tags->get_tag() ? (string) $tags->get_attribute( 'href' ) : '';
+			if ( str_contains( $href, '/category/' ) ) {
+				$rows[ $row ]['terms'][] = $href;
+			}
+		}
+		$this->assertNull( $tags->get_last_error() );
+		$this->assertSame(
+			array(
+				array(
+					'time'  => 1,
+					'terms' => array( get_category_link( $cats[1] ) ),
+					'title' => 1,
+				),
+				array(
+					'time'  => 1,
+					'terms' => array( get_category_link( 1 ) ),
+					'title' => 1,
+				),
+			),
+			$rows,
+			'Each row: a date, the first category only (Assessment of three), a level-two title'
+		);
+		$this->assertMatchesRegularExpression( '#<div class="wp-block-group tala-row__meta[ "].*?<time\b.*?tala-first-term#s', $main, 'The date, then the category' );
+		$this->assertStringContainsString( 'tala-row__text', $main );
+
+		$all = $this->render( '<!-- wp:post-terms {"term":"category"} /-->', $three );
+		$this->assertSame( 3, substr_count( $all, '<a ' ), 'Other Categories blocks keep every term' );
+		$first = $this->render( '<!-- wp:post-terms {"term":"category","className":"tala-first-term"} /-->', $three );
+		$this->assertSame( 1, substr_count( $first, '<a ' ) );
+		$this->assertStringContainsString( '>Assessment</a>', $first );
+		$this->assertStringNotContainsString( 'wp-block-post-terms__separator', $first );
+		$this->assertMatchesRegularExpression( '#^<div class="[^"]*\btala-first-term\b[^"]*"><a [^>]*></a></div>$#', (string) preg_replace( '#>[^<]*</a>#', '></a>', $first ), 'Its wrapper and the link, nothing else' );
+		$this->assertSame( '<p>x</p>', tala_blog_first_term( '<p>x</p>', array( 'attrs' => array( 'className' => 'tala-first-term' ) ) ), 'No link: left as it is' );
+	}
+
+	/**
+	 * The home page opens with a graph-paper band: the site title as the page's display title, the
+	 * tagline as its lead, a search field and the top-level categories as chips.
+	 */
+	public function test_home_header_band(): void {
+		$parent = self::factory()->category->create( array( 'name' => 'Teaching' ) );
+		$child  = self::factory()->category->create(
+			array(
+				'name'   => 'Seating',
+				'parent' => $parent,
+			)
+		);
+		$this->publish_post( array( 'post_category' => array( $parent, $child ) ) );
+		update_option( 'blogname', 'Guro Notes' );
+		update_option( 'blogdescription', 'Notes for teachers' );
+
+		$template = get_block_template( 'tala-blog//home' )->content;
+		$main     = array_values( array_filter( parse_blocks( $template ), static fn( $block ) => null !== $block['blockName'] ) )[1];
+		$band     = $main['innerBlocks'][0];
+		$this->assertContains( 'tala-band--paper', explode( ' ', $band['attrs']['className'] ?? '' ) );
+
+		$this->go_to( home_url( '/' ) );
+		$html = render_block( $band );
+		$this->assertMatchesRegularExpression( '#<h1 class="(?=[^"]*\bwp-block-site-title\b)(?=[^"]*\btala-display\b)[^"]*">Guro Notes</h1>#', $html, 'The site title, not linked, as the display title' );
+		$this->assertSame( 1, substr_count( $html, '<h1' ) );
+		$this->assertMatchesRegularExpression( '#<p class="(?=[^"]*\bwp-block-site-tagline\b)(?=[^"]*\btala-lead\b)[^"]*">Notes for teachers</p>#', $html );
+		$this->assertMatchesRegularExpression( '#<form[^>]* role="search"#', $html, 'A search field' );
+		$this->assertStringNotContainsString( 'wp-block-search__button-only', $html, 'A field, not the header\'s button' );
+		$this->assertMatchesRegularExpression( '#<ul class="(?=[^"]*\bwp-block-categories\b)(?=[^"]*\btala-chips\b)[^"]*">#', $html, 'Categories as chips' );
+		$this->assertStringContainsString( '>Teaching</a>', $html );
+		$this->assertStringNotContainsString( '>Seating</a>', $html, 'Top-level categories only' );
+		$this->assertLessThan( strpos( $html, 'tala-lead' ), strpos( $html, '<h1' ), 'Title, lead, search, chips' );
+		$this->assertLessThan( strpos( $html, 'role="search"' ), strpos( $html, 'tala-lead' ) );
+		$this->assertLessThan( strpos( $html, 'tala-chips' ), strpos( $html, 'role="search"' ) );
 	}
 
 	/**
@@ -395,8 +511,9 @@ HTML;
 	/**
 	 * Template parts and their areas. Every template is the frame: the header part, then a main
 	 * element of full-width bands, each holding one rail, then the footer part (the one footer:
-	 * search lives in the header). Only search results keep a search form in the page, under their
-	 * title; the 404 page has one in its text pattern (tala-blog/hidden-404).
+	 * search lives in the header). Only search results (to refine the search, under their title) and
+	 * the home page's title band keep a search form in the page; the 404 page has one in its text
+	 * pattern (tala-blog/hidden-404).
 	 */
 	public function test_templates_and_parts(): void {
 		$areas = array(
@@ -431,7 +548,7 @@ HTML;
 				$this->assertContains( 'tala-rail', $classes( $band['innerBlocks'][0] ), "$slug: each band holds a rail" );
 			}
 			$this->assertStringNotContainsString( 'footer-without-search', $content, $slug );
-			if ( 'search' !== $slug ) {
+			if ( ! in_array( $slug, array( 'search', 'home' ), true ) ) {
 				$this->assertStringNotContainsString( '"slug":"tala-blog/search"', $content, "$slug: search is in the header" );
 			}
 		}

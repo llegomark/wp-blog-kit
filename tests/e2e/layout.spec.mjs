@@ -455,3 +455,97 @@ test.describe( 'the footer', () => {
 		} );
 	}
 } );
+
+/**
+ * Article lists (home, archives, search results), as NASH's: ruled rows without pictures. From
+ * 44rem of list the date and first category sit in a 9rem column beside the title and summary;
+ * narrower, they stack. The rules run from side rule to side rule. "Previous page" and "Next page"
+ * are outline buttons with arrows.
+ *
+ * @param {import('@playwright/test').Page} page Page.
+ * @return {Promise<Object>} What the list measures.
+ */
+const rows = ( page ) =>
+	page.evaluate( () => {
+		const all = [ ...document.querySelectorAll( 'main .tala-row' ) ];
+		const row = all[ 0 ];
+		const box = ( el ) => el.getBoundingClientRect();
+		const rail = row.closest( '.tala-rail' );
+		const railStyle = getComputedStyle( rail );
+		const title = row.querySelector( '.wp-block-post-title a' );
+		const s = getComputedStyle( title );
+		return {
+			count: all.length,
+			images: document.querySelectorAll( 'main img, main .wp-block-post-featured-image' ).length,
+			columns: getComputedStyle( row ).gridTemplateColumns,
+			meta: { top: box( row.querySelector( '.tala-row__meta' ) ).top, bottom: box( row.querySelector( '.tala-row__meta' ) ).bottom, left: box( row.querySelector( '.tala-row__meta' ) ).left },
+			text: { top: box( row.querySelector( '.tala-row__text' ) ).top, left: box( row.querySelector( '.tala-row__text' ) ).left },
+			terms: row.querySelectorAll( '.tala-first-term a' ).length,
+			time: !! row.querySelector( '.tala-row__meta time' ),
+			// Each row is ruled from side rule to side rule.
+			span: [ Math.round( box( row ).left ), Math.round( box( row ).width ) ],
+			inner: [ Math.round( box( rail ).left + parseFloat( railStyle.borderLeftWidth ) ), Math.round( rail.clientWidth ) ],
+			rules: all.slice( 1 ).map( ( r ) => getComputedStyle( r.closest( '.wp-block-post' ) ) ).map( ( style ) => `${ style.borderTopWidth } ${ style.borderTopStyle }` ),
+			title: [ s.color, s.textDecorationLine ].join( ' ' ),
+			excerpt: getComputedStyle( row.querySelector( '.wp-block-post-excerpt' ) ).fontSize,
+		};
+	} );
+
+test.describe( 'article lists, desktop', () => {
+	test.use( DESKTOP );
+
+	test( 'ruled rows, a 9rem column for the date and category beside the title; no pictures', async ( { page } ) => {
+		for ( const path of [ pages.home, pages.category, pages.search ] ) {
+			await page.goto( path );
+			const list = await rows( page );
+			expect( list.count, path ).toBeGreaterThan( 0 );
+			expect( list.images, `${ path }: no thumbnails` ).toBe( 0 );
+			const tracks = list.columns.split( ' ' );
+			expect( tracks, path ).toHaveLength( 2 );
+			expect( tracks[ 0 ], `${ path }: 9rem` ).toBe( '144px' );
+			expect( list.text.top, `${ path }: side by side` ).toBeCloseTo( list.meta.top, 0 );
+			expect( list.text.left ).toBeGreaterThan( list.meta.left + 144 );
+			expect( [ list.time, list.terms ], `${ path }: a date and one category` ).toEqual( [ true, 1 ] );
+			expect( list.span, `${ path }: rules span the rail` ).toEqual( list.inner );
+			expect( list.rules.every( ( rule ) => '1px solid' === rule ), path ).toBe( true );
+			expect( list.excerpt ).toBe( '15px' );
+		}
+	} );
+
+	test( 'the title link: heading ink, a cobalt underline on hover', async ( { page } ) => {
+		await page.goto( pages.home );
+		expect( ( await rows( page ) ).title ).toBe( 'rgb(0, 0, 0) none' );
+		await page.locator( 'main .tala-row .wp-block-post-title a' ).first().hover();
+		expect( ( await rows( page ) ).title ).toBe( 'rgb(19, 72, 220) underline' );
+	} );
+
+	test( '"Previous page" and "Next page": outline buttons with arrows', async ( { page } ) => {
+		const button = ( name ) =>
+			page.getByRole( 'link', { name } ).evaluate( ( a ) => {
+				const s = getComputedStyle( a );
+				return {
+					text: a.textContent.replace( /\s+/g, ' ' ).trim(),
+					border: `${ s.borderTopWidth } ${ s.borderTopStyle }`,
+					height: a.getBoundingClientRect().height >= 44,
+					radius: s.borderTopLeftRadius,
+				};
+			} );
+		await page.goto( pages.home );
+		expect( await button( 'Next page' ) ).toEqual( { text: 'Next page→', border: '1px solid', height: true, radius: '4px' } );
+		await page.goto( pages.page2 );
+		expect( await button( 'Previous page' ) ).toEqual( { text: '←Previous page', border: '1px solid', height: true, radius: '4px' } );
+	} );
+} );
+
+test.describe( 'article lists, phone', () => {
+	test.use( { viewport: { width: 390, height: 844 } } );
+
+	test( 'the date and category stack above the title', async ( { page } ) => {
+		await page.goto( pages.home );
+		const list = await rows( page );
+		expect( list.columns.split( ' ' ), 'One column' ).toHaveLength( 1 );
+		expect( list.text.top ).toBeGreaterThanOrEqual( list.meta.bottom );
+		expect( list.span, 'Rules span the rail' ).toEqual( list.inner );
+		expect( await page.evaluate( () => document.documentElement.scrollWidth - document.documentElement.clientWidth ) ).toBe( 0 );
+	} );
+} );
