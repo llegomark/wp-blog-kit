@@ -27,6 +27,20 @@ for ( const [ device, settings ] of Object.entries( { phone: PHONE, desktop: DES
 					await openMenu( page );
 					expect( await axeViolations( page ) ).toEqual( [] );
 				} );
+
+				test( 'open menu as a sheet on a tablet', async ( { page } ) => {
+					await page.setViewportSize( { width: 720, height: 900 } );
+					await page.goto( pages.article );
+					await openMenu( page );
+					expect( await axeViolations( page ) ).toEqual( [] );
+				} );
+
+				test( 'open search field', async ( { page } ) => {
+					await page.goto( pages.article );
+					await page.getByRole( 'button', { name: 'Expand search field' } ).click();
+					await expect( page.getByRole( 'searchbox', { name: 'Search' } ) ).toBeFocused();
+					expect( await axeViolations( page ) ).toEqual( [] );
+				} );
 			}
 		} );
 	}
@@ -45,6 +59,9 @@ for ( const colorScheme of [ 'light', 'dark' ] ) {
 			expect( await background() ).toBe( paper[ colorScheme ] );
 			for ( const theme of [ 'light', 'dark' ] ) {
 				await page.evaluate( ( name ) => ( document.documentElement.dataset.theme = name ), theme );
+				// Set here without the switch (whose script turns transitions off), buttons fade to the
+				// new colours in 150 ms: axe checks the colours they end with.
+				await page.evaluate( () => Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) ) );
 				expect( await background(), theme ).toBe( paper[ theme ] );
 				expect( await page.evaluate( () => getComputedStyle( document.documentElement ).colorScheme ), theme ).toBe( theme );
 				expect( await axeViolations( page ), theme ).toEqual( [] );
@@ -56,6 +73,9 @@ for ( const colorScheme of [ 'light', 'dark' ] ) {
 			await page.emulateMedia( { media: 'print' } );
 			for ( const theme of [ 'light', 'dark' ] ) {
 				await page.evaluate( ( name ) => ( document.documentElement.dataset.theme = name ), theme );
+				// Set here without the switch (whose script turns transitions off), buttons fade to the
+				// new colours in 150 ms: axe checks the colours they end with.
+				await page.evaluate( () => Promise.all( document.getAnimations().map( ( animation ) => animation.finished ) ) );
 				expect(
 					await page.evaluate( () => [ document.body, document.querySelector( 'h1' ) ].map( ( el ) => getComputedStyle( el ).backgroundColor + ' ' + getComputedStyle( el ).color ) ),
 					theme,

@@ -7,22 +7,24 @@ import { demoPages } from './utils.mjs';
 
 const pages = demoPages();
 
-// What each kind of page should have: HTTP status, the name of its one search form (in the footer
-// of the home page, at the top of every other page) and its structured data. WebSite and
-// Organization belong to the home page (its first page) only.
+// What each kind of page should have: HTTP status, the names of its search forms (the site search
+// in the header of every page; search results and the 404 page also have one in the page) and its
+// structured data. WebSite and Organization belong to the home page (its first page) only.
+const site = [ 'Site' ];
+const both = [ 'Site', 'Articles' ];
 const expected = {
-	home: [ 200, 'Site', [ 'WebSite', 'Organization' ] ],
-	page2: [ 200, 'Site', [] ],
-	article: [ 200, 'Articles', [ 'BlogPosting', 'BreadcrumbList' ] ],
-	withComments: [ 200, 'Articles', [ 'BlogPosting', 'BreadcrumbList' ] ],
-	page: [ 200, 'Articles', [ 'BreadcrumbList' ] ],
-	category: [ 200, 'Articles', [ 'BreadcrumbList' ] ],
-	tag: [ 200, 'Articles', [ 'BreadcrumbList' ] ],
-	author: [ 200, 'Articles', [ 'ProfilePage', 'BreadcrumbList' ] ],
-	date: [ 200, 'Articles', [] ],
-	search: [ 200, 'Articles', [] ],
-	searchNone: [ 200, 'Articles', [] ],
-	notFound: [ 404, 'Articles', [] ],
+	home: [ 200, site, [ 'WebSite', 'Organization' ] ],
+	page2: [ 200, site, [] ],
+	article: [ 200, site, [ 'BlogPosting', 'BreadcrumbList' ] ],
+	withComments: [ 200, site, [ 'BlogPosting', 'BreadcrumbList' ] ],
+	page: [ 200, site, [ 'BreadcrumbList' ] ],
+	category: [ 200, site, [ 'BreadcrumbList' ] ],
+	tag: [ 200, site, [ 'BreadcrumbList' ] ],
+	author: [ 200, site, [ 'ProfilePage', 'BreadcrumbList' ] ],
+	date: [ 200, site, [] ],
+	search: [ 200, both, [] ],
+	searchNone: [ 200, both, [] ],
+	notFound: [ 404, both, [] ],
 };
 
 /**
@@ -42,7 +44,7 @@ function schemaTypes( html ) {
 }
 
 for ( const [ kind, path ] of Object.entries( pages ) ) {
-	const [ status, searchForm, types ] = expected[ kind ];
+	const [ status, searchForms, types ] = expected[ kind ];
 
 	test( `${ kind } (${ path }) renders cleanly`, async ( { request } ) => {
 		const response = await request.get( path );
@@ -51,7 +53,7 @@ for ( const [ kind, path ] of Object.entries( pages ) ) {
 
 		expect( html ).not.toMatch( /<b>(Warning|Notice|Deprecated|Fatal error)<\/b>/ );
 		expect( html.match( /<h1[\s>]/g ), 'One H1' ).toHaveLength( 1 );
-		expect( [ ...html.matchAll( /<form[^>]*role="search"[^>]*aria-label="([^"]+)"/g ) ].map( ( m ) => m[ 1 ] ) ).toEqual( [ searchForm ] );
+		expect( [ ...html.matchAll( /<form[^>]*role="search"[^>]*aria-label="([^"]+)"/g ) ].map( ( m ) => m[ 1 ] ) ).toEqual( searchForms );
 		expect( schemaTypes( html ) ).toEqual( types );
 
 		expect( html ).toContain( '<meta name="theme-color" content="#f4f4f2" media="(prefers-color-scheme: light)">' );

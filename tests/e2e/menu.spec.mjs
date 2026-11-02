@@ -3,7 +3,7 @@
  * with its top bar exactly over the header's, so nothing seems to move.
  */
 import { test, expect } from '@playwright/test';
-import { demoPages, PHONE, DESKTOP, wp } from './utils.mjs';
+import { demoPages, PHONE, DESKTOP, wp, openMenu } from './utils.mjs';
 
 const pages = demoPages();
 
@@ -75,10 +75,59 @@ test.describe( 'phone', () => {
 
 	test( 'the close button is a 44 px target in the menu button\'s place', async ( { page } ) => {
 		await page.goto( pages.home );
-		await page.getByRole( 'button', { name: 'Open menu' } ).click();
+		const open = await box( page, '.wp-block-navigation__responsive-container-open' );
+		expect( open, 'The menu button is a 44 px target' ).toMatch( / 44\.0x44\.0$/ );
+		await openMenu( page );
 		const close = page.getByRole( 'button', { name: 'Close', exact: true } );
 		const size = await close.evaluate( ( el ) => [ el.offsetWidth, el.offsetHeight ] );
 		expect( size ).toEqual( [ 44, 44 ] );
+		expect( await box( page, '.wp-block-navigation-overlay-close' ) ).toBe( open );
+	} );
+
+	test( 'a sheet the width of the screen, links at least 48 px tall with hairlines', async ( { page } ) => {
+		await page.setViewportSize( { width: 390, height: 844 } );
+		await page.goto( pages.home );
+		await openMenu( page );
+		const sheet = await page.evaluate( () => {
+			const overlay = document.querySelector( '.tala-overlay' ).getBoundingClientRect();
+			const links = [ ...document.querySelectorAll( '.tala-overlay-menu a' ) ].map( ( a ) => {
+				const s = getComputedStyle( a );
+				return [ a.getBoundingClientRect().height >= 48, `${ s.borderBottomWidth } ${ s.borderBottomStyle }`, s.fontSize ];
+			} );
+			return { left: overlay.left, width: overlay.width, screen: document.documentElement.clientWidth, links };
+		} );
+		expect( sheet.left ).toBe( 0 );
+		expect( sheet.width ).toBe( sheet.screen );
+		expect( sheet.links.length ).toBeGreaterThan( 0 );
+		for ( const link of sheet.links ) {
+			expect( link ).toEqual( [ true, '1px solid', '17px' ] );
+		}
+	} );
+} );
+
+test.describe( 'tablet', () => {
+	test.use( { viewport: { width: 720, height: 900 }, isMobile: true, hasTouch: true } );
+
+	test( 'the menu opens as a 24rem sheet at the right edge, over a dimmed page', async ( { page } ) => {
+		await page.goto( pages.article );
+		await expect( page.locator( '.tala-header .wp-block-navigation__responsive-container-content > ul' ), 'The menu folds behind its button' ).toBeHidden();
+		await openMenu( page );
+		await expect( page.getByRole( 'dialog', { name: 'Menu' } ) ).toBeVisible();
+		const sheet = await page.evaluate( () => {
+			const container = document.querySelector( '.wp-block-navigation__responsive-container' );
+			const overlay = document.querySelector( '.tala-overlay' );
+			return {
+				width: overlay.getBoundingClientRect().width,
+				right: overlay.getBoundingClientRect().right,
+				edge: container.getBoundingClientRect().right,
+				rule: `${ getComputedStyle( overlay ).borderLeftWidth } ${ getComputedStyle( overlay ).borderLeftStyle }`,
+				backdrop: getComputedStyle( container ).backgroundColor,
+			};
+		} );
+		expect( sheet ).toMatchObject( { width: 384, right: sheet.edge, rule: '1px solid' } );
+		expect( sheet.backdrop, 'The page behind is dimmed' ).not.toMatch( /^rgba\(0, 0, 0, 0\)$|^transparent$/ );
+		await page.keyboard.press( 'Escape' );
+		await expect( page.getByRole( 'dialog', { name: 'Menu' } ) ).toBeHidden();
 	} );
 } );
 
@@ -140,5 +189,61 @@ test.describe( 'narrow desktop window', () => {
 		await page.getByRole( 'button', { name: 'Open menu' } ).click();
 		expect( await box( page, '.tala-header .wp-block-site-title' ) ).toBe( before );
 		expect( await box( page, '.tala-overlay .wp-block-site-title' ) ).toBe( before );
+	} );
+} );
+
+test.describe( 'desktop header', () => {
+	test.use( DESKTOP );
+
+	test( 'brand, ghost links, a separator, search and the switch on one row of 44 px targets', async ( { page } ) => {
+		await page.goto( pages.article );
+		const row = await page.evaluate( () => {
+			const at = ( el ) => {
+				const r = el.getBoundingClientRect();
+				return { left: r.left, right: r.right, middle: Math.round( r.top + ( r.height / 2 ) ), height: r.height, width: r.width };
+			};
+			const header = document.querySelector( '.tala-header' );
+			const links = [ ...header.querySelectorAll( '.wp-block-navigation__responsive-container-content > ul > li > a' ) ];
+			const separator = header.querySelector( '.tala-separator' );
+			const search = header.querySelector( '.wp-block-search__button' );
+			const s = getComputedStyle( search );
+			return {
+				order: [ header.querySelector( '.wp-block-site-title' ), links[ 0 ], links.at( -1 ), separator, search, header.querySelector( '.tala-theme-switch' ) ].map( at ),
+				links: links.map( ( a ) => [ at( a ).height >= 44, getComputedStyle( a ).fontSize, getComputedStyle( a ).fontWeight ] ),
+				separator: [ at( separator ).width, at( separator ).height ],
+				search: [ at( search ).width, at( search ).height, s.borderTopWidth, s.backgroundColor === getComputedStyle( document.body ).backgroundColor ],
+				menuButton: getComputedStyle( header.querySelector( '.wp-block-navigation__responsive-container-open' ) ).display,
+			};
+		} );
+		expect( row.menuButton, 'The menu is shown, not its button' ).toBe( 'none' );
+		for ( let i = 1; i < row.order.length; i++ ) {
+			expect( row.order[ i ].left, `item ${ i } after item ${ i - 1 }` ).toBeGreaterThanOrEqual( row.order[ i - 1 ].right );
+			expect( Math.abs( row.order[ i ].middle - row.order[ 0 ].middle ), `item ${ i } on the row` ).toBeLessThanOrEqual( 1 );
+		}
+		for ( const link of row.links ) {
+			expect( link ).toEqual( [ true, '15px', '500' ] );
+		}
+		expect( row.separator ).toEqual( [ 1, 20 ] );
+		expect( row.search.slice( 0, 3 ) ).toEqual( [ 44, 44, '1px' ] );
+	} );
+
+	test( 'the search button opens a field over the header without moving anything', async ( { page } ) => {
+		await page.goto( pages.article );
+		const where = () =>
+			page.evaluate( () =>
+				[ '.tala-header .wp-block-site-title', '.tala-header .wp-block-search__button', '.tala-header .tala-theme-switch', 'main' ]
+					.map( ( s ) => JSON.stringify( document.querySelector( s ).getBoundingClientRect() ) )
+					.join( '\n' ),
+			);
+		const before = await where();
+		await page.getByRole( 'button', { name: 'Expand search field' } ).click();
+		const field = page.getByRole( 'searchbox', { name: 'Search' } );
+		await expect( field ).toBeVisible();
+		await expect( field ).toBeFocused();
+		expect( await where() ).toBe( before );
+		expect( ( await field.boundingBox() ).width ).toBeGreaterThanOrEqual( 240 );
+		await field.fill( 'reading' );
+		await page.keyboard.press( 'Enter' );
+		await expect( page ).toHaveURL( /[?&]s=reading/ );
 	} );
 } );

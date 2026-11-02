@@ -393,44 +393,170 @@ HTML;
 	}
 
 	/**
-	 * Template parts and their areas; search results and the 404 page use the footer without
-	 * search, as they have a search form at the top.
+	 * Template parts and their areas. Every template is the frame: the header part, then a main
+	 * element of full-width bands, each holding one rail, then the footer part (the one footer:
+	 * search lives in the header). Only search results keep a search form in the page, under their
+	 * title; the 404 page has one in its text pattern (tala-blog/hidden-404).
 	 */
 	public function test_templates_and_parts(): void {
 		$areas = array(
-			'header'                => 'header',
-			'footer'                => 'footer',
-			'footer-without-search' => 'footer',
-			'navigation-overlay'    => 'navigation-overlay',
+			'header'             => 'header',
+			'footer'             => 'footer',
+			'navigation-overlay' => 'navigation-overlay',
 		);
 		foreach ( $areas as $slug => $area ) {
 			$part = get_block_template( 'tala-blog//' . $slug, 'wp_template_part' );
 			$this->assertInstanceOf( WP_Block_Template::class, $part, $slug );
 			$this->assertSame( $area, $part->area, $slug );
 		}
-		// One search form per page: at the top of every page but the home page, in its footer there.
-		foreach ( array( 'search', '404', 'index', 'single', 'page', 'archive', 'author' ) as $slug ) {
+		$classes = static fn( array $block ): array => preg_split( '/\s+/', $block['attrs']['className'] ?? '', -1, PREG_SPLIT_NO_EMPTY );
+		foreach ( array( 'home', 'index', 'single', 'page', 'archive', 'author', 'search', '404' ) as $slug ) {
 			$content = get_block_template( 'tala-blog//' . $slug )->content;
-			$this->assertStringContainsString( '"slug":"footer-without-search"', $content, $slug );
-			if ( '404' !== $slug ) { // Its search form is in its text pattern (tala-blog/hidden-404).
-				$this->assertStringContainsString( '"slug":"tala-blog/search"', $content, $slug );
+			$blocks  = array_values( array_filter( parse_blocks( $content ), static fn( $block ) => null !== $block['blockName'] ) );
+			$this->assertSame( array( 'core/template-part', 'core/group', 'core/template-part' ), array_column( $blocks, 'blockName' ), $slug );
+			$this->assertSame( 'header', $blocks[0]['attrs']['slug'], $slug );
+			$this->assertSame( 'footer', $blocks[2]['attrs']['slug'], "$slug: the one footer" );
+
+			$main = $blocks[1];
+			$this->assertSame( 'main', $main['attrs']['tagName'] ?? '', $slug );
+			$this->assertContains( 'tala-main', $classes( $main ), $slug );
+			$this->assertSame( 'default', $main['attrs']['layout']['type'] ?? '', "$slug: bands run the full width" );
+			$this->assertNotEmpty( $main['innerBlocks'], $slug );
+			foreach ( $main['innerBlocks'] as $band ) {
+				$this->assertSame( 'core/group', $band['blockName'], $slug );
+				$this->assertContains( 'tala-band', $classes( $band ), "$slug: main holds bands" );
+				$this->assertCount( 1, $band['innerBlocks'], "$slug: one rail per band" );
+				$this->assertContains( 'tala-rail', $classes( $band['innerBlocks'][0] ), "$slug: each band holds a rail" );
+			}
+			$this->assertStringNotContainsString( 'footer-without-search', $content, $slug );
+			if ( 'search' !== $slug ) {
+				$this->assertStringNotContainsString( '"slug":"tala-blog/search"', $content, "$slug: search is in the header" );
 			}
 		}
-		$home = get_block_template( 'tala-blog//home' )->content;
-		$this->assertStringContainsString( '"slug":"footer",', $home );
-		$this->assertStringNotContainsString( '"slug":"tala-blog/search"', $home );
+		$this->assertStringContainsString( '"slug":"tala-blog/search"', WP_Block_Patterns_Registry::get_instance()->get_registered( 'tala-blog/hidden-404' )['content'] );
 	}
 
 	/**
-	 * The header: logo and title, and the menu named "Primary" that opens the theme's overlay on phones.
+	 * The header: logo and title, the menu named "Primary" (which opens the theme's overlay on
+	 * phones), a separator, the site search as a button that opens into a field, and the Light/Dark
+	 * switch, in that order, in a band with a rail like every section of the page.
 	 */
 	public function test_header(): void {
 		$this->publish_post( array( 'post_type' => 'page' ) );
 		$header = do_blocks( '<!-- wp:template-part {"slug":"header","theme":"tala-blog","tagName":"header"} /-->' );
-		$this->assertStringContainsString( 'tala-brand', $header );
-		$this->assertMatchesRegularExpression( '/<nav[^>]* aria-label="Primary"/', $header );
+		$this->assertMatchesRegularExpression( '/<div class="wp-block-group tala-band tala-header[ "]/', $header );
+		$this->assertMatchesRegularExpression( '/<div class="wp-block-group tala-rail[ "]/', $header );
 		$this->assertStringContainsString( 'disable-default-overlay', $header, 'The theme\'s own overlay' );
 		$this->assertStringContainsString( 'wp-block-navigation-overlay-close', $header );
+		$this->assertSame( 1, preg_match( '/<form[^>]* role="search"[^>]*>/', $header, $search ), 'One search form' );
+		$this->assertStringContainsString( 'wp-block-search__button-only', $search[0] );
+		$this->assertStringContainsString( 'wp-block-search__icon-button', $search[0] );
+		$this->assertStringContainsString( 'aria-label="Site"', $search[0] );
+
+		$order = array(
+			'brand'     => strpos( $header, 'tala-brand' ),
+			'menu'      => preg_match( '/<nav[^>]* aria-label="Primary"/', $header, $nav, PREG_OFFSET_CAPTURE ) ? $nav[0][1] : false,
+			'overlay'   => strpos( $header, 'wp-block-navigation-overlay-close' ),
+			'separator' => strpos( $header, 'tala-separator' ),
+			'search'    => strpos( $header, 'wp-block-search__button-only' ),
+			'switch'    => strpos( $header, 'class="tala-theme-switch"' ),
+		);
+		$this->assertNotContains( false, $order );
+		$sorted = $order;
+		asort( $sorted );
+		$this->assertSame( array_keys( $order ), array_keys( $sorted ), 'Brand, menu (and its overlay), separator, search, switch' );
+	}
+
+	/**
+	 * Type: no faux bold or italic, balanced headings, tabular figures in dates and tables; the
+	 * page-level h1 defaults to the "title" role (upright, regular weight), and display titles come
+	 * only from the .tala-display class, in Inter Display's light italic (the preloaded file).
+	 * Hover styles live in theme.css under the media query for devices that hover, never in
+	 * theme.json, which can't express it.
+	 */
+	public function test_type_and_hover_styles(): void {
+		$h1 = (array) wp_get_global_styles( array( 'elements', 'h1' ) );
+		$this->assertSame( 'var(--wp--preset--font-size--x-large)', $h1['typography']['fontSize'] ?? null );
+		$this->assertSame( '-0.025em', $h1['typography']['letterSpacing'] ?? null );
+		$this->assertSame( '1.2', $h1['typography']['lineHeight'] ?? null );
+		$this->assertSame( '400', wp_get_global_styles( array( 'elements', 'heading', 'typography', 'fontWeight' ) ) );
+		$this->assertStringNotContainsString( ':hover', (string) file_get_contents( get_theme_file_path( 'theme.json' ) ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
+
+		$css   = (string) preg_replace( '#/\*.*?\*/#s', '', (string) file_get_contents( get_theme_file_path( 'assets/theme.css' ) ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
+		$rules = self::css_rules( $css );
+		$find  = static function ( string $selector ) use ( $rules ): string {
+			foreach ( $rules as $rule ) {
+				if ( array() === $rule['at'] && preg_replace( '/\s+/', ' ', $rule['selector'] ) === $selector ) {
+					return $rule['body'];
+				}
+			}
+			return '';
+		};
+		$this->assertStringContainsString( 'font-synthesis: none', $find( 'html' ) );
+		$this->assertStringContainsString( 'text-wrap: balance', $find( ':where(h1, h2, h3, h4)' ) );
+		$this->assertStringContainsString( 'font-variant-numeric: tabular-nums', $find( ':where(time, td, th)' ) );
+		$display = $find( '.tala-display' );
+		$this->assertStringContainsString( 'font-family: var(--wp--preset--font-family--inter-display)', $display );
+		$this->assertStringContainsString( 'font-style: italic', $display );
+		$this->assertStringContainsString( 'font-weight: 300', $display );
+
+		$hovers = array_filter( $rules, static fn( $rule ) => str_contains( $rule['selector'], ':hover' ) );
+		$this->assertNotEmpty( $hovers );
+		foreach ( $hovers as $rule ) {
+			$this->assertContains( '@media (hover: hover) and (pointer: fine)', $rule['at'], $rule['selector'] );
+		}
+		foreach ( $rules as $rule ) {
+			if ( preg_match( '/(?:^|;)\s*(?:translate|scale|transition(?:-property)?)\s*:\s*+(?!none)/', $rule['body'] ) ) {
+				$this->assertContains( '@media (prefers-reduced-motion: no-preference)', $rule['at'], "Motion only for readers who don't ask for less: {$rule['selector']}" );
+			}
+		}
+	}
+
+	/**
+	 * The style rules of a stylesheet (without comments), each with the at-rules around it.
+	 *
+	 * @param string $css CSS.
+	 * @return array<int, array{selector: string, body: string, at: string[]}>
+	 */
+	private static function css_rules( string $css ): array {
+		$rules   = array();
+		$stack   = array();
+		$prelude = '';
+		$depth   = 0;
+		$body    = '';
+		foreach ( str_split( $css ) as $char ) {
+			if ( '{' === $char ) {
+				$prelude = trim( $prelude );
+				if ( str_starts_with( $prelude, '@' ) ) {
+					$stack[] = $prelude;
+				} else {
+					$depth = 1;
+					$body  = '';
+					$open  = $prelude;
+				}
+				$prelude = '';
+			} elseif ( '}' === $char ) {
+				if ( $depth ) {
+					$rules[] = array(
+						'selector' => $open ?? '',
+						'body'     => trim( $body ),
+						'at'       => $stack,
+					);
+					$depth   = 0;
+				} else {
+					array_pop( $stack );
+				}
+				$prelude = '';
+			} elseif ( $depth ) {
+				$body .= $char;
+			} else {
+				$prelude .= ( ';' === $char ) ? '' : $char;
+				if ( ';' === $char ) {
+					$prelude = '';
+				}
+			}
+		}
+		return $rules;
 	}
 
 	/**

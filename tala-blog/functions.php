@@ -202,7 +202,7 @@ add_filter( 'styles_inline_size_limit', static fn(): int => 60000 );
 add_action( 'wp_enqueue_scripts', 'tala_blog_styles', 20 );
 
 /**
- * Inlines the theme CSS after the global styles: about 17 KB, under 5 KB once the page is
+ * Inlines the theme CSS after the global styles: about 38 KB, under 10 KB once the page is
  * compressed, cheaper than another request.
  */
 function tala_blog_styles(): void {

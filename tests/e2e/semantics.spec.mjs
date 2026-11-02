@@ -14,7 +14,7 @@ const pages = demoPages();
 
 test( 'an article: a header with the title and dates, a footer with categories and tags', async ( { page } ) => {
 	await page.goto( pages.article );
-	const article = page.locator( 'main > article' );
+	const article = page.locator( 'main .tala-measure > article' );
 	await expect( article ).toHaveCount( 1 );
 	await expect( article.locator( ':scope > header h1' ) ).toHaveCount( 1 );
 	await expect( article.locator( ':scope > header time' ).first() ).toBeVisible();
@@ -27,7 +27,7 @@ test( '"Keep reading" is a navigation landmark right after the article, before t
 	await expect( nav.getByRole( 'heading', { level: 2, name: 'Keep reading' } ) ).toBeVisible();
 	await expect( nav.locator( '.tala-related h3 a' ).first() ).toBeVisible();
 	await expect( nav.getByRole( 'link', { name: /Older article/ } ) ).toBeVisible();
-	await expect( page.locator( 'main > article + nav[aria-label="Keep reading"] + .wp-block-post-author' ) ).toHaveCount( 1 );
+	await expect( page.locator( 'main .tala-measure > article + nav[aria-label="Keep reading"] + .wp-block-post-author' ) ).toHaveCount( 1 );
 
 	await page.goto( pages.page );
 	await expect( page.getByRole( 'navigation', { name: 'Keep reading' } ) ).toHaveCount( 0 );
