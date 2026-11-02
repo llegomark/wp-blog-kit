@@ -1,4 +1,6 @@
-/* Tala Blog: drafting paper. Light: grey-white paper, dark ink, one cobalt accent. Dark: the same at night. */
+/* Tala Blog: drafting paper. Light: grey-white paper, dark ink, one cobalt accent. Dark: the same at night.
+   "The design system", in the comments below, means the drafting-paper design system this theme
+   follows: ink on paper, one cobalt accent, hairlines, square cards, Inter. */
 
 /* Inter, self-hosted: theme.json declares its faces, functions.php preloads the two Latin files.
    Until Inter arrives, text uses "Inter Fallback": Arial (or a font with Arial's widths: Arimo on
@@ -797,10 +799,14 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 }
 
 /* The cells: hairline gaps on the line colour. On a phone the brand cell takes the rail's width and
-   the menu's columns go two up below it (a last odd one takes the row). From 48rem of footer it is
-   one row: the brand cell 2fr, each column of the menu 1fr (--tala-columns, set on the cells and the
-   menu by tala_blog_footer_columns() and tala_blog_footer_cells()); the menu and its list share the
-   cells' tracks (subgrid), so every hairline lines up. */
+   the menu's columns go two up below it (a last odd one takes the row). From 48rem of footer, a menu
+   of one or two columns sits on one row with the brand cell: the brand cell 2fr, each column 1fr
+   (--tala-columns, set on the cells and the menu by tala_blog_footer_columns() and
+   tala_blog_footer_cells()). With three columns or more (the class tala-cells--stacked, from
+   tala_blog_footer_cells(): Firefox has no style queries on custom properties), the brand cell takes
+   a row of its own and the columns share the whole rail below it, so a long word like
+   "Kindergarten" keeps its column. The menu and its list share the cells' tracks (subgrid), so every
+   hairline lines up. */
 .tala-cells {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
@@ -831,6 +837,15 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	.tala-slab .tala-cells > .tala-footer-menu > .wp-block-navigation__container {
 		grid-column: 1 / -1;
 		grid-template-columns: subgrid;
+	}
+
+	.tala-cells.tala-cells--stacked {
+		grid-template-columns: repeat(var(--tala-columns, 3), minmax(0, 1fr));
+	}
+
+	.tala-cells--stacked > .tala-footer-brand,
+	.tala-slab .tala-cells--stacked > .tala-footer-menu {
+		grid-column: 1 / -1;
 	}
 }
 
@@ -1091,14 +1106,10 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 }
 
 /* The text band: the design system's padding, then the text column, its parts 2.5rem apart (the text, its
-   topics, "Read next", the author box, the comments). The column is a container, so the author box
-   lays out by its own width. */
+   topics, "Read next", the author box, the comments). The column is not a size container: that would
+   wrap every ad slot in it too. */
 .tala-band > .tala-rail--text {
 	padding-block: clamp(2rem, 1.5rem + 3vw, 3.5rem);
-}
-
-.tala-text {
-	container: tala-text / inline-size;
 }
 
 .tala-text > * {
@@ -1512,9 +1523,9 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	line-height: 1.45;
 }
 
-/* Quotes, in articles and comments, look like the Quote block (theme.json): on the wash, square,
-   with a 2px cobalt rule at the start, as the design system's, the width of the text. A pull quote keeps its own
-   look. */
+/* Quotes, in articles and comments, look like the Quote block (theme.json): on a cobalt wash (the
+   accent at 7%), square, with a 2px cobalt rule at the start, as the design system's, the width of
+   the text. A pull quote keeps its own look. */
 :where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not(.wp-block-pullquote > blockquote)) {
 	margin-inline: 0;
 }
@@ -1523,7 +1534,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	margin-inline: 0;
 	padding: 0.75rem 1rem;
 	border-inline-start: 2px solid var(--wp--preset--color--accent);
-	background-color: var(--wp--preset--color--wash);
+	background-color: color-mix(in srgb, var(--wp--preset--color--accent) 7%, transparent);
 }
 
 :where(.wp-block-post-content, .wp-block-comment-content) :where(blockquote:not(.wp-block-pullquote > blockquote)) > * {
@@ -1708,24 +1719,16 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 }
 
 /* The author box, as the design system's "About the author": a square card on the surface, the round photo
-   (80px, on a hairline ring) beside the name from 34rem of column, above it on a phone. */
+   (80px, on a hairline ring) beside the name and biography while they keep 20rem, above them on a
+   phone (they wrap: no container query needed). */
 .tala-author {
 	display: flex;
-	flex-direction: column;
+	flex-wrap: wrap;
 	align-items: flex-start;
-	gap: 1rem;
-	padding: 1.25rem;
+	gap: 1rem 1.25rem;
+	padding: clamp(1.25rem, 1rem + 1vw, 1.5rem);
 	border: 1px solid var(--wp--preset--color--border);
 	background-color: var(--wp--preset--color--surface);
-}
-
-@container tala-text (width >= 34rem) {
-
-	.tala-author {
-		flex-direction: row;
-		gap: 1.25rem;
-		padding: 1.5rem;
-	}
 }
 
 .tala-author .wp-block-post-author__avatar {
@@ -1744,7 +1747,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 
 .tala-author .wp-block-post-author__content {
 	display: flex;
-	flex: 1 1 auto;
+	flex: 1 1 20rem;
 	flex-direction: column;
 	gap: 0.5rem;
 	min-inline-size: 0;
@@ -1820,9 +1823,17 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	letter-spacing: normal;
 }
 
-/* The comment form ends at its button; the paragraph margin under it would add to the footer's space. */
+/* The comment form ends at its button; the paragraph margin under it would add to the footer's space.
+   When the text is large, the button's label wraps between words and its side padding gives way
+   (to 8% of the form's width), rather than push it out of the window. */
 .wp-block-post-comments-form .form-submit {
 	margin-block-end: 0;
+}
+
+.wp-block-post-comments-form input[type="submit"] {
+	max-inline-size: 100%;
+	padding-inline: min(calc(1.333em + 2px), 8%);
+	white-space: normal;
 }
 
 .wp-block-post-comments-form label {
@@ -2028,9 +2039,24 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	min-block-size: var(--tala-control);
 }
 
+/* The field and its button wrap onto two lines when the text is large (200% on a phone), rather
+   than push the button out of the window. */
+.tala-intro .wp-block-search__inside-wrapper,
+.tala-status .wp-block-search__inside-wrapper {
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.tala-intro .wp-block-search__input,
+.tala-status .wp-block-search__input {
+	flex: 1 1 8rem;
+	min-inline-size: 0;
+}
+
 .tala-intro .wp-block-search__button,
 .tala-status .wp-block-search__button {
-	margin-inline-start: 0.5rem;
+	max-inline-size: 100%;
+	margin-inline-start: 0;
 	padding-block: 0;
 }
 

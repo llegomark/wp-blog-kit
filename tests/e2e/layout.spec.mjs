@@ -262,6 +262,87 @@ test.describe( 'the text column, desktop', () => {
 } );
 
 /**
+ * Reflow with the text at 200% (the browser's text size, as the root font size): on a 360 and a 320
+ * px phone no page scrolls sideways, and nothing sticks out of the window: the in-page search form
+ * (home, search results, the 404 page) and the comment form's button wrap.
+ */
+test.describe( 'text at 200%', () => {
+	for ( const width of [ 360, 320 ] ) {
+		test( `${ width } px: nothing wider than the window`, async ( { page } ) => {
+			await page.setViewportSize( { width, height: 800 } );
+			for ( const path of [ pages.home, pages.search, pages.notFound, pages.withComments ] ) {
+				await page.goto( path );
+				// At the usual text size the search field and its button share a row.
+				const row = await page.evaluate( () => {
+					const [ field, button ] = [ 'main .wp-block-search__input', 'main .wp-block-search__button' ].map( ( s ) => document.querySelector( s )?.getBoundingClientRect() );
+					return ! field || Math.abs( field.top - button.top ) < 1;
+				} );
+				expect( row, `${ path }: field and button on one row at 100%` ).toBe( true );
+				await page.addStyleTag( { content: 'html { font-size: 200% !important; }' } );
+				const overflow = await page.evaluate( () => {
+					const edge = document.documentElement.clientWidth;
+					// Boxes past the window's edge, outside boxes that scroll or clip on their own (a wide table).
+					const clipped = ( el ) => {
+						for ( let up = el.parentElement; up && up !== document.body; up = up.parentElement ) {
+							if ( 'visible' !== getComputedStyle( up ).overflowX ) {
+								return true;
+							}
+						}
+						return false;
+					};
+					const out = [ ...document.querySelectorAll( 'main *, footer form *' ) ]
+						.filter( ( el ) => el.getClientRects().length && el.getBoundingClientRect().right > edge + 0.5 && ! clipped( el ) )
+						.map( ( el ) => `${ el.tagName.toLowerCase() }.${ [ ...el.classList ].join( '.' ) } +${ Math.round( el.getBoundingClientRect().right - edge ) }` );
+					// The comment form's button: each word of its label fits inside its padding.
+					const submit = document.querySelector( 'main #commentform input[type="submit"]' );
+					const tight = [];
+					if ( submit ) {
+						const style = getComputedStyle( submit );
+						const text = document.createElement( 'canvas' ).getContext( '2d' );
+						text.font = `${ style.fontWeight } ${ style.fontSize } ${ style.fontFamily }`;
+						const room = submit.clientWidth - parseFloat( style.paddingLeft ) - parseFloat( style.paddingRight );
+						tight.push( ...submit.value.split( /\s+/ ).filter( ( word ) => text.measureText( word ).width > room ) );
+					}
+					return { scroll: document.documentElement.scrollWidth - edge, out, tight, form: !! document.querySelector( 'main .wp-block-search__input, main #commentform' ) };
+				} );
+				expect( overflow.form, `${ path }: has its form` ).toBe( true );
+				expect( overflow.out, `${ path }: past the window` ).toEqual( [] );
+				expect( overflow.scroll, `${ path }: sideways scrolling` ).toBe( 0 );
+				expect( overflow.tight, `${ path }: words of the comment button broken` ).toEqual( [] );
+			}
+		} );
+	}
+} );
+
+/**
+ * The author box: the photo beside the name and biography on a desktop, above them on a phone,
+ * laid out by wrapping, without making the text column a size container (which would wrap every
+ * ad slot in it too).
+ */
+test.describe( 'the author box', () => {
+	for ( const [ width, beside ] of [ [ DESKTOP.viewport.width, true ], [ 320, false ] ] ) {
+		test( `${ width } px: the photo ${ beside ? 'beside' : 'above' } the name; the text column is no size container`, async ( { page } ) => {
+			await page.setViewportSize( { width, height: 900 } );
+			await page.goto( pages.article );
+			const box = await page.evaluate( () => {
+				const rect = ( s ) => document.querySelector( `main .wp-block-post-author ${ s }` ).getBoundingClientRect();
+				const card = document.querySelector( 'main .wp-block-post-author' ).getBoundingClientRect();
+				const [ photo, content ] = [ rect( '.wp-block-post-author__avatar' ), rect( '.wp-block-post-author__content' ) ];
+				return {
+					containers: [ ...document.querySelectorAll( 'main *' ) ].filter( ( el ) => 'normal' !== getComputedStyle( el ).containerType && el.contains( document.querySelector( 'main .wp-block-post-content' ) ) ).map( ( el ) => el.className ),
+					besideTop: Math.abs( content.top - photo.top ) < 1 && content.left >= photo.right,
+					below: content.top >= photo.bottom,
+					inside: content.right <= card.right && photo.right <= card.right,
+				};
+			} );
+			expect( box.containers, 'No size container around the article\'s text' ).toEqual( [] );
+			expect( box.inside ).toBe( true );
+			expect( beside ? box.besideTop : box.below ).toBe( true );
+		} );
+	}
+} );
+
+/**
  * The footer slab: the site's menu as columns of links on the cobalt slab, and the site title as a
  * giant outlined wordmark that spans the rail whatever its length, never widening the page.
  */
@@ -379,12 +460,12 @@ test.describe( 'the footer', () => {
 		} );
 
 	/**
-	 * Every column on one row, each 1fr, and the brand cell 2fr.
+	 * Every column on one row, each 1fr, and the brand cell 2fr beside them (one or two columns).
 	 *
 	 * @param {Object} footer What cells() measured.
 	 * @param {number} count  Columns expected.
 	 */
-	const oneRow = ( footer, count ) => {
+	const beside = ( footer, count ) => {
 		expect( footer.columns, 'Columns' ).toHaveLength( count );
 		for ( const column of footer.columns ) {
 			expect( column.top, `${ column.heading || 'last column' }: on the brand cell's row` ).toBeCloseTo( footer.brand.top, 0 );
@@ -395,28 +476,161 @@ test.describe( 'the footer', () => {
 		expect( footer.brand.width + ( count * footer.columns[ 0 ].width ) + count ).toBeCloseTo( footer.rail, 0 );
 	};
 
-	test( 'desktop: the menu\'s columns on one row beside the brand cell, 2fr to each column\'s 1fr', async ( { page } ) => {
+	/**
+	 * Three columns or more: the brand cell on a row of its own across the rail, the columns on one
+	 * row below it, sharing the whole rail equally.
+	 *
+	 * @param {Object} footer What cells() measured.
+	 * @param {number} count  Columns expected.
+	 */
+	const stacked = ( footer, count ) => {
+		expect( footer.columns, 'Columns' ).toHaveLength( count );
+		expect( footer.brand.width, 'The brand cell spans the rail' ).toBeCloseTo( footer.rail, 0 );
+		for ( const column of footer.columns ) {
+			expect( column.top, `${ column.heading || 'last column' }: below the brand cell` ).toBeGreaterThanOrEqual( footer.brand.bottom );
+			expect( column.top, 'One row' ).toBeCloseTo( footer.columns[ 0 ].top, 0 );
+			expect( column.width ).toBeCloseTo( footer.columns[ 0 ].width, 0 );
+		}
+		// The columns fill the rail: columns and the 1 px hairlines between them.
+		expect( ( count * footer.columns[ 0 ].width ) + count - 1 ).toBeCloseTo( footer.rail, 0 );
+	};
+
+	/**
+	 * Every word of the menu (headings, links, third-level links) against its column: on one line
+	 * (no break inside a word) and inside the column's content box.
+	 *
+	 * @param {import('@playwright/test').Page} page Page.
+	 * @return {Promise<Object>} Words checked, and those that don't fit.
+	 */
+	const words = ( page ) =>
+		page.evaluate( () => {
+			const misfits = [];
+			let checked = 0;
+			for ( const cell of document.querySelectorAll( 'footer .tala-footer-menu .wp-block-navigation__container > li' ) ) {
+				const style = getComputedStyle( cell );
+				const outer = cell.getBoundingClientRect();
+				const left = outer.left + parseFloat( style.borderLeftWidth ) + parseFloat( style.paddingLeft );
+				const right = outer.right - parseFloat( style.borderRightWidth ) - parseFloat( style.paddingRight );
+				const walker = document.createTreeWalker( cell, NodeFilter.SHOW_TEXT );
+				for ( let node = walker.nextNode(); node; node = walker.nextNode() ) {
+					for ( const word of node.data.matchAll( /\S+/g ) ) {
+						const range = document.createRange();
+						range.setStart( node, word.index );
+						range.setEnd( node, word.index + word[ 0 ].length );
+						const lines = [ ...range.getClientRects() ].filter( ( r ) => r.width > 0 );
+						++checked;
+						if ( 1 !== lines.length || lines[ 0 ].left < left - 0.5 || lines[ 0 ].right > right + 0.5 ) {
+							misfits.push( { word: word[ 0 ], lines: lines.length, width: Math.round( range.getBoundingClientRect().width ), room: Math.round( right - left ) } );
+						}
+					}
+				}
+			}
+			return { checked, misfits };
+		} );
+
+	/**
+	 * A menu link or submenu in block markup.
+	 *
+	 * @param {string}   label    Label.
+	 * @param {string[]} children Its submenu's markup; none for a link.
+	 * @return {string} Markup.
+	 */
+	const item = ( label, children = [] ) => {
+		const attrs = JSON.stringify( { label, url: `/?s=${ encodeURIComponent( label ) }`, kind: 'custom' } );
+		return children.length ? `<!-- wp:navigation-submenu ${ attrs } -->${ children.join( '' ) }<!-- /wp:navigation-submenu -->` : `<!-- wp:navigation-link ${ attrs } /-->`;
+	};
+
+	/**
+	 * Publishes a menu (the newest is the one the footer uses) and returns its ID.
+	 *
+	 * @param {string}   name  Title.
+	 * @param {string[]} items Markup of its items.
+	 * @return {string} ID.
+	 */
+	const publishMenu = ( name, items ) => wp( 'post', 'create', '--post_type=wp_navigation', '--post_status=publish', `--post_title=${ name }`, `--post_content=${ items.join( '' ) }`, '--porcelain' );
+
+	test( 'desktop: one or two columns beside the brand cell, 2fr to each column\'s 1fr; three or more on a row of their own below it', async ( { page } ) => {
 		// Four columns (a newer menu is the one used): three with submenus, then the gathered items.
-		const content =
-			'<!-- wp:navigation-submenu {"label":"Guides","url":"/category/classroom-guides/","kind":"custom"} --><!-- wp:navigation-link {"label":"Classroom guides","url":"/category/classroom-guides/","kind":"custom"} /--><!-- /wp:navigation-submenu -->' +
-			'<!-- wp:navigation-submenu {"label":"Topics","url":"/tag/teaching/","kind":"custom"} --><!-- wp:navigation-link {"label":"Teaching","url":"/tag/teaching/","kind":"custom"} /--><!-- /wp:navigation-submenu -->' +
-			'<!-- wp:navigation-submenu {"label":"About","url":"/about/","kind":"custom"} --><!-- wp:navigation-link {"label":"Contact","url":"/about/#contact","kind":"custom"} /--><!-- /wp:navigation-submenu -->' +
-			'<!-- wp:navigation-link {"label":"Hello","url":"/hello-world/","kind":"custom"} /-->';
-		const four = wp( 'post', 'create', '--post_type=wp_navigation', '--post_status=publish', '--post_title=Four columns', `--post_content=${ content }`, '--porcelain' );
+		const four = publishMenu( 'Four columns', [
+			item( 'Guides', [ item( 'Classroom guides' ) ] ),
+			item( 'Topics', [ item( 'Teaching' ) ] ),
+			item( 'About', [ item( 'Contact' ) ] ),
+			item( 'Hello' ),
+		] );
 		try {
 			await page.setViewportSize( DESKTOP.viewport );
 			await page.goto( pages.article );
-			oneRow( await cells( page ), 4 );
+			stacked( await cells( page ), 4 );
 		} finally {
 			wp( 'post', 'delete', four, '--force' );
+		}
+		// Two columns: one submenu and the gathered items, beside the brand cell.
+		const two = publishMenu( 'Two columns', [ item( 'Guides', [ item( 'Classroom guides' ) ] ), item( 'Hello' ) ] );
+		try {
+			for ( const width of [ 820, DESKTOP.viewport.width ] ) {
+				await page.setViewportSize( { width, height: 900 } );
+				await page.goto( pages.article );
+				beside( await cells( page ), 2 );
+			}
+		} finally {
+			wp( 'post', 'delete', two, '--force' );
 		}
 		// Three columns (Guides, About, the gathered items) at 820 px: 48rem of footer and more.
 		await page.setViewportSize( { width: 820, height: 900 } );
 		await page.goto( pages.article );
 		const three = await cells( page );
-		oneRow( three, 3 );
+		stacked( three, 3 );
 		expect( three.columns.map( ( c ) => c.heading ) ).toEqual( [ 'Guides', 'About', '' ] );
 	} );
+
+	// Menus shaped like two real sites' (their labels as test data): five columns with short
+	// columns and long one-word labels, and three columns with a third level and long words in it.
+	const shapes = {
+		'five columns': [
+			item( 'Grades', [ 'Kindergarten', ...Array.from( { length: 12 }, ( _, i ) => `Grade ${ i + 1 }` ) ].map( ( label ) => item( label ) ) ),
+			item( 'Issuances', [ item( 'DepEd Orders' ), item( 'DepEd Memoranda' ) ] ),
+			item( 'Resources', [ 'Self-Learning Modules', 'Homeroom Guidance Modules', 'DepEd Online Application', 'Position Description Form', 'Principals’ Test', 'Directory' ].map( ( label ) => item( label ) ) ),
+			item( 'About', [ item( 'Homework Help' ), item( 'Suggest a Resource' ), item( 'Facebook Group' ) ] ),
+			item( 'Search' ),
+		],
+		'three columns with a third level': [
+			item( 'DepEd Resources', [
+				item( 'MELCs', [ item( 'Most Essential Learning Competencies (MELCs)' ) ] ),
+				item( 'Issuances', [ item( 'DepEd Order' ), item( 'DepEd Memoranda' ) ] ),
+				item( 'Scholarships' ),
+				item( 'DepEd Hiring Process' ),
+				item( 'Examinations', [ item( 'Principals’ Test' ), item( 'Licensure Examination for Teachers' ), item( 'Schools Division Superintendents Examination' ) ] ),
+				item( 'Buhay Guro' ),
+				item( 'Teaching & Education' ),
+			] ),
+			item( 'About', [ 'TeacherPH Team', 'Our Story', 'Contribute', 'Our Services', 'Advertise With Us', 'Feedback Form', 'Contact Us', 'Suggest a Resource', 'Facebook Group' ].map( ( label ) => item( label ) ) ),
+			item( 'Search' ),
+		],
+	};
+	for ( const [ shape, items ] of Object.entries( shapes ) ) {
+		test( `desktop: no word breaks inside its column, ${ shape }`, async ( { page } ) => {
+			const id = publishMenu( `Footer ${ shape }`, items );
+			try {
+				// 800 px: under 48rem of footer, so two up; 810 px: about the narrowest row of columns (48rem of footer).
+				for ( const width of [ 800, 810, DESKTOP.viewport.width ] ) {
+					await page.setViewportSize( { width, height: 900 } );
+					await page.goto( pages.article );
+					const found = await words( page );
+					expect( found.checked, `${ width } px: words checked` ).toBeGreaterThan( 20 );
+					expect( found.misfits, `${ width } px: words broken or wider than their column` ).toEqual( [] );
+					expect( await page.evaluate( () => document.documentElement.scrollWidth - document.documentElement.clientWidth ), 'No sideways scrolling' ).toBe( 0 );
+				}
+				// From 48rem of footer: the brand cell on its own row, the columns sharing the rail.
+				for ( const width of [ 810, DESKTOP.viewport.width ] ) {
+					await page.setViewportSize( { width, height: 900 } );
+					await page.goto( pages.article );
+					stacked( await cells( page ), items.length );
+				}
+			} finally {
+				wp( 'post', 'delete', id, '--force' );
+			}
+		} );
+	}
 
 	for ( const width of [ 320, 390 ] ) {
 		test.describe( `phone, ${ width } px`, () => {

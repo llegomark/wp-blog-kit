@@ -166,7 +166,9 @@ Headings are never bold (300–450; 500 at most on small labels). theme.json fon
     label as the heading (h2-sized 1.1875rem, 400) and its links below (15 px, 40 px tall); top-level
     items without a submenu gather in a last column. Links underlined at white 45%, solid white on hover.
   - Phone: two columns (brand cell spanning both); from 48rem of footer width the brand cell takes 2fr
-    and the columns share the rest.
+    and the columns share the rest when the menu has one or two columns; with three or more, the brand
+    cell takes a row of its own and the columns share the whole rail below it (final review M1: at 2fr
+    beside five columns, words like "Kindergarten" broke mid-word).
 - Bottom bar: rule above, 0.75rem uppercase, 0.12em tracking, 80% opacity: "© {year} {site title}" left,
   the tagline right.
 - Wordmark band (`aria-hidden="true"`): NASH's -45° hatch, the site title in capitals in Inter 300, outlined

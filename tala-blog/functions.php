@@ -480,25 +480,20 @@ function tala_blog_reading_time( $source_args, $block ) {
 }
 
 /**
- * Minutes it takes to read a post: its words as readers see them (the blocks rendered, the markup
- * stripped, split at whitespace, so "niño" is one word), at 220 words a minute, rounded up, and at
- * least one. A reading time inside the post's own text doesn't count that text again.
+ * Minutes it takes to read a post: the words of its text (the markup, the block delimiters, which
+ * are HTML comments, and the shortcodes stripped; split at whitespace, so "niño" is one word), at
+ * 220 words a minute, rounded up, and at least one. The post is not rendered for this: rendering it
+ * a second time would run its dynamic blocks again (a form would count a second view).
  *
  * @param WP_Post|int $post Post.
  * @return int
  */
 function tala_blog_reading_minutes( $post ): int {
-	static $counting = array();
-	$post            = get_post( $post );
-	if ( ! $post || isset( $counting[ $post->ID ] ) ) {
+	$post = get_post( $post );
+	if ( ! $post ) {
 		return 1;
 	}
-	$counting[ $post->ID ] = true;
-	try {
-		$text = wp_strip_all_tags( do_blocks( $post->post_content ) );
-	} finally {
-		unset( $counting[ $post->ID ] );
-	}
+	$text  = wp_strip_all_tags( strip_shortcodes( $post->post_content ) );
 	$words = preg_split( '/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY );
 	return max( 1, (int) ceil( count( is_array( $words ) ? $words : array() ) / 220 ) );
 }
@@ -610,7 +605,9 @@ add_filter( 'render_block_core/group', 'tala_blog_footer_cells', 10, 2 );
 /**
  * The footer's cells (the Group with the class "tala-cells") get the number of the menu's columns
  * (--tala-columns, from tala_blog_footer_columns()), so from 48rem of footer they lay out as one
- * row: the brand cell 2fr and each column 1fr.
+ * row: the brand cell 2fr and each column 1fr. With three columns or more they also get the class
+ * tala-cells--stacked: the brand cell then takes a row of its own and the columns share the rail
+ * below it, so their words keep room (a class, as Firefox has no style queries on custom properties).
  *
  * @param string               $html  Rendered Group.
  * @param array<string, mixed> $block Parsed block.
@@ -630,6 +627,9 @@ function tala_blog_footer_cells( $html, $block ) {
 			$tags->seek( 'cells' );
 			$style = trim( (string) $tags->get_attribute( 'style' ) );
 			$tags->set_attribute( 'style', ( '' === $style ? '' : rtrim( $style, ';' ) . ';' ) . '--tala-columns:' . $columns[1] );
+			if ( (int) $columns[1] >= 3 ) {
+				$tags->add_class( 'tala-cells--stacked' );
+			}
 			break;
 		}
 	}
@@ -649,10 +649,14 @@ add_action( 'wp_enqueue_scripts', 'tala_blog_styles', 20 );
  * Inlines the theme CSS after the global styles, cheaper than another request. The comments that
  * explain it in assets/theme.css (a quarter of the file) and the indentation stay out of the page:
  * about 48 KB is printed, under 10 KB once the page is compressed. The editor reads the file as it is.
+ *
+ * The comments are cut by a plain pattern, from each slash-star to the next star-slash, so
+ * theme.css must never have a slash-star inside a string or url(). If PCRE fails (its backtrack
+ * limit, say), the file is inlined as it is: a page without it would be unstyled.
  */
 function tala_blog_styles(): void {
 	$css = (string) file_get_contents( get_theme_file_path( 'assets/theme.css' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
-	$css = (string) preg_replace( array( '#/\*.*?\*/#s', '/\n\s+/' ), array( '', "\n" ), $css );
+	$css = preg_replace( array( '#/\*.*?\*/#s', '/\n\s+/' ), array( '', "\n" ), $css ) ?? $css;
 	wp_register_style( 'tala-blog', false, array(), wp_get_theme()->get( 'Version' ) );
 	wp_enqueue_style( 'tala-blog' );
 	wp_add_inline_style( 'tala-blog', trim( $css ) );
@@ -1249,7 +1253,7 @@ function tala_blog_contents_box( $sections ) {
 		. sprintf( $svg, 'tala-contents-icon', '<path d="M3 6h.01M3 12h.01M3 18h.01M8 6h13M8 12h13M8 18h13"/>' )
 		. '<span class="tala-contents-label"><span class="tala-contents-title">' . esc_html( $title ) . '</span> '
 		. '<span class="tala-contents-count">' . esc_html( $count ) . '</span></span>'
-		. sprintf( $svg, 'tala-contents-chevron', '<path d="m6 9 6 6 6-6"/>' )
+		. sprintf( $svg, 'tala-contents-chevron', '<polyline points="5 8.5 12 15.5 19 8.5"/>' )
 		. '</summary><nav aria-label="' . esc_attr( $title ) . '"><ol>' . $items . '</ol></nav></details>';
 }
 

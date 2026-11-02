@@ -95,7 +95,7 @@ test( '"On this page": after the opening, closed until opened, its links jump to
 	await expect( page.locator( 'details.tala-contents' ), 'Three sections by default' ).toHaveCount( 0 );
 } );
 
-test( 'the article\'s text: h2 under a rule, blockquote on wash with a 2px cobalt rule, cobalt links', async ( { page } ) => {
+test( 'the article\'s text: h2 under a rule, blockquote on a cobalt wash with a 2px cobalt rule, cobalt links', async ( { page } ) => {
 	await page.goto( pages.article );
 	const text = page.locator( '.wp-block-post-content' );
 	const style = ( locator, props ) => locator.evaluate( ( el, names ) => names.map( ( name ) => getComputedStyle( el )[ name ] ).join( ' | ' ), props );
@@ -105,7 +105,34 @@ test( 'the article\'s text: h2 under a rule, blockquote on wash with a 2px cobal
 	expect( await style( h3, [ 'fontSize', 'fontWeight' ] ) ).toBe( '19px | 450' );
 	const quote = text.locator( 'blockquote' ).first();
 	expect( await quote.evaluate( ( el ) => el.getBoundingClientRect().width === el.parentElement.getBoundingClientRect().width ), 'The width of the text' ).toBe( true );
-	expect( await style( quote, [ 'borderLeftWidth', 'borderLeftStyle', 'borderLeftColor', 'backgroundColor', 'borderTopLeftRadius' ] ) ).toBe( '2px | solid | rgb(19, 72, 220) | rgb(235, 235, 236) | 0px' );
+	// The wash is the accent at 7%, in light and dark, and the quote's text keeps 4.5:1 on it.
+	expect( await style( quote, [ 'borderLeftWidth', 'borderLeftStyle', 'borderLeftColor', 'backgroundColor', 'borderTopLeftRadius' ] ) ).toBe( '2px | solid | rgb(19, 72, 220) | color(srgb 0.0745098 0.282353 0.862745 / 0.07) | 0px' );
+	for ( const colorScheme of [ 'light', 'dark' ] ) {
+		await page.emulateMedia( { colorScheme } );
+		const wash = await quote.evaluate( ( el ) => {
+			// The wash painted on the page's paper, read back as a pixel; the quote's text colour likewise.
+			const paint = ( ...colours ) => {
+				const canvas = document.createElement( 'canvas' ).getContext( '2d' );
+				for ( const colour of colours ) {
+					canvas.fillStyle = colour;
+					canvas.fillRect( 0, 0, 1, 1 );
+				}
+				return [ ...canvas.getImageData( 0, 0, 1, 1 ).data ].slice( 0, 3 );
+			};
+			const luminance = ( rgb ) => {
+				const [ r, g, b ] = rgb.map( ( v ) => ( v / 255 <= 0.04045 ? v / 255 / 12.92 : ( ( ( v / 255 ) + 0.055 ) / 1.055 ) ** 2.4 ) );
+				return ( 0.2126 * r ) + ( 0.7152 * g ) + ( 0.0722 * b );
+			};
+			const accent = getComputedStyle( document.body ).getPropertyValue( '--wp--preset--color--accent' ).trim();
+			const background = paint( getComputedStyle( document.body ).backgroundColor, getComputedStyle( el ).backgroundColor );
+			const expected = paint( getComputedStyle( document.body ).backgroundColor, `color-mix(in srgb, ${ accent } 7%, transparent)` );
+			const [ hi, lo ] = [ luminance( background ), luminance( paint( getComputedStyle( el.querySelector( 'p' ) ?? el ).color ) ) ].sort( ( a, b ) => b - a );
+			return { background, expected, contrast: ( hi + 0.05 ) / ( lo + 0.05 ) };
+		} );
+		expect( wash.background, `${ colorScheme }: the accent at 7%` ).toEqual( wash.expected );
+		expect( wash.contrast, `${ colorScheme }: text on the wash` ).toBeGreaterThanOrEqual( 4.5 );
+	}
+	await page.emulateMedia( { colorScheme: 'light' } );
 	expect( await style( text.locator( 'ul' ).first(), [ 'listStyleType' ] ) ).toBe( 'square' );
 	expect( await style( text.locator( 'table' ).first(), [ 'fontVariantNumeric' ] ) ).toBe( 'tabular-nums' );
 	expect( await style( text.locator( '.wp-block-table' ).first(), [ 'overflowX', 'borderTopWidth', 'borderTopStyle' ] ) ).toBe( 'auto | 1px | solid' );

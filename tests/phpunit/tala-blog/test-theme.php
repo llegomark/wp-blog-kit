@@ -358,9 +358,10 @@ HTML;
 	}
 
 	/**
-	 * Reading time: the words of the article as readers see it (its blocks rendered, the markup
+	 * Reading time: the words of the article's text (the markup, block delimiters and shortcodes
 	 * stripped), at 220 a minute, rounded up, at least a minute. Words are split at whitespace, so a
-	 * Filipino word with "ñ" is one word. The tala-blog/reading-time binding writes it as "N min read".
+	 * Filipino word with "ñ" is one word. The post isn't rendered for it (a form in it would count a
+	 * second view). The tala-blog/reading-time binding writes it as "N min read".
 	 */
 	public function test_reading_minutes(): void {
 		$paragraph = static fn( string $words ): string => "<!-- wp:paragraph -->\n<p>" . $words . "</p>\n<!-- /wp:paragraph -->";
@@ -382,12 +383,25 @@ HTML;
 		$bound = '<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"tala-blog/reading-time"}}}} --><p></p><!-- /wp:paragraph -->';
 		$this->assertMatchesRegularExpression( '#^<p[^>]*>3 min read</p>$#', trim( $this->render( $bound, $post ) ) );
 
-		// A reading time inside the post's own text doesn't count the text again and again: the
-		// bound paragraph measures the post being shown, this one.
-		$loop            = $this->publish_post( array( 'post_content' => $paragraph( $words( 5 ) ) . $bound ) );
-		$GLOBALS['post'] = get_post( $loop );
-		setup_postdata( $GLOBALS['post'] );
-		$this->assertSame( 1, tala_blog_reading_minutes( $loop ) );
+		// The post isn't rendered to count it: its dynamic blocks don't run, its shortcodes aren't words.
+		$renders = 0;
+		register_block_type(
+			'tala-test/counter',
+			array(
+				'render_callback' => static function () use ( &$renders ): string {
+					++$renders;
+					return '<p>' . str_repeat( 'salita ', 500 ) . '</p>';
+				},
+			)
+		);
+		try {
+			$dynamic = $this->publish_post( array( 'post_content' => $paragraph( $words( 5 ) ) . '<!-- wp:tala-test/counter /-->' . $bound . '[gallery ids="1,2,3"]' ) );
+			$this->assertSame( 1, tala_blog_reading_minutes( $dynamic ) );
+			$this->assertSame( 0, $renders, 'Not rendered' );
+			$this->assertSame( 1, tala_blog_reading_minutes( $this->publish_post( array( 'post_content' => $paragraph( $words( 219 ) . ' [gallery ids="1,2,3"]' ) ) ) ), 'A shortcode is no words' );
+		} finally {
+			unregister_block_type( 'tala-test/counter' );
+		}
 
 		// A post behind a password has no reading time until the password is entered.
 		$locked = $this->publish_post(
@@ -889,6 +903,7 @@ HTML;
 		$this->assertMatchesRegularExpression( '#^<footer[^>]*>\s*<div class="wp-block-group tala-slab[ "]#', $footer );
 		$this->assertMatchesRegularExpression( '/<div class="wp-block-group tala-rail[ "]/', $footer );
 		$this->assertMatchesRegularExpression( '/<div (?=[^>]*class="wp-block-group tala-cells[ "])[^>]*style="--tala-columns:2"/', $footer, 'The cells know the columns' );
+		$this->assertStringNotContainsString( 'tala-cells--stacked', $footer, 'Two columns sit beside the brand cell' );
 		$this->assertSame( 1, preg_match_all( '/<nav [^>]*>/', $footer, $navs ), 'One menu' );
 		$this->assertStringContainsString( 'tala-footer-menu', $navs[0][0] );
 		// Core numbers a name it has already used on the page ("Footer 2"), as each test renders the footer again.
@@ -928,6 +943,22 @@ HTML;
 		$this->assertMatchesRegularExpression( '/<nav [^>]*--tala-columns:1[;"]/', $footer );
 		$this->assertMatchesRegularExpression( '/<div (?=[^>]*class="wp-block-group tala-cells[ "])[^>]*style="--tala-columns:1"/', $footer );
 		$this->assertStringNotContainsString( 'wp-block-page-list', $footer );
+		$this->assertStringNotContainsString( 'tala-cells--stacked', $footer );
+
+		// Three columns or more: the brand cell takes a row of its own (a class, for the CSS).
+		$submenu = static fn( string $label ): string => '<!-- wp:navigation-submenu {"label":"' . $label . '","url":"/' . strtolower( $label ) . '/","kind":"custom"} -->'
+			. '<!-- wp:navigation-link {"label":"' . $label . ' 1","url":"/' . strtolower( $label ) . '-1/","kind":"custom"} /-->'
+			. '<!-- /wp:navigation-submenu -->';
+		self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_navigation',
+				'post_status'  => 'publish',
+				'post_title'   => 'Three columns',
+				'post_content' => $submenu( 'Grades' ) . $submenu( 'Issuances' ) . '<!-- wp:navigation-link {"label":"Search","url":"/search/","kind":"custom"} /-->',
+			)
+		);
+		$footer  = $this->footer();
+		$this->assertMatchesRegularExpression( '/<div (?=[^>]*class="wp-block-group tala-cells[ "][^"]*\btala-cells--stacked\b)[^>]*style="--tala-columns:3"/', $footer );
 	}
 
 	/**
@@ -1722,6 +1753,35 @@ HTML;
 		$this->assertStringContainsString( 'box-shadow: 6px 6px 0 color-mix(in srgb, var(--wp--preset--color--accent) 10%, transparent);', $css, 'Rules arrive as written' );
 		$rules = (string) preg_replace( '#/\*.*?\*/#s', '', $file );
 		$this->assertSame( substr_count( $rules, '{' ), substr_count( $css, '{' ), 'Every rule arrives' );
+	}
+
+	/**
+	 * If PCRE fails while stripping the comments (its backtrack limit, say), the CSS is inlined as
+	 * the file has it, never left out: a page without it would be unstyled.
+	 */
+	public function test_inline_css_survives_a_pcre_failure(): void {
+		$saved                = $GLOBALS['wp_styles'] ?? null;
+		$GLOBALS['wp_styles'] = new WP_Styles();
+		$limits               = array(
+			'pcre.backtrack_limit' => ini_get( 'pcre.backtrack_limit' ),
+			'pcre.jit'             => ini_get( 'pcre.jit' ),
+		);
+		ini_set( 'pcre.jit', '0' ); // phpcs:ignore WordPress.PHP.IniSet.Risky -- restored below; the test needs PCRE to fail.
+		ini_set( 'pcre.backtrack_limit', '1' ); // phpcs:ignore WordPress.PHP.IniSet.Risky,WordPress.PHP.IniSet.pcre_backtrack_limit_Disallowed -- restored below.
+		try {
+			tala_blog_styles();
+			$failed = preg_last_error();
+			$data   = wp_styles()->get_data( 'tala-blog', 'after' );
+			$css    = implode( "\n", is_array( $data ) ? $data : array() );
+		} finally {
+			foreach ( $limits as $name => $value ) {
+				ini_set( $name, (string) $value ); // phpcs:ignore WordPress.PHP.IniSet.Risky,WordPress.PHP.IniSet.pcre_backtrack_limit_Disallowed -- restoring.
+			}
+			$GLOBALS['wp_styles'] = $saved;
+		}
+		$this->assertSame( PREG_BACKTRACK_LIMIT_ERROR, $failed, 'PCRE failed' );
+		$file = (string) file_get_contents( get_theme_file_path( 'assets/theme.css' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
+		$this->assertSame( trim( $file ), $css, 'The file as it is' );
 	}
 
 	/**

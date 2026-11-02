@@ -214,7 +214,7 @@
 			},
 			"core/quote": {
 				"border": { "left": { "color": "var:preset|color|accent", "style": "solid", "width": "2px" } },
-				"color": { "background": "var:preset|color|wash" },
+				"color": { "background": "color-mix(in srgb, var(--wp--preset--color--accent) 7%, transparent)" },
 				"spacing": { "padding": { "top": "0.75rem", "right": "1rem", "bottom": "0.75rem", "left": "1rem" } }
 			},
 			"core/code": {

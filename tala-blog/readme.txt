@@ -57,7 +57,7 @@ In Appearance → Editor → Patterns → Header, select the logo placeholder be
 
 = Can I change the colours or the font? =
 
-The theme has one look on purpose: the colour presets and serif presets of version 1 are gone. Appearance → Editor → Styles still changes colours and fonts for a site, as with any block theme.
+The theme has one look on purpose: version 2 has no colour or serif presets. Appearance → Editor → Styles still changes colours and fonts for a site, as with any block theme. A preset picked in version 1 stays saved and overrides the new colours or Inter until the site's styles are reset in Appearance → Editor → Styles.
 
 = Does it work with Gravity Forms? =
 
@@ -189,7 +189,7 @@ With Orbital, the theme's colours replace the colours set in a form block's styl
 == Upgrade Notice ==
 
 = 2.0.0 =
-A new look. Sites that picked a 1.x colour or typography preset lose it. The Call to action and Footer note parts are empty until filled in the Site Editor. Templates or parts customized in the Site Editor keep their old markup until their customizations are cleared.
+A new look. A 1.x colour or typography preset you picked stays saved and overrides the new colours or Inter: reset Appearance → Editor → Styles. The Call to action and Footer note parts are empty until filled. Templates or parts customized in the Site Editor keep their old markup until cleared.
 
 == Copyright ==
 
