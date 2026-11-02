@@ -1250,7 +1250,7 @@ function tala_blog_contents_box( $sections ) {
 	);
 	$svg = '<svg class="%s" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">%s</svg>';
 	return '<details class="tala-contents"><summary>'
-		. sprintf( $svg, 'tala-contents-icon', '<path d="M3 6h.01M3 12h.01M3 18h.01M8 6h13M8 12h13M8 18h13"/>' )
+		. sprintf( $svg, 'tala-contents-icon', '<path d="M4 7h.5M4 12h.5M4 17h.5M9 7h11M9 12h11M9 17h7"/>' )
 		. '<span class="tala-contents-label"><span class="tala-contents-title">' . esc_html( $title ) . '</span> '
 		. '<span class="tala-contents-count">' . esc_html( $count ) . '</span></span>'
 		. sprintf( $svg, 'tala-contents-chevron', '<polyline points="5 8.5 12 15.5 19 8.5"/>' )

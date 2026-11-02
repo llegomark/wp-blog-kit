@@ -1824,8 +1824,8 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 }
 
 /* The comment form ends at its button; the paragraph margin under it would add to the footer's space.
-   When the text is large, the button's label wraps between words and its side padding gives way
-   (to 8% of the form's width), rather than push it out of the window. */
+   On a narrow form or with large text, the button's label wraps between words and its side padding
+   gives way (to 8% of the form's width), rather than push it out of the window. */
 .wp-block-post-comments-form .form-submit {
 	margin-block-end: 0;
 }
