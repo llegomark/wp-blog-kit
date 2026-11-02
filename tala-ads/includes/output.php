@@ -253,6 +253,57 @@ function tala_ads_innity_here() {
 		&& is_main_query() && get_the_ID() === get_queried_object_id() && ! post_password_required() && tala_ads_innity_allowed();
 }
 
+/**
+ * Whether Innity's in-image ads are kept off the page's images: when a Universal tag is set (the
+ * only zone that serves them), unless the "tala_ads_innity_in_image" filter returns true. Innity
+ * lays them over the lower part of a large image in the article, which on a scanned memo or an
+ * infographic covers its text.
+ *
+ * @return bool
+ */
+function tala_ads_innity_no_in_image() {
+	$settings = tala_ads_settings();
+	return ! is_admin() && '' !== $settings['innity_key'] && ( '' !== $settings['innity_desktop'] || '' !== $settings['innity_mobile'] )
+		&& ! apply_filters( 'tala_ads_innity_in_image', false );
+}
+
+add_filter( 'wp_content_img_tag', 'tala_ads_innity_content_image' );
+
+/**
+ * An image in a post or page's content, marked data-innity-allow-in-image="false", which both
+ * Innity's image finder and its in-image ads skip.
+ *
+ * @param mixed $image The image's tag (a string, unless another filter broke it).
+ * @return mixed
+ */
+function tala_ads_innity_content_image( $image ) {
+	if ( ! is_string( $image ) || ! tala_ads_innity_no_in_image() ) {
+		return $image;
+	}
+	$tag = new WP_HTML_Tag_Processor( $image );
+	if ( ! $tag->next_tag( array( 'tag_name' => 'img' ) ) ) {
+		return $image;
+	}
+	$tag->set_attribute( 'data-innity-allow-in-image', 'false' );
+	return $tag->get_updated_html();
+}
+
+add_filter( 'wp_get_attachment_image_attributes', 'tala_ads_innity_attachment_image' );
+
+/**
+ * The same mark on images WordPress prints from the media library outside the content: featured
+ * images, the site logo.
+ *
+ * @param mixed $attributes The image's attributes (an array, unless another filter broke it).
+ * @return mixed
+ */
+function tala_ads_innity_attachment_image( $attributes ) {
+	if ( is_array( $attributes ) && tala_ads_innity_no_in_image() ) {
+		$attributes['data-innity-allow-in-image'] = 'false';
+	}
+	return $attributes;
+}
+
 add_filter( 'the_content', 'tala_ads_innity_box', 20 );
 
 /**

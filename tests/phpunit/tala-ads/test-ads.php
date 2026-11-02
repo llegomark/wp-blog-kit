@@ -473,6 +473,28 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * With a Universal tag, the site's images carry data-innity-allow-in-image="false", which keeps
+	 * Innity's in-image ads off them: images in the content and those printed from the media library,
+	 * unless the tala_ads_innity_in_image filter allows them; nothing without a Universal tag.
+	 */
+	public function test_innity_in_image_off(): void {
+		$image = self::factory()->attachment->create_upload_object( DIR_TESTDATA . '/images/canola.jpg' );
+		$html  = '<p><img src="https://example.org/memo.jpg" width="800" height="1100" alt="A memo"></p>';
+
+		update_option( 'tala_ads', array_merge( self::ALL, array( 'innity_desktop' => '103008' ) ) );
+		$this->assertStringContainsString( 'data-innity-allow-in-image="false"', wp_filter_content_tags( $html ), 'An image in the content.' );
+		$this->assertStringContainsString( 'data-innity-allow-in-image="false"', wp_get_attachment_image( $image, 'full' ), 'A featured image or logo.' );
+
+		add_filter( 'tala_ads_innity_in_image', '__return_true' );
+		$this->assertStringNotContainsString( 'data-innity-allow-in-image', wp_filter_content_tags( $html ), 'Allowed by the filter.' );
+		remove_filter( 'tala_ads_innity_in_image', '__return_true' );
+
+		update_option( 'tala_ads', self::ALL );
+		$this->assertStringNotContainsString( 'data-innity-allow-in-image', wp_filter_content_tags( $html ), 'The box alone serves no in-image ads.' );
+		$this->assertStringNotContainsString( 'data-innity-allow-in-image', wp_get_attachment_image( $image, 'full' ) );
+	}
+
+	/**
 	 * No Innity on searches or on Google's results page: their addresses carry what readers typed,
 	 * and Innity's tags send the full address to its servers.
 	 */

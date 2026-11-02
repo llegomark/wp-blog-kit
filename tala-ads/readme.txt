@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.6.0
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -24,11 +24,12 @@ Tala Ads puts a site's ad and tracking code in one place, outside the theme, so 
   * A 300 × 250 box after the sixth paragraph of each post and page (after the text of a shorter one), centred, with its height kept free while the ad loads so the page doesn't move. With the zone's alternate ad set to "Blank Ad", the box closes when Innity has nothing sold for it, instead of showing Innity's own ad.
   * Universal tags, one for wide screens and one for phones. Innity picks the format. Its in-read ad goes after the fourth paragraph, two below the In-article ad, instead of after the second, where Innity would put it. The phones' tag also brings full-screen formats, which cover the page on top of AdSense's vignette and anchor ads; leave it empty to keep them off.
   * Innity's tags read no consent signal of their own and set an identifier cookie. With Google's messages on, Innity waits for Google's consent data and stays off where the GDPR applies. It also stays off searches and Google's results page, whose addresses carry what readers typed. The Universal tag loads once the page has.
+  * Innity's in-image ads, laid over the lower part of a large image, stay off: the site's images carry data-innity-allow-in-image="false", which Innity's image finder and its ads skip. On a scanned memo or an infographic they would cover its text.
 * **IDs, not code.** Each ID field keeps just the ID it asks for, even when the whole code is pasted, so nothing typed into those fields can put a script on the site.
 * **ads.txt check.** Settings → Ads says whether the site's ads.txt lists the publisher ID, without which AdSense may hold back ads.
 * **Any theme.** Every script goes through WordPress's script loader, which keeps each one to a single copy per page, and the boxes are added to the post's content. A theme only needs to call `wp_body_open()`, as WordPress asks themes to.
 
-Developers can keep ads off a page with the `tala_ads_show` filter (return false), choose which post types get the Innity box and in-read place with `tala_ads_post_types` (posts and pages by default), and which get the In-article ad with `tala_ads_in_article_post_types` (posts by default). `tala_ads_innity_paragraphs` (6) and `tala_ads_innity_in_read_paragraphs` (4) set how many paragraphs come before the Innity box and the in-read place.
+Developers can keep ads off a page with the `tala_ads_show` filter (return false), choose which post types get the Innity box and in-read place with `tala_ads_post_types` (posts and pages by default), and which get the In-article ad with `tala_ads_in_article_post_types` (posts by default). Return true from `tala_ads_innity_in_image` to allow Innity's in-image ads. `tala_ads_innity_paragraphs` (6) and `tala_ads_innity_in_read_paragraphs` (4) set how many paragraphs come before the Innity box and the in-read place.
 
 == Installation ==
 
@@ -68,6 +69,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, the In-article ad unit, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.7.0 =
+* New: with a Universal tag set, Innity's in-image ads stay off the site's images, which carry data-innity-allow-in-image="false": those in posts and pages and those printed from the media library, such as featured images. Innity's image finder and its in-image ads both skip them. The `tala_ads_innity_in_image` filter allows them again.
 
 = 1.6.0 =
 * Changed: with Google's messages on, Innity waits for Google's consent data and doesn't load where the GDPR applies; the box then closes. Innity's tags read no consent signal of their own, and set an identifier cookie (iUUID) that they share with partners.
