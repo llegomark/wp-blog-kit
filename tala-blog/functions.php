@@ -212,6 +212,32 @@ function tala_blog_styles(): void {
 	wp_add_inline_style( 'tala-blog', (string) $css );
 }
 
+add_action( 'gform_enqueue_scripts', 'tala_blog_gravity_forms', 1001 );
+
+/**
+ * Gravity Forms in the theme's colours, in light and dark mode: the rules for its Orbital theme and
+ * for its 2.5 theme go right after Gravity Forms' own stylesheet for that theme. So they load only on
+ * pages with such a form, in the order that lets them work. Gravity Forms enqueues its stylesheets on
+ * this hook, at priority 1000, for each form on the page.
+ */
+function tala_blog_gravity_forms(): void {
+	$sheets = array(
+		'assets/gravity-forms-orbital.css' => array( 'gravity_forms_orbital_theme', 'gravity_forms_theme_framework' ),
+		'assets/gravity-forms-2-5.css'     => array( 'gform_theme', 'gform_basic' ),
+	);
+	foreach ( $sheets as $file => $handles ) {
+		$handle = current( array_filter( $handles, static fn( $h ) => wp_style_is( $h, 'enqueued' ) ) );
+		if ( ! $handle ) {
+			continue;
+		}
+		$css   = (string) file_get_contents( get_theme_file_path( $file ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
+		$after = wp_styles()->get_data( $handle, 'after' );
+		if ( ! is_array( $after ) || ! in_array( $css, $after, true ) ) {
+			wp_add_inline_style( $handle, $css );
+		}
+	}
+}
+
 add_action( 'init', 'tala_blog_remove_emoji' );
 
 /**

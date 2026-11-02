@@ -937,4 +937,53 @@ HTML;
 		$this->assertEmpty( $manager->get_setting( 'tala_blog_page_numbers' )->default, 'Off by default.' );
 		$this->assertSame( 'checkbox', $manager->get_control( 'tala_blog_page_numbers' )->type );
 	}
+
+	/**
+	 * Gravity Forms: the theme's rules for each of its form themes follow Gravity Forms' own stylesheet
+	 * for that theme, once, and only when a form on the page uses it. Gravity Forms isn't installed in
+	 * the tests: its stylesheets are registered by their names, as Gravity Forms registers them.
+	 */
+	public function test_gravity_forms_styles_follow_its_stylesheets(): void {
+		$saved                = $GLOBALS['wp_styles'] ?? null;
+		$GLOBALS['wp_styles'] = new WP_Styles();
+		try {
+			foreach ( array( 'gravity_forms_theme_framework', 'gravity_forms_orbital_theme', 'gform_basic', 'gform_theme' ) as $handle ) {
+				wp_register_style( $handle, false, array(), '3.2.0' );
+			}
+			$after = static function ( string $handle ): array {
+				$data = wp_styles()->get_data( $handle, 'after' );
+				return is_array( $data ) ? $data : array();
+			};
+
+			// No form, or a form without Gravity Forms' styles: nothing.
+			do_action( 'gform_enqueue_scripts', array( 'id' => 1 ), false );
+			$this->assertSame( array(), $after( 'gravity_forms_orbital_theme' ) );
+			$this->assertSame( array(), $after( 'gform_theme' ) );
+
+			// An Orbital form: the theme's colours for Orbital's CSS API, in light and dark mode.
+			wp_enqueue_style( 'gravity_forms_theme_framework' );
+			wp_enqueue_style( 'gravity_forms_orbital_theme' );
+			do_action( 'gform_enqueue_scripts', array( 'id' => 1 ), false );
+			do_action( 'gform_enqueue_scripts', array( 'id' => 2 ), false ); // A second form on the page.
+			$orbital = $after( 'gravity_forms_orbital_theme' );
+			$this->assertCount( 1, $orbital, 'Once per page, however many forms.' );
+			$this->assertStringContainsString( 'body .gform-theme--framework.gform-theme:not(#tala-blog-gravity-forms)', $orbital[0] );
+			$this->assertStringContainsString( '--gf-ctrl-label-color-primary: var(--wp--preset--color--contrast);', $orbital[0] );
+			$this->assertStringContainsString( '--gf-color-in-ctrl: var(--wp--preset--color--base);', $orbital[0] );
+			$this->assertStringContainsString( '@media (prefers-color-scheme: dark)', $orbital[0] );
+			$this->assertSame( array(), $after( 'gform_theme' ), "The 2.5 theme's rules wait for a 2.5 form." );
+
+			// A form with Gravity Forms' 2.5 theme.
+			wp_enqueue_style( 'gform_basic' );
+			wp_enqueue_style( 'gform_theme' );
+			do_action( 'gform_enqueue_scripts', array( 'id' => 3 ), false );
+			$legacy = $after( 'gform_theme' );
+			$this->assertCount( 1, $legacy );
+			$this->assertStringContainsString( 'body .gform_wrapper.gravity-theme', $legacy[0] );
+			$this->assertSame( array(), $after( 'gform_basic' ) );
+			$this->assertCount( 1, $after( 'gravity_forms_orbital_theme' ) );
+		} finally {
+			$GLOBALS['wp_styles'] = $saved;
+		}
+	}
 }

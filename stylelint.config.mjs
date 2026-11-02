@@ -29,5 +29,13 @@ export default {
 				'selector-class-pattern': null,
 			},
 		},
+		{
+			// Gravity Forms names its own classes (gform_wrapper, gfield_required): these styles can
+			// only select them as Gravity Forms wrote them.
+			files: [ 'tala-blog/assets/gravity-forms-*.css' ],
+			rules: {
+				'selector-class-pattern': null,
+			},
+		},
 	],
 };

@@ -1,0 +1,74 @@
+/* Gravity Forms' 2.5 theme in the page's colours, light and dark. Loaded only on pages with such a form,
+   right after Gravity Forms' own stylesheet (functions.php: tala_blog_gravity_forms()).
+
+   The 2.5 theme leaves most colours to the browser, which follows the page's light or dark mode
+   (color-scheme in theme.css). These rules give its fields and buttons the theme's look, and keep its
+   red "Required" marks and error messages readable in dark mode. Each selector starts with "body" so
+   it outranks Gravity Forms' rule of the same shape; the fields' :where() keeps them below its rule
+   for an invalid field, whose red border stays. */
+
+/* Fields: like the theme's own (the comment and search fields), with borders that keep 3:1 against
+   the page (WCAG 1.4.11). An invalid field keeps Gravity Forms' red border. */
+body .gform_wrapper.gravity-theme .gfield :where(input:not([type="checkbox"], [type="radio"], [type="file"], [type="image"], [type="submit"], [type="button"], [type="reset"], [type="hidden"]), select, textarea) {
+	border: 1px solid var(--wp--preset--color--muted);
+	border-radius: 5px;
+	background-color: var(--wp--preset--color--base);
+	color: var(--wp--preset--color--contrast);
+	font-family: inherit;
+	font-size: 1rem; /* 16px: phones don't zoom into a field when it's tapped */
+}
+
+body .gform_wrapper.gravity-theme .gfield :where(input, textarea)::placeholder {
+	color: var(--wp--preset--color--muted);
+	opacity: 1;
+}
+
+body .gform_wrapper.gravity-theme .gfield :where(input[type="checkbox"], input[type="radio"]) {
+	accent-color: var(--wp--preset--color--contrast);
+}
+
+body .gform_wrapper.gravity-theme .gfield_description {
+	color: var(--wp--preset--color--muted);
+}
+
+/* Buttons: like the theme's buttons (theme.json, styles.elements.button). */
+body .gform_wrapper.gravity-theme :is(.gform_footer, .gform_page_footer) :is(input[type="submit"], input[type="button"], button) {
+	padding: calc(0.667em + 2px) calc(1.333em + 2px);
+	border: 0;
+	border-radius: 5px;
+	background-color: var(--wp--preset--color--contrast);
+	color: var(--wp--preset--color--base);
+	font-family: inherit;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	line-height: inherit;
+	cursor: pointer;
+}
+
+body .gform_wrapper.gravity-theme :is(.gform_footer, .gform_page_footer) :is(input[type="submit"], input[type="button"], button):hover {
+	background-color: var(--wp--preset--color--accent);
+}
+
+/* Dark mode: Gravity Forms' red (#c02b0a) is 3.2:1 on the dark page; this one is 7.3:1, for the
+   "Required" marks, the error summary and messages, and the labels of fields with an error. Its pale
+   error boxes take a dark tint instead. */
+@media (prefers-color-scheme: dark) {
+
+	body .gform_wrapper.gravity-theme :is(.gfield_required, .gfield_error label, .gfield_error legend, .gfield_validation_message, .validation_message, .validation_error, .gform_validation_errors > h2, .gform_validation_errors > ol li, .gform_validation_errors > ol a, .gfield_creditcard_warning_message) {
+		color: #ff7a63;
+	}
+
+	body .gform_wrapper.gravity-theme :is(.gform_validation_errors, .gfield_validation_message, .validation_message, .validation_error, .gfield_creditcard_warning) {
+		border-color: #ff7a63;
+		background: color-mix(in srgb, #ff7a63 10%, var(--wp--preset--color--base));
+	}
+
+	body .gform_wrapper.gravity-theme .gfield_error [aria-invalid="true"],
+	body .gform_wrapper.gravity-theme .gfield_error .ginput_container_image_choice .gfield-choice-image-wrapper::before {
+		border-color: #ff7a63;
+	}
+
+	body .gform_wrapper.gravity-theme :is(.gform_validation_errors, .gform_validation_errors > ol a):focus {
+		outline-color: #ff7a63;
+	}
+}

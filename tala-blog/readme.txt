@@ -53,7 +53,20 @@ In Appearance → Editor → Patterns → Header, select the logo placeholder be
 
 In Appearance → Editor → Styles → Browse styles. Under "Color variations", Sepia, Blue and Green replace the light colours and the dark-mode colours together; under "Typography", Serif sets all text in the device's serif font and Serif headings only the headings and the site title. "Default" goes back to the theme's own. Both use fonts already on the reader's device, so nothing is downloaded.
 
+= Does it work with Gravity Forms? =
+
+Yes. Forms take the page's colours, font and field style, in light and dark mode, with either of Gravity Forms' form themes (Orbital, or the Gravity Forms 2.5 theme). The rules load only on pages with a form, right after Gravity Forms' own stylesheet.
+
+With Orbital, the theme's colours replace the colours set in a form block's style settings, so every form matches the page. Other form plugins that leave their fields to the browser follow the page's light or dark mode as well.
+
 == Changelog ==
+
+= 1.12.0 =
+* New: Gravity Forms support, in light and dark mode. The theme now styles Gravity Forms forms with the page's colours, font and field style.
+* Orbital forms: labels, fields, descriptions, buttons and focus rings use the theme's colour presets through Gravity Forms' CSS API, so they change with dark mode and the colour variations. Previously their dark labels disappeared on the dark page.
+* Gravity Forms 2.5 theme forms: fields and buttons look like the theme's own.
+* Both form themes: field text is 16 px, so phones don't zoom in when a field is tapped. In dark mode, the red "Required" marks and error messages are a lighter red with 7:1 contrast.
+* Loaded only on pages with a form, right after Gravity Forms' own stylesheet.
 
 = 1.11.0 =
 * New: "In this article", a table of contents on articles with three sections or more. It sits after the opening paragraphs, before the first section, as a navigation landmark folded into one line ("In this article · 5 sections") that opens into the sections, each with its subsections. The sections are the article's highest heading level (H2, or H3 or H4 in older articles), the subsections the level below; headings in FAQ answers, quotations, figures, tables and forms are left out, and so are headings given the class tala-no-contents (on the heading or a group around it).
