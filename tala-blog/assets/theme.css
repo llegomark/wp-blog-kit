@@ -119,6 +119,14 @@
 	--wp--preset--color--on-slab: var(--wp--custom--color--dark--on-slab);
 }
 
+/* The Light/Dark switch changes every colour at once: its script turns transitions off while the new
+   colours are computed. */
+.tala-switching *,
+.tala-switching *::before,
+.tala-switching *::after {
+	transition: none !important;
+}
+
 /* Page to page: a short crossfade where the browser supports it, unless the reader asks for less motion. */
 @media (prefers-reduced-motion: no-preference) {
 
@@ -290,6 +298,72 @@ footer.wp-block-template-part {
 .tala-header .wp-block-navigation a:hover {
 	color: var(--wp--preset--color--accent);
 	text-decoration: underline;
+}
+
+/* The Light/Dark switch: a 44px outline icon button showing the theme it switches to, a moon on a
+   light page and a sun on a dark one. It needs JavaScript (the script in <head> adds tala-js to
+   <html>); without it the switch is hidden on the site and the page follows the device. The editor
+   (.editor-styles-wrapper) never runs that script, and shows the switch. */
+.tala-theme-switch {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	border: 1px solid var(--wp--preset--color--border);
+	border-radius: 4px;
+	background-color: color-mix(in srgb, var(--wp--preset--color--surface) 60%, transparent);
+	box-shadow: inset 0 -2px 0 0 color-mix(in srgb, var(--wp--preset--color--muted) 14%, transparent);
+	color: var(--wp--preset--color--heading);
+	cursor: pointer;
+}
+
+/* In the header: beside the menu, and a 44px target in the 24px row of the title and the menu button,
+   so the header keeps its height (the menu overlay's top bar matches it). */
+.tala-header .tala-theme-switch {
+	margin-block: -10px;
+	margin-inline-start: auto;
+}
+
+html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
+.tala-theme-switch__sun,
+:root[data-theme="dark"] .tala-theme-switch__moon {
+	display: none;
+}
+
+:root[data-theme="dark"] .tala-theme-switch__sun {
+	display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+
+	:root:not([data-theme="light"]) .tala-theme-switch__moon {
+		display: none;
+	}
+
+	:root:not([data-theme="light"]) .tala-theme-switch__sun {
+		display: block;
+	}
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+	.tala-theme-switch:hover {
+		background-color: var(--wp--preset--color--wash);
+		box-shadow: none;
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+
+	.tala-theme-switch {
+		transition-property: color, background-color, border-color, box-shadow;
+		transition-duration: 150ms;
+		transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+	}
 }
 
 .tala-footer {

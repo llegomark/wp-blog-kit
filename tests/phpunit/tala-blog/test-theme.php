@@ -94,6 +94,52 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * The Light/Dark switch. A small script in <head>, printed before any CSS, applies the reader's
+	 * stored choice (only "light" or "dark", read inside try: storage can be blocked) and marks the
+	 * page as running JavaScript; it has the button's two labels, translated. The header has the
+	 * button, with its state, its label and two decorative icons.
+	 */
+	public function test_theme_switch(): void {
+		add_filter( 'gettext_tala-blog', static fn( $translation, $text ) => str_starts_with( $text, 'Switch to ' ) ? "($text)" : $translation, 10, 2 );
+
+		// A fresh style queue, so the theme's styles print in this <head> whatever printed before.
+		$styles               = $GLOBALS['wp_styles'] ?? null;
+		$GLOBALS['wp_styles'] = new WP_Styles();
+		$head                 = get_echo( 'wp_head' );
+		$GLOBALS['wp_styles'] = $styles;
+		$tag                  = '<script id="tala-blog-theme-switch-js">';
+		$this->assertSame( 1, substr_count( $head, $tag ) );
+		$at = (int) strpos( $head, $tag );
+		$this->assertLessThan( strpos( $head, '<style' ), $at, 'Before any styles' );
+		$this->assertLessThan( strpos( $head, 'rel="preload"' ), $at, 'Before the font preloads' );
+		if ( preg_match( '/<link[^>]+rel=["\']stylesheet/', $head, $link, PREG_OFFSET_CAPTURE ) ) {
+			$this->assertLessThan( $link[0][1], $at, 'Before any stylesheet' );
+		}
+
+		$this->assertSame( 1, preg_match( '#' . preg_quote( $tag, '#' ) . '(.*?)</script>#s', $head, $script ) );
+		$js = $script[1];
+		$this->assertLessThan( 1024, strlen( $js ), 'A tiny script' );
+		$this->assertMatchesRegularExpression( '/try\s*\{\s*(\w+)\s*=\s*localStorage\.getItem\("tala-theme"\)/', $js, 'Reads the choice inside try' );
+		$this->assertMatchesRegularExpression( '/try\s*\{\s*localStorage\.setItem\("tala-theme",/', $js, 'Stores the choice inside try' );
+		$this->assertMatchesRegularExpression( '/if\s*\(\s*"light"\s*===\s*(\w+)\s*\|\|\s*"dark"\s*===\s*\1\s*\)\s*\{?\s*\w+\.dataset\.theme\s*=\s*\1\b/', $js, 'Only "light" or "dark" becomes the theme' );
+		$this->assertMatchesRegularExpression( '/\.add\("tala-js"\)/', $js, '<html> gets the class tala-js' );
+		$this->assertStringContainsString( '["(Switch to dark theme)","(Switch to light theme)"]', $js, 'Both labels, translated' );
+
+		// The pattern file itself: rendering the header here would leave its translated text in the
+		// pattern registry's cache, and number the next "Primary" menu "Primary 2", for later tests.
+		$header = get_echo(
+			static function (): void {
+				include get_theme_file_path( 'patterns/header.php' );
+			}
+		);
+		$this->assertStringContainsString( "<!-- wp:html -->\n<button", $header, 'An HTML block' );
+		$this->assertSame( 1, preg_match( '#<button type="button" class="tala-theme-switch" aria-pressed="false" aria-label="\(Switch to dark theme\)">(.*?)</button>#s', $header, $button ), 'The switch, labelled for a light page until the script knows the theme' );
+		$this->assertSame( 2, preg_match_all( '#<svg[^>]* aria-hidden="true" focusable="false"#', $button[1] ), 'A sun and a moon, decorative' );
+		$this->assertStringContainsString( 'tala-theme-switch__sun', $button[1] );
+		$this->assertStringContainsString( 'tala-theme-switch__moon', $button[1] );
+	}
+
+	/**
 	 * An article's sections, as headings of one level in a row.
 	 *
 	 * @param string[] $titles Heading texts.

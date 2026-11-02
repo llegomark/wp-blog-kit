@@ -212,6 +212,58 @@ function tala_blog_styles(): void {
 	wp_add_inline_style( 'tala-blog', (string) $css );
 }
 
+add_action( 'wp_head', 'tala_blog_theme_switch_script', 0 );
+
+/**
+ * The Light/Dark switch's script, first in <head>, so it runs before any CSS is painted:
+ *
+ * - It applies the reader's choice, kept in localStorage ("tala-theme": "light" or "dark"), as
+ *   data-theme on <html>. Until the reader chooses, the page follows the device.
+ * - It adds the class tala-js to <html>, which shows the switch. Without JavaScript the switch
+ *   can't work, so it stays hidden and the page follows the device.
+ * - A click on the switch (.tala-theme-switch, in the header) changes the theme and stores it for
+ *   the next pages. The new colours are computed with transitions off (class tala-switching and a
+ *   forced style pass), so nothing fades. The switch's state and label and the browser's colour
+ *   (the theme-color metas) follow, as they follow the device until a choice.
+ *
+ * Storage can be blocked (a private window, site data turned off), so every use of it is in try:
+ * the switch then works for the visit. The script is under 1 KB, so its names are short: l the two
+ * labels, d the document, h <html>, k its classes, q the device's dark mode, c the paper of each
+ * theme, M the theme-color metas, t the theme. A browser too old for arrow functions can't run it
+ * at all, and keeps the page without JavaScript.
+ */
+function tala_blog_theme_switch_script(): void {
+	$labels = array( __( 'Switch to dark theme', 'tala-blog' ), __( 'Switch to light theme', 'tala-blog' ) );
+	wp_print_inline_script_tag(
+		'(l=>{' .
+		'const d=document,h=d.documentElement,k=h.classList,q=matchMedia("(prefers-color-scheme: dark)"),c={},M="meta[name=theme-color]";' .
+		'let t;' .
+		'try{t=localStorage.getItem("tala-theme")}catch(e){}' .
+		'if("light"===t||"dark"===t){h.dataset.theme=t}' .
+		'k.add("tala-js");' .
+		'const now=()=>h.dataset.theme||(q.matches?"dark":"light"),' .
+		'each=(s,f)=>d.querySelectorAll(s).forEach(f),' .
+		'show=()=>{' .
+		'const on="dark"===now();' .
+		'each(".tala-theme-switch",b=>{b.setAttribute("aria-pressed",on);b.setAttribute("aria-label",l[+on])});' .
+		'each(M,m=>{m.content=c[h.dataset.theme]||m.content})' .
+		'};' .
+		// The paper of each theme, from the metas as printed (one per colour scheme), then the switch's state.
+		'd.addEventListener("DOMContentLoaded",()=>{each(M,m=>{c[/dark/.test(m.media)?"dark":"light"]=m.content});show()});' .
+		'd.addEventListener("click",e=>{' .
+		'if(e.target.closest&&e.target.closest(".tala-theme-switch")){' .
+		't="dark"===now()?"light":"dark";' .
+		'k.add("tala-switching");h.dataset.theme=t;h.offsetWidth;k.remove("tala-switching");' .
+		'try{localStorage.setItem("tala-theme",t)}catch(e){}' .
+		'show()' .
+		'}' .
+		'});' .
+		'q.onchange=show' .
+		'})(' . (string) wp_json_encode( $labels ) . ');',
+		array( 'id' => 'tala-blog-theme-switch-js' )
+	);
+}
+
 add_action( 'wp_head', 'tala_blog_font_preloads', 1 );
 
 /**
