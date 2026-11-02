@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -65,6 +65,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, the In-article ad unit, Google's messages and error protection, the Tag Manager container ID, Google search and the Innity box.
 
 == Changelog ==
+
+= 1.4.1 =
+* Fixed: no more "AdSense head tag doesn't support data-wp-strategy attribute" warning in the browser console on every page. AdSense reads each data- attribute on its script tag as a setting and warns about those it doesn't know; WordPress adds data-wp-strategy to scripts that load asynchronously. The note is now left off AdSense's tag, which still loads asynchronously.
 
 = 1.4.0 =
 * New: an AdSense In-article ad unit, after the second paragraph of each post. Enter the unit's ID (or paste its code: only the ID is kept) under Settings → Ads. Only the article's own paragraphs count; its space is kept free while it loads, so the text doesn't jump, and closes if Google leaves it unfilled. The ad comes before the Innity box, which still follows the article's text.

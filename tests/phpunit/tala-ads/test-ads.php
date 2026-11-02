@@ -242,6 +242,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertStringContainsString( 'ins.adsbygoogle iframe{color-scheme:light}', $head, 'Ad frames stay see-through in dark mode.' );
 		$this->assertMatchesRegularExpression( '#<script[^>]+src="https://pagead2\.googlesyndication\.com/pagead/js/adsbygoogle\.js\?client=ca-pub-1234567890123456"[^>]*>#', $head );
 		$this->assertMatchesRegularExpression( '#<script(?=[^>]*\basync\b)(?=[^>]*crossorigin="anonymous")[^>]+adsbygoogle\.js#', $head, 'Async, with crossorigin="anonymous".' );
+		$this->assertSame( 1, preg_match( '#<script[^>]+adsbygoogle\.js[^>]*>#', $head, $tag ) );
+		$this->assertDoesNotMatchRegularExpression( '#\sdata-#', $tag[0], 'AdSense reads every data- attribute on its tag and warns in the console about those it doesn\'t know, such as WordPress\'s data-wp-strategy.' );
 
 		$this->assertSame( 1, substr_count( $head, "'dataLayer',\"GTM-ABC1234\"" ), 'Tag Manager is loaded once.' );
 		$this->assertSame( 1, substr_count( $head, 'fundingchoicesmessages.google.com/i/pub-1234567890123456?ers=1' ), 'The consent message is loaded once.' );

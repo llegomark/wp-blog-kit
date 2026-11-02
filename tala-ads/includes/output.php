@@ -90,7 +90,10 @@ function tala_ads_enqueue(): void {
 add_filter( 'wp_script_attributes', 'tala_ads_script_attributes' );
 
 /**
- * AdSense's code asks for crossorigin="anonymous" on its script.
+ * AdSense's code asks for crossorigin="anonymous" on its script. AdSense also reads every data-
+ * attribute on that tag as a setting and warns in the console about any it doesn't know, so the
+ * data-wp-strategy note WordPress adds to scripts with a loading strategy comes off (the tag keeps
+ * its async attribute).
  *
  * @param array<string, string|bool> $attributes Script tag attributes.
  * @return array<string, string|bool>
@@ -98,6 +101,7 @@ add_filter( 'wp_script_attributes', 'tala_ads_script_attributes' );
 function tala_ads_script_attributes( $attributes ) {
 	if ( 'tala-ads-adsense-js' === ( $attributes['id'] ?? '' ) ) {
 		$attributes['crossorigin'] = 'anonymous';
+		unset( $attributes['data-wp-strategy'] );
 	}
 	return $attributes;
 }
