@@ -355,10 +355,12 @@ a {
 	opacity: 1;
 }
 
-/* Header and footer: their own bands and padding set the space around them, not the page's block gap. */
+/* Header, footer and the Call to action part between main and the footer: their own bands and
+   padding set the space around them, not the page's block gap. */
 
 header.wp-block-template-part,
-footer.wp-block-template-part {
+footer.wp-block-template-part,
+.tala-main ~ .wp-block-template-part {
 	margin-block-start: 0;
 }
 
@@ -1922,6 +1924,38 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	margin-block-start: 0.5rem;
 }
 
+/* The closing call to action (the "Closing call to action" pattern, for the Call to action part): on
+   the graph-paper band, a square surface card with a hairline border and NASH's flat cobalt offset
+   shadow, the one raised element on the page. Eyebrow, display heading (NASH's measure-18 of display
+   type), lead (measure-44, in the text's ink), one button and a meta line, centred, 1.25rem apart. */
+.tala-cta {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1.25rem;
+	box-sizing: border-box;
+	max-inline-size: 48rem;
+	margin-inline: auto;
+	padding: clamp(2rem, 1.25rem + 3vw, 3.5rem) clamp(1.25rem, 0.5rem + 3vw, 3rem);
+	border: 1px solid var(--wp--preset--color--border);
+	background-color: var(--wp--preset--color--surface);
+	box-shadow: 6px 6px 0 color-mix(in srgb, var(--wp--preset--color--accent) 10%, transparent);
+	text-align: center;
+}
+
+.tala-cta > * {
+	margin-block: 0;
+}
+
+.tala-cta > .tala-display {
+	max-inline-size: calc(18 * 0.594em);
+}
+
+.tala-cta > .tala-lead {
+	max-inline-size: calc(44 * 0.628em);
+	color: var(--wp--preset--color--contrast);
+}
+
 /* Title bands of the home page and the archives: the title, its lead, and on the home page a search
    field and the top-level categories as chips, 1.25rem apart. */
 
@@ -2271,6 +2305,7 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 
 	header.wp-block-template-part,
 	footer.wp-block-template-part,
+	.tala-main ~ .wp-block-template-part,
 	.wp-block-tala-seo-breadcrumbs,
 	.wp-block-group.tala-post-nav,
 	.tala-comments,

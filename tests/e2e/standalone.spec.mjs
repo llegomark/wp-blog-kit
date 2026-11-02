@@ -73,6 +73,13 @@ test.describe( 'Tala Blog without Tala SEO', () => {
 			expect( info.breadcrumbs, name ).toBe( false );
 			expect( info.types, `${ name }: no plugin, no structured data` ).toEqual( [] );
 			await expect( page.locator( 'h1' ), name ).toHaveCount( 1 );
+			// The theme ships the Call to action part empty: no call to action, and no empty wrapper
+			// between the page's main element and its footer.
+			await expect( page.locator( '.tala-cta' ), name ).toHaveCount( 0 );
+			expect(
+				await page.evaluate( () => document.querySelector( '.wp-site-blocks > main' )?.nextElementSibling?.tagName ),
+				`${ name }: the footer follows main`,
+			).toBe( 'FOOTER' );
 			expect( await axeViolations( page ), name ).toEqual( [] );
 		}
 	} );

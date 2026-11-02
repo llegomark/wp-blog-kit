@@ -711,7 +711,8 @@ HTML;
 	}
 
 	/**
-	 * Every pattern registers and parses; the hidden ones stay out of the inserter.
+	 * Every pattern registers and parses; all but the Closing call to action (offered for the
+	 * Call to action part) stay out of the inserter.
 	 */
 	public function test_patterns(): void {
 		$registry = WP_Block_Patterns_Registry::get_instance();
@@ -721,7 +722,9 @@ HTML;
 			$slug    = 'tala-blog/' . basename( $file, '.php' );
 			$pattern = $registry->get_registered( $slug );
 			$this->assertIsArray( $pattern, $slug );
-			$this->assertFalse( $pattern['inserter'] ?? true, "$slug stays out of the inserter" );
+			if ( 'tala-blog/call-to-action' !== $slug ) {
+				$this->assertFalse( $pattern['inserter'] ?? true, "$slug stays out of the inserter" );
+			}
 			$this->assertNotEmpty( parse_blocks( $pattern['content'] ), $slug );
 		}
 		$this->assertStringContainsString( '"slug":"tala-blog/site-brand"', $registry->get_registered( 'tala-blog/header' )['content'] );
@@ -742,6 +745,7 @@ HTML;
 			'footer'             => 'footer',
 			'navigation-overlay' => 'navigation-overlay',
 			'footer-note'        => 'uncategorized',
+			'call-to-action'     => 'uncategorized',
 		);
 		foreach ( $areas as $slug => $area ) {
 			$part = get_block_template( 'tala-blog//' . $slug, 'wp_template_part' );
@@ -753,6 +757,12 @@ HTML;
 		foreach ( array( 'home', 'index', 'single', 'page', 'archive', 'author', 'search', '404' ) as $slug ) {
 			$content = get_block_template( 'tala-blog//' . $slug )->content;
 			$blocks  = array_values( array_filter( parse_blocks( $content ), static fn( $block ) => null !== $block['blockName'] ) );
+			// Every page but the 404 closes with the Call to action part, between main and the footer.
+			if ( '404' !== $slug ) {
+				$this->assertSame( 'core/template-part', $blocks[2]['blockName'] ?? '', "$slug: the call to action" );
+				$this->assertSame( 'call-to-action', $blocks[2]['attrs']['slug'] ?? '', "$slug: the call to action" );
+				array_splice( $blocks, 2, 1 );
+			}
 			$this->assertSame( array( 'core/template-part', 'core/group', 'core/template-part' ), array_column( $blocks, 'blockName' ), $slug );
 			$this->assertSame( 'header', $blocks[0]['attrs']['slug'], $slug );
 			$this->assertSame( 'footer', $blocks[2]['attrs']['slug'], "$slug: the one footer" );
@@ -999,6 +1009,74 @@ HTML;
 		$footer = $this->footer();
 		$this->assertMatchesRegularExpression( '#tala-footer-brand.*<div class="wp-block-template-part">\s*<p[^>]*>An independent site.</p>\s*</div>#s', $footer );
 		$this->assertLessThan( strpos( $footer, '<nav ' ), strpos( $footer, 'An independent site.' ), 'In the brand cell' );
+	}
+
+	/**
+	 * The closing call to action: the theme ships the Call to action part empty, and an empty part
+	 * prints nothing (no wrapper); filled in the Site Editor (saved in the database), it prints once,
+	 * after the content and before the footer. The "Closing call to action" pattern gives NASH's
+	 * band: graph paper, eyebrow, display h2, lead, one primary button and a meta line, in a surface
+	 * card.
+	 */
+	public function test_call_to_action_part(): void {
+		$part = get_block_template( 'tala-blog//call-to-action', 'wp_template_part' );
+		$this->assertInstanceOf( WP_Block_Template::class, $part );
+		$this->assertSame( 'uncategorized', $part->area );
+		$this->assertSame( 'Call to action', $part->title );
+		$this->assertSame( '', trim( $part->content ) );
+
+		$post = $this->publish_post(
+			array(
+				'post_title'   => 'Seating plans',
+				'post_content' => '<!-- wp:paragraph --><p>The article text.</p><!-- /wp:paragraph -->',
+			)
+		);
+		$page = function () use ( $post ): string {
+			$this->go_to( get_permalink( $post ) );
+			$GLOBALS['_wp_current_template_content'] = get_block_template( 'tala-blog//single' )->content;
+			return get_the_block_template_html();
+		};
+		$html = $page();
+		$this->assertStringContainsString( 'The article text.', $html );
+		$this->assertSame( 1, preg_match( '#</main>(.*?)<footer class="wp-block-template-part#s', $html, $between ) );
+		$this->assertSame( '', trim( $between[1] ), 'An empty part prints nothing, not even its wrapper' );
+
+		$saved = self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_template_part',
+				'post_status'  => 'publish',
+				'post_name'    => 'call-to-action',
+				'post_title'   => 'Call to action',
+				'post_content' => '<!-- wp:paragraph --><p>Practise for the exam.</p><!-- /wp:paragraph -->',
+			)
+		);
+		wp_set_post_terms( $saved, array( 'tala-blog' ), 'wp_theme' );
+		$html = $page();
+		$this->assertSame( 1, substr_count( $html, 'Practise for the exam.' ), 'Printed once' );
+		$this->assertGreaterThan( strpos( $html, 'The article text.' ), strpos( $html, 'Practise for the exam.' ), 'After the content' );
+		$this->assertGreaterThan( strpos( $html, '</main>' ), strpos( $html, 'Practise for the exam.' ), 'After main' );
+		$this->assertLessThan( strpos( $html, '<footer class="wp-block-template-part' ), strpos( $html, 'Practise for the exam.' ), 'Before the footer' );
+
+		$pattern = WP_Block_Patterns_Registry::get_instance()->get_registered( 'tala-blog/call-to-action' );
+		$this->assertIsArray( $pattern );
+		$this->assertSame( 'Closing call to action', $pattern['title'] );
+		$this->assertContains( 'call-to-action', $pattern['categories'] );
+		$this->assertContains( 'core/template-part/uncategorized', $pattern['blockTypes'] );
+		$this->assertTrue( $pattern['inserter'] ?? true, 'In the inserter' );
+		$content = $pattern['content'];
+		$this->assertMatchesRegularExpression( '/class="wp-block-group tala-band tala-band--paper[ "]/', $content );
+		$this->assertMatchesRegularExpression( '/<h2 class="wp-block-heading tala-display[ "]/', $content );
+		$this->assertMatchesRegularExpression( '/<p class="tala-eyebrow[ "]/', $content );
+		$this->assertMatchesRegularExpression( '/<p class="tala-lead[ "]/', $content );
+		$this->assertMatchesRegularExpression( '/<p class="tala-meta[ "]/', $content );
+		$this->assertMatchesRegularExpression( '/class="wp-block-group tala-cta[ "]/', $content, 'The card' );
+		$this->assertSame( 1, preg_match_all( '/<div class="wp-block-button[ "]/', $content ), 'One button' );
+		$this->assertStringNotContainsString( 'is-style-outline', $content, 'A primary button' );
+		foreach ( array( 'Next step', 'Ready for the next step?', 'Tell readers where to go next.', 'Get started' ) as $text ) {
+			$this->assertStringContainsString( $text, $content );
+		}
+		$css = (string) file_get_contents( get_theme_file_path( 'assets/theme.css' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
+		$this->assertStringContainsString( 'box-shadow: 6px 6px 0 color-mix(in srgb, var(--wp--preset--color--accent) 10%, transparent);', $css, 'NASH\'s flat offset shadow on the card' );
 	}
 
 	/**

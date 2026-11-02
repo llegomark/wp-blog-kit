@@ -231,6 +231,7 @@
 		{ "name": "header", "title": "Header", "area": "header" },
 		{ "name": "footer", "title": "Footer", "area": "footer" },
 		{ "name": "footer-note", "title": "Footer note", "area": "uncategorized" },
+		{ "name": "call-to-action", "title": "Call to action", "area": "uncategorized" },
 		{ "name": "navigation-overlay", "title": "Menu overlay", "area": "navigation-overlay" }
 	]
 }
