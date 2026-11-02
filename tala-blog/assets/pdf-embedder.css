@@ -1,8 +1,91 @@
-/* PDF Embedder's viewer: its toolbar's light grey text (#d3d3d3) on a mid-grey bar (#808080) is 2.6:1.
-   On the theme's text colour (#3f3f3f) as the bar it is 7:1 (WCAG 1.4.3), in light and dark mode.
-   Loaded only on pages with a viewer, right after PDF Embedder's stylesheet
-   (functions.php: tala_blog_pdf_viewer()). */
+/* PDF Embedder's viewer in the page's look, light and dark (Light/Dark switch included): its grey bar
+   with light grey text (#d3d3d3 on #808080, 2.6:1) becomes a surface bar with the text's ink and a
+   hairline under it; its buttons are outline buttons (a 1px border box, 4px corners, the wash on
+   hover where a pointer hovers), and the page sits on the wash. Its icons are white pictures: black
+   on the light bar, as they are on the dark one. Loaded only on pages with a viewer, right after PDF
+   Embedder's stylesheet (functions.php: tala_blog_pdf_viewer()), whose selectors these match. */
+
+.pdfemb-viewer {
+	border-color: var(--wp--preset--color--border);
+}
+
+.pdfemb-viewer,
+.pdfemb-viewer .pdfemb-pagescontainer,
+.pdfemb-viewer .pdfemb-pagescontainer .pdfemb-inner-div {
+	background-color: var(--wp--preset--color--wash);
+}
 
 .pdfemb-viewer .pdfemb-toolbar {
-	background-color: #3f3f3f;
+	background-color: var(--wp--preset--color--surface);
+	color: var(--wp--preset--color--contrast);
+}
+
+.pdfemb-viewer .pdfemb-toolbar.pdfemb-toolbar-top {
+	border-block-end: 1px solid var(--wp--preset--color--border);
+}
+
+.pdfemb-viewer .pdfemb-toolbar.pdfemb-toolbar-bottom {
+	border-block-start: 1px solid var(--wp--preset--color--border);
+}
+
+.pdfemb-viewer .pdfemb-toolbar div {
+	color: var(--wp--preset--color--contrast);
+	font-family: inherit;
+	font-size: var(--wp--preset--font-size--x-small);
+	font-variant-numeric: tabular-nums;
+}
+
+.pdfemb-viewer .pdfemb-toolbar input.pdfemb-page-num {
+	border: 1px solid var(--wp--preset--color--border);
+	border-radius: 4px;
+	background-color: var(--wp--preset--color--surface);
+	color: var(--wp--preset--color--contrast);
+	font-family: inherit;
+	font-size: var(--wp--preset--font-size--x-small);
+}
+
+.pdfemb-viewer .pdfemb-toolbar button,
+.pdfemb-viewer .pdfemb-toolbar button[disabled],
+.pdfemb-viewer .pdfemb-toolbar button:hover,
+.pdfemb-viewer .pdfemb-toolbar button.pdfemb-toggled,
+.pdfemb-viewer .pdfemb-toolbar button.pdfemb-toggled:hover {
+	border: 1px solid var(--wp--preset--color--border);
+	border-radius: 4px;
+	background-color: var(--wp--preset--color--surface);
+	background-image: none;
+	box-shadow: inset 0 -2px 0 0 color-mix(in srgb, var(--wp--preset--color--muted) 14%, transparent);
+	color: var(--wp--preset--color--contrast);
+}
+
+.pdfemb-viewer .pdfemb-toolbar button.pdfemb-toggled,
+.pdfemb-viewer .pdfemb-toolbar button.pdfemb-toggled:hover {
+	background-color: var(--wp--preset--color--wash);
+	box-shadow: none;
+}
+
+.pdfemb-viewer .pdfemb-toolbar button.pdfemb-btndisabled {
+	color: var(--wp--preset--color--muted);
+}
+
+.pdfemb-viewer .pdfemb-toolbar button::before {
+	filter: brightness(0);
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+	.pdfemb-viewer .pdfemb-toolbar button:not([disabled]):hover {
+		background-color: var(--wp--preset--color--wash);
+		box-shadow: none;
+	}
+}
+
+@media (prefers-color-scheme: dark) {
+
+	:root:not([data-theme="light"]) .pdfemb-viewer .pdfemb-toolbar button::before {
+		filter: none;
+	}
+}
+
+:root[data-theme="dark"] .pdfemb-viewer .pdfemb-toolbar button::before {
+	filter: none;
 }

@@ -726,7 +726,7 @@ function tala_blog_font_preloads(): void {
 add_action( 'gform_enqueue_scripts', 'tala_blog_gravity_forms', 1001 );
 
 /**
- * Gravity Forms in the theme's colours, in light and dark mode: the rules for its Orbital theme and
+ * Gravity Forms in the theme's look, light or dark as the page is: the rules for its Orbital theme and
  * for its 2.5 theme go right after Gravity Forms' own stylesheet for that theme. So they load only on
  * pages with such a form, in the order that lets them work. Gravity Forms enqueues its stylesheets on
  * this hook, at priority 1000, for each form on the page.
@@ -759,7 +759,8 @@ add_action( 'wp_head', 'tala_blog_pdf_viewer', 1 );
  *   unpacked) has downloaded and run; the viewer, below the opening paragraphs, starts when the page
  *   is ready, as before. WordPress keeps a script blocking when a blocking script on the page needs
  *   it first (a Gravity Forms form, for one), so nothing runs before what it depends on.
- * - Its toolbar gets readable contrast (assets/pdf-embedder.css), right after its own stylesheet.
+ * - The viewer takes the theme's look, light or dark as the page is, with a readable toolbar
+ *   (assets/pdf-embedder.css), right after its own stylesheet.
  */
 function tala_blog_pdf_viewer(): void {
 	if ( ! wp_script_is( 'pdfemb_embed_pdf', 'enqueued' ) ) {
