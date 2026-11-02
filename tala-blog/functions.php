@@ -212,6 +212,20 @@ function tala_blog_styles(): void {
 	wp_add_inline_style( 'tala-blog', (string) $css );
 }
 
+add_action( 'wp_head', 'tala_blog_font_preloads', 1 );
+
+/**
+ * Preloads the two Inter files every page needs, before any CSS: the Latin text face and the light
+ * italic display face of the titles. The browser then fetches them alongside the CSS instead of
+ * after it, so the text shows in Inter sooner. The Latin Extended and italic files load only on a
+ * page with characters or italics they cover (theme.json, unicodeRange).
+ */
+function tala_blog_font_preloads(): void {
+	foreach ( array( 'InterVariable-latin.woff2', 'InterDisplay-LightItalic-latin.woff2' ) as $file ) {
+		printf( '<link rel="preload" href="%s" as="font" type="font/woff2" crossorigin>' . "\n", esc_url( get_theme_file_uri( 'assets/fonts/' . $file ) ) );
+	}
+}
+
 add_action( 'gform_enqueue_scripts', 'tala_blog_gravity_forms', 1001 );
 
 /**
@@ -289,9 +303,9 @@ function tala_blog_remove_emoji(): void {
 add_action( 'wp_head', 'tala_blog_theme_color', 2 );
 
 /**
- * Browser UI colour for light and dark mode: the page background of each, from theme.json or the
- * chosen colour preset (the "base" palette colour and settings.custom.color.dark.base), the same
- * values the CSS uses.
+ * Browser UI colour for light and dark mode: the paper of each, from theme.json or a chosen colour
+ * preset (the "base" palette colour and settings.custom.color.dark.base), the same values the CSS
+ * uses.
  */
 function tala_blog_theme_color(): void {
 	// Saved global styles can hold anything a site administrator wrote: only text is a colour.
@@ -314,11 +328,12 @@ function tala_blog_theme_color(): void {
 add_filter( 'wp_theme_json_data_user', 'tala_blog_preset_dark_colors' );
 
 /**
- * The dark-mode colours of the chosen colour preset. A preset (styles/colors) brings them along in
- * settings.custom.color.dark, but when the person who picks it can't save unfiltered HTML (a site
- * administrator on a multisite network, say), WordPress saves only the palette, and the site would
- * show the preset in light mode and the theme's own colours in dark mode. While the site's palette
- * is still a preset's, the dark colours come from that preset.
+ * The dark-mode colours of the chosen colour preset. The theme ships none, but a child theme can
+ * (styles/colors). A preset brings them along in settings.custom.color.dark, but when the person
+ * who picks it can't save unfiltered HTML (a site administrator on a multisite network, say),
+ * WordPress saves only the palette, and the site would show the preset in light mode and the
+ * theme's own colours in dark mode. While the site's palette is still a preset's, the dark colours
+ * come from that preset.
  *
  * @param WP_Theme_JSON_Data $theme_json The site's own styles (Appearance → Editor → Styles).
  * @return WP_Theme_JSON_Data

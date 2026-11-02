@@ -1,23 +1,122 @@
-/* Tala Blog: a quiet reading page. Light: near-white page, near-black text. Dark: the same, inverted. */
+/* Tala Blog: drafting paper. Light: grey-white paper, dark ink, one cobalt accent. Dark: the same at night. */
+
+/* Inter, self-hosted: theme.json declares its faces, functions.php preloads the two Latin files.
+   Until Inter arrives, text uses "Inter Fallback": Arial (or a font with Arial's widths: Arimo on
+   ChromeOS, Liberation Sans on Linux) sized and spaced like Inter, so the swap barely moves the
+   page. These faces download nothing. The overrides come from Inter's and Arial's metrics (average
+   width of English text, ascent, descent, line gap), as Next.js and Capsize compute them. */
+@font-face {
+	font-family: "Inter Fallback";
+	font-style: normal;
+	src: local("Arial"), local("ArialMT"), local("Arimo"), local("Arimo-Regular"), local("Liberation Sans"), local("LiberationSans");
+	size-adjust: 106.43%;
+	ascent-override: 91.02%;
+	descent-override: 22.66%;
+	line-gap-override: 0%;
+}
+
+@font-face {
+	font-family: "Inter Fallback";
+	font-style: italic;
+	src: local("Arial Italic"), local("Arial-ItalicMT"), local("Arimo Italic"), local("Arimo-Italic"), local("Liberation Sans Italic"), local("LiberationSans-Italic");
+	size-adjust: 107.25%;
+	ascent-override: 90.33%;
+	descent-override: 22.49%;
+	line-gap-override: 0%;
+}
+
+/* Display titles use Inter Light at its display optical size, which is narrower than text, so they
+   get their own fallback. */
+@font-face {
+	font-family: "Inter Display Fallback";
+	font-style: italic;
+	src: local("Arial Italic"), local("Arial-ItalicMT"), local("Arimo Italic"), local("Arimo-Italic"), local("Liberation Sans Italic"), local("LiberationSans-Italic");
+	size-adjust: 95.12%;
+	ascent-override: 101.85%;
+	descent-override: 25.36%;
+	line-gap-override: 0%;
+}
+
+/* Android has no Arial or Arial-width font, so it takes these: the same overrides from Roboto's
+   metrics. They are separate families because a face that fails to load does not fall back to
+   another face of the same family and style; the next family in the stack is tried. */
+@font-face {
+	font-family: "Inter Fallback Roboto";
+	font-style: normal;
+	src: local("Roboto"), local("Roboto Regular"), local("Roboto-Regular");
+	size-adjust: 106.66%;
+	ascent-override: 90.82%;
+	descent-override: 22.61%;
+	line-gap-override: 0%;
+}
+
+@font-face {
+	font-family: "Inter Fallback Roboto";
+	font-style: italic;
+	src: local("Roboto Italic"), local("Roboto-Italic");
+	size-adjust: 110.52%;
+	ascent-override: 87.66%;
+	descent-override: 21.83%;
+	line-gap-override: 0%;
+}
+
+@font-face {
+	font-family: "Inter Display Fallback Roboto";
+	font-style: italic;
+	src: local("Roboto Italic"), local("Roboto-Italic");
+	size-adjust: 98.02%;
+	ascent-override: 98.83%;
+	descent-override: 24.61%;
+	line-gap-override: 0%;
+}
 
 :root {
 	color-scheme: light dark;
 	scrollbar-gutter: stable; /* room for the scrollbar on short pages too, so pages don't jump sideways */
 }
 
-/* Dark mode follows the reader's system setting; its colours live in theme.json and in each colour
-   preset (settings.custom.color.dark: under "color", so picking a palette in the Site Editor brings
-   its dark colours along). */
+/* Dark mode: on a dark device until the reader chooses Light, and wherever the reader chooses Dark
+   (the choice is data-theme on <html>). The dark colours live in theme.json, and in a colour preset
+   of a child theme (settings.custom.color.dark: under "color", so picking a palette in the Site
+   Editor brings its dark colours along). */
+:root[data-theme="light"] {
+	color-scheme: light;
+}
+
 @media (prefers-color-scheme: dark) {
 
-	:root {
+	:root:not([data-theme="light"]) {
 		--wp--preset--color--base: var(--wp--custom--color--dark--base);
+		--wp--preset--color--surface: var(--wp--custom--color--dark--surface);
 		--wp--preset--color--contrast: var(--wp--custom--color--dark--contrast);
+		--wp--preset--color--heading: var(--wp--custom--color--dark--heading);
 		--wp--preset--color--muted: var(--wp--custom--color--dark--muted);
 		--wp--preset--color--accent: var(--wp--custom--color--dark--accent);
-		--wp--preset--color--rule: var(--wp--custom--color--dark--rule);
+		--wp--preset--color--on-accent: var(--wp--custom--color--dark--on-accent);
+		--wp--preset--color--accent-deep: var(--wp--custom--color--dark--accent-deep);
 		--wp--preset--color--wash: var(--wp--custom--color--dark--wash);
+		--wp--preset--color--border: var(--wp--custom--color--dark--border);
+		--wp--preset--color--rule: var(--wp--custom--color--dark--rule);
+		--wp--preset--color--slab: var(--wp--custom--color--dark--slab);
+		--wp--preset--color--on-slab: var(--wp--custom--color--dark--on-slab);
 	}
+}
+
+:root[data-theme="dark"] {
+	color-scheme: dark;
+	--wp--preset--color--base: var(--wp--custom--color--dark--base);
+	--wp--preset--color--surface: var(--wp--custom--color--dark--surface);
+	--wp--preset--color--contrast: var(--wp--custom--color--dark--contrast);
+	--wp--preset--color--heading: var(--wp--custom--color--dark--heading);
+	--wp--preset--color--muted: var(--wp--custom--color--dark--muted);
+	--wp--preset--color--accent: var(--wp--custom--color--dark--accent);
+	--wp--preset--color--on-accent: var(--wp--custom--color--dark--on-accent);
+	--wp--preset--color--accent-deep: var(--wp--custom--color--dark--accent-deep);
+	--wp--preset--color--wash: var(--wp--custom--color--dark--wash);
+	--wp--preset--color--border: var(--wp--custom--color--dark--border);
+	--wp--preset--color--rule: var(--wp--custom--color--dark--rule);
+	--wp--preset--color--slab: var(--wp--custom--color--dark--slab);
+	--wp--preset--color--on-slab: var(--wp--custom--color--dark--on-slab);
 }
 
 /* Page to page: a short crossfade where the browser supports it, unless the reader asks for less motion. */
@@ -38,7 +137,7 @@ body {
 	text-wrap: pretty;
 }
 
-/* Links: a fine dotted underline in the text colour; full black (white in dark mode) on hover. */
+/* Links: a fine dotted underline in the text colour; the accent colour on hover. */
 a {
 	text-decoration-style: dotted;
 	text-decoration-thickness: 1px;
@@ -718,13 +817,23 @@ footer.wp-block-template-part {
 
 @media print {
 
-	:root {
+	/* As specific as the dark-mode rules, and after them: paper stays white in either theme. */
+	:root[data-theme],
+	:root:not([data-theme]) {
+		color-scheme: light;
 		--wp--preset--color--base: #fff;
+		--wp--preset--color--surface: #fff;
 		--wp--preset--color--contrast: #000;
+		--wp--preset--color--heading: #000;
 		--wp--preset--color--muted: #333;
 		--wp--preset--color--accent: #000;
-		--wp--preset--color--rule: #999;
+		--wp--preset--color--on-accent: #fff;
+		--wp--preset--color--accent-deep: #000;
 		--wp--preset--color--wash: #f2f2f2;
+		--wp--preset--color--border: #999;
+		--wp--preset--color--rule: #999;
+		--wp--preset--color--slab: #fff;
+		--wp--preset--color--on-slab: #000;
 	}
 
 	body {

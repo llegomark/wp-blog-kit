@@ -9,28 +9,42 @@
 			"defaultGradients": false,
 			"defaultDuotone": false,
 			"palette": [
-				{ "slug": "base", "name": "Background", "color": "#fcfcfc" },
-				{ "slug": "contrast", "name": "Text", "color": "#3f3f3f" },
-				{ "slug": "muted", "name": "Secondary text", "color": "#5d5d5d" },
-				{ "slug": "accent", "name": "Emphasis (links on hover, buttons, focus)", "color": "#000000" },
-				{ "slug": "rule", "name": "Lines", "color": "#d4d4d4" },
-				{ "slug": "wash", "name": "Wash (quotes, code)", "color": "#f5f5f5" }
+				{ "slug": "base", "name": "Paper", "color": "#f4f4f2" },
+				{ "slug": "surface", "name": "Surface", "color": "#fafafa" },
+				{ "slug": "contrast", "name": "Text", "color": "#393d45" },
+				{ "slug": "heading", "name": "Headings", "color": "#000000" },
+				{ "slug": "muted", "name": "Secondary text", "color": "#585f6c" },
+				{ "slug": "accent", "name": "Accent (links on hover, buttons, focus)", "color": "#1348dc" },
+				{ "slug": "on-accent", "name": "Text on accent", "color": "#ffffff" },
+				{ "slug": "accent-deep", "name": "Accent, deep (button edge)", "color": "#053794" },
+				{ "slug": "wash", "name": "Wash (hover, inline code)", "color": "#ebebec" },
+				{ "slug": "border", "name": "Borders (fields, cards)", "color": "#dadde2" },
+				{ "slug": "rule", "name": "Lines", "color": "#cbcfd4" },
+				{ "slug": "slab", "name": "Footer", "color": "#1348dc" },
+				{ "slug": "on-slab", "name": "Text on footer", "color": "#ffffff" }
 			]
 		},
 		"custom": {
 			"color": {
 				"dark": {
-					"base": "#121212",
-					"contrast": "#e3e3e3",
-					"muted": "#a3a3a3",
-					"accent": "#ffffff",
-					"rule": "#3d3d3d",
-					"wash": "#1c1c1c"
+					"base": "#16181d",
+					"surface": "#1c1f26",
+					"contrast": "#d3d6dc",
+					"heading": "#f2f3f5",
+					"muted": "#a3aab7",
+					"accent": "#7d9bff",
+					"on-accent": "#0b1433",
+					"accent-deep": "#4f73e6",
+					"wash": "#232730",
+					"border": "#2e323b",
+					"rule": "#2c3038",
+					"slab": "#1640b8",
+					"on-slab": "#ffffff"
 				}
 			}
 		},
 		"layout": {
-			"contentSize": "40rem",
+			"contentSize": "45rem",
 			"wideSize": "60rem"
 		},
 		"spacing": {
@@ -50,27 +64,75 @@
 			"fluid": true,
 			"fontFamilies": [
 				{
-					"slug": "system-sans",
-					"name": "System sans-serif (no download)",
-					"fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, \"Noto Sans\", \"Helvetica Neue\", Arial, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\""
+					"slug": "inter",
+					"name": "Inter",
+					"fontFamily": "\"Inter\", \"Inter Fallback\", \"Inter Fallback Roboto\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+					"fontFace": [
+						{
+							"fontFamily": "Inter",
+							"fontStyle": "normal",
+							"fontWeight": "100 900",
+							"fontDisplay": "swap",
+							"src": [ "file:./assets/fonts/InterVariable-latin-ext.woff2" ],
+							"unicodeRange": "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0, U+2C60-2C7F, U+A720-A7FF"
+						},
+						{
+							"fontFamily": "Inter",
+							"fontStyle": "italic",
+							"fontWeight": "100 900",
+							"fontDisplay": "swap",
+							"src": [ "file:./assets/fonts/InterVariable-Italic-latin-ext.woff2" ],
+							"unicodeRange": "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0, U+2C60-2C7F, U+A720-A7FF"
+						},
+						{
+							"fontFamily": "Inter",
+							"fontStyle": "normal",
+							"fontWeight": "100 900",
+							"fontDisplay": "swap",
+							"src": [ "file:./assets/fonts/InterVariable-latin.woff2" ],
+							"unicodeRange": "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2070-209F, U+20AC, U+20B1, U+2122, U+2190-2199, U+2212, U+2215, U+2260, U+2264-2265, U+FEFF, U+FFFD"
+						},
+						{
+							"fontFamily": "Inter",
+							"fontStyle": "italic",
+							"fontWeight": "100 900",
+							"fontDisplay": "swap",
+							"src": [ "file:./assets/fonts/InterVariable-Italic-latin.woff2" ],
+							"unicodeRange": "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2070-209F, U+20AC, U+20B1, U+2122, U+2190-2199, U+2212, U+2215, U+2260, U+2264-2265, U+FEFF, U+FFFD"
+						}
+					]
 				},
 				{
-					"slug": "system-serif",
-					"name": "System serif (no download)",
-					"fontFamily": "\"Iowan Old Style\", Charter, \"Bitstream Charter\", \"Noto Serif\", Georgia, serif"
-				},
-				{
-					"slug": "system-mono",
-					"name": "System monospace (no download)",
-					"fontFamily": "ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace"
+					"slug": "inter-display",
+					"name": "Inter Display (light italic, for display titles)",
+					"fontFamily": "\"Inter Display\", \"Inter Display Fallback\", \"Inter Display Fallback Roboto\", ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+					"fontFace": [
+						{
+							"fontFamily": "Inter Display",
+							"fontStyle": "italic",
+							"fontWeight": "200 300",
+							"fontDisplay": "swap",
+							"src": [ "file:./assets/fonts/InterVariable-Italic-latin-ext.woff2" ],
+							"unicodeRange": "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0, U+2C60-2C7F, U+A720-A7FF"
+						},
+						{
+							"fontFamily": "Inter Display",
+							"fontStyle": "italic",
+							"fontWeight": "200 300",
+							"fontDisplay": "swap",
+							"src": [ "file:./assets/fonts/InterDisplay-LightItalic-latin.woff2" ],
+							"unicodeRange": "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2070-209F, U+20AC, U+20B1, U+2122, U+2190-2199, U+2212, U+2215, U+2260, U+2264-2265, U+FEFF, U+FFFD"
+						}
+					]
 				}
 			],
 			"fontSizes": [
-				{ "slug": "small", "name": "Small", "size": "0.875rem", "fluid": false },
-				{ "slug": "medium", "name": "Medium", "size": "1.125rem", "fluid": { "min": "1.0625rem", "max": "1.1875rem" } },
-				{ "slug": "large", "name": "Large", "size": "1.4375rem", "fluid": { "min": "1.25rem", "max": "1.4375rem" } },
-				{ "slug": "x-large", "name": "Extra large", "size": "1.75rem", "fluid": { "min": "1.5rem", "max": "1.75rem" } },
-				{ "slug": "xx-large", "name": "Huge", "size": "2.1875rem", "fluid": { "min": "1.625rem", "max": "2.1875rem" } }
+				{ "slug": "x-small", "name": "Extra small", "size": "0.8125rem", "fluid": false },
+				{ "slug": "small", "name": "Small", "size": "0.9375rem", "fluid": false },
+				{ "slug": "medium", "name": "Medium", "size": "1.0625rem", "fluid": false },
+				{ "slug": "large", "name": "Large", "size": "1.1875rem", "fluid": false },
+				{ "slug": "x-large", "name": "Extra large", "size": "clamp(1.5rem, 1.3rem + 0.9vw, 2rem)", "fluid": false },
+				{ "slug": "xx-large", "name": "Huge", "size": "clamp(2.25rem, 1.4rem + 3.6vw, 3.75rem)", "fluid": false }
 			]
 		}
 	},
@@ -87,9 +149,9 @@
 			}
 		},
 		"typography": {
-			"fontFamily": "var:preset|font-family|system-sans",
+			"fontFamily": "var:preset|font-family|inter",
 			"fontSize": "var:preset|font-size|medium",
-			"lineHeight": "1.6"
+			"lineHeight": "1.65"
 		},
 		"elements": {
 			"link": {
@@ -98,26 +160,26 @@
 				":hover": { "color": { "text": "var:preset|color|accent" }, "typography": { "textDecoration": "none" } }
 			},
 			"heading": {
-				"color": { "text": "var:preset|color|contrast" },
-				"typography": { "fontWeight": "600", "lineHeight": "calc(1em + 0.5rem)" }
+				"color": { "text": "var:preset|color|heading" },
+				"typography": { "fontWeight": "400", "lineHeight": "1.2" }
 			},
 			"h1": {
-				"typography": { "fontSize": "var:preset|font-size|xx-large", "letterSpacing": "-0.02rem" }
+				"typography": { "fontSize": "var:preset|font-size|xx-large", "letterSpacing": "-0.035em", "lineHeight": "1.08" }
 			},
 			"h2": {
-				"typography": { "fontSize": "var:preset|font-size|x-large", "letterSpacing": "-0.02rem" }
+				"typography": { "fontSize": "var:preset|font-size|x-large", "letterSpacing": "-0.025em" }
 			},
 			"h3": {
-				"typography": { "fontSize": "var:preset|font-size|large", "letterSpacing": "-0.01rem" }
+				"typography": { "fontSize": "var:preset|font-size|large", "letterSpacing": "-0.012em" }
 			},
 			"h4": {
 				"typography": { "fontSize": "var:preset|font-size|medium" }
 			},
 			"button": {
-				"border": { "radius": "5px" },
-				"color": { "background": "var:preset|color|contrast", "text": "var:preset|color|base" },
-				"typography": { "fontSize": "var:preset|font-size|small", "fontWeight": "600" },
-				":hover": { "color": { "background": "var:preset|color|accent", "text": "var:preset|color|base" } }
+				"border": { "radius": "4px" },
+				"color": { "background": "var:preset|color|accent", "text": "var:preset|color|on-accent" },
+				"typography": { "fontSize": "var:preset|font-size|small", "fontWeight": "500" },
+				":hover": { "color": { "background": "var:preset|color|accent-deep", "text": "var:preset|color|on-accent" } }
 			},
 			"caption": {
 				"color": { "text": "var:preset|color|muted" },
@@ -129,7 +191,7 @@
 				"typography": { "fontSize": "var:preset|font-size|medium", "fontWeight": "600", "lineHeight": "1.3" },
 				"elements": {
 					"link": {
-						"color": { "text": "var:preset|color|contrast" },
+						"color": { "text": "var:preset|color|heading" },
 						"typography": { "textDecoration": "none" }
 					}
 				}
@@ -140,7 +202,7 @@
 			"core/post-title": {
 				"elements": {
 					"link": {
-						"color": { "text": "var:preset|color|contrast" },
+						"color": { "text": "var:preset|color|heading" },
 						"typography": { "textDecoration": "none" }
 					}
 				}
@@ -160,7 +222,7 @@
 			"core/code": {
 				"border": { "color": "var:preset|color|rule", "radius": "5px", "style": "solid", "width": "1px" },
 				"spacing": { "padding": { "top": "var:preset|spacing|20", "right": "var:preset|spacing|30", "bottom": "var:preset|spacing|20", "left": "var:preset|spacing|30" } },
-				"typography": { "fontFamily": "var:preset|font-family|system-mono", "fontSize": "0.9em" }
+				"typography": { "fontFamily": "var:preset|font-family|inter", "fontSize": "0.9em" }
 			},
 			"core/separator": {
 				"color": { "text": "var:preset|color|rule" }

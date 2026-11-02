@@ -54,8 +54,8 @@ for ( const [ kind, path ] of Object.entries( pages ) ) {
 		expect( [ ...html.matchAll( /<form[^>]*role="search"[^>]*aria-label="([^"]+)"/g ) ].map( ( m ) => m[ 1 ] ) ).toEqual( [ searchForm ] );
 		expect( schemaTypes( html ) ).toEqual( types );
 
-		expect( html ).toContain( '<meta name="theme-color" content="#fcfcfc" media="(prefers-color-scheme: light)">' );
-		expect( html ).toContain( '<meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">' );
+		expect( html ).toContain( '<meta name="theme-color" content="#f4f4f2" media="(prefers-color-scheme: light)">' );
+		expect( html ).toContain( '<meta name="theme-color" content="#16181d" media="(prefers-color-scheme: dark)">' );
 	} );
 }
 

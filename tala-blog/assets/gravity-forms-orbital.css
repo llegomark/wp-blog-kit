@@ -13,7 +13,7 @@ body .gform-theme--framework.gform-theme:not(#tala-blog-gravity-forms),
 body [data-parent-form]:not(#tala-blog-gravity-forms) {
 
 	/* Type and shape: the page's font; fields like the theme's own (the comment and search fields). */
-	--gf-font-family-base: var(--wp--preset--font-family--system-sans);
+	--gf-font-family-base: var(--wp--preset--font-family--inter);
 	--gf-ctrl-font-size: 1rem; /* 16px: phones don't zoom into a field when it's tapped */
 	--gf-radius: 5px;
 	--gf-ctrl-shadow: none;

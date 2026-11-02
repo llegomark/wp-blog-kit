@@ -85,12 +85,12 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * The browser's theme colour follows theme.json in light and dark mode.
+	 * The browser's theme colour follows theme.json in light and dark mode: the paper of each.
 	 */
 	public function test_theme_colour(): void {
 		$meta = get_echo( 'tala_blog_theme_color' );
-		$this->assertStringContainsString( '<meta name="theme-color" content="#fcfcfc" media="(prefers-color-scheme: light)">', $meta );
-		$this->assertStringContainsString( '<meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)">', $meta );
+		$this->assertStringContainsString( '<meta name="theme-color" content="#f4f4f2" media="(prefers-color-scheme: light)">', $meta );
+		$this->assertStringContainsString( '<meta name="theme-color" content="#16181d" media="(prefers-color-scheme: dark)">', $meta );
 	}
 
 	/**
@@ -588,28 +588,6 @@ HTML;
 	}
 
 	/**
-	 * What the Site Editor keeps of a style variation when it lists it as a colour or typography
-	 * preset: only what sits under one of the keys, at any depth, as filterObjectByProperties() in
-	 * WordPress's global styles code does. A variation that keeps all of its settings and styles this
-	 * way is a preset; any other is listed as a whole style.
-	 *
-	 * @param array<mixed> $data Settings or styles.
-	 * @param string[]     $keys Keys to keep.
-	 * @return array<mixed>
-	 */
-	private static function only( array $data, array $keys ): array {
-		$kept = array();
-		foreach ( $data as $key => $value ) {
-			if ( in_array( $key, $keys, true ) ) {
-				$kept[ $key ] = $value;
-			} elseif ( is_array( $value ) && self::only( $value, $keys ) ) {
-				$kept[ $key ] = self::only( $value, $keys );
-			}
-		}
-		return $kept;
-	}
-
-	/**
 	 * WCAG contrast ratio of two colours written #rrggbb.
 	 *
 	 * @param string $a Colour.
@@ -630,16 +608,6 @@ HTML;
 		$light     = max( $luminance( $a ), $luminance( $b ) );
 		$dark      = min( $luminance( $a ), $luminance( $b ) );
 		return ( $light + 0.05 ) / ( $dark + 0.05 );
-	}
-
-	/**
-	 * A JSON file of the theme, decoded.
-	 *
-	 * @param string $file Path in the theme.
-	 * @return array<string, mixed>
-	 */
-	private static function theme_json( string $file ): array {
-		return (array) wp_json_file_decode( get_theme_file_path( $file ), array( 'associative' => true ) );
 	}
 
 	/**
@@ -787,7 +755,7 @@ HTML;
 						'theme' => array(
 							array(
 								'slug'  => 'base',
-								'color' => array( '#fcfcfc' ),
+								'color' => array( '#f4f4f2' ),
 							),
 							'contrast',
 							array( 'slug' => 'accent' ),
@@ -807,111 +775,156 @@ HTML;
 		remove_filter( 'wp_theme_json_data_user', $inject );
 		WP_Theme_JSON_Resolver::clean_cached_data();
 		$this->assertStringNotContainsString( 'prefers-color-scheme: light', $meta, 'No light colour to announce' );
-		$this->assertStringContainsString( 'content="#121212" media="(prefers-color-scheme: dark)"', $meta, "The theme's own dark colour" );
+		$this->assertStringContainsString( 'content="#16181d" media="(prefers-color-scheme: dark)"', $meta, "The theme's own dark colour" );
 	}
 
 	/**
-	 * The theme's style variations: three colour presets and two typography presets.
+	 * One identity on every site: the theme offers no style variations (colour or typography
+	 * presets) in the Site Editor.
 	 */
-	public function test_style_variations_are_offered(): void {
-		$this->assertEqualsCanonicalizing(
-			array( 'Blue', 'Green', 'Sepia', 'Serif', 'Serif headings' ),
-			wp_list_pluck( WP_Theme_JSON_Resolver::get_style_variations(), 'title' )
-		);
+	public function test_no_style_variations(): void {
+		$this->assertSame( array(), WP_Theme_JSON_Resolver::get_style_variations() );
 	}
 
 	/**
-	 * The theme's colours and each colour preset: the six colours, in light and in dark mode, with
-	 * text at 6:1 or more on the page and on the washed background, as the readme says; and the
-	 * presets hold only colours, so the Site Editor lists them as palettes (their dark colours
-	 * included), not as whole styles.
+	 * The theme's colours, light and dark (settings.custom.color.dark, which the CSS swaps in), with
+	 * text that keeps WCAG AA contrast (4.5:1) on the page, the surface and the washed background,
+	 * and on the accent and the footer slab, in both.
 	 */
 	public function test_colour_presets(): void {
-		$theme = self::theme_json( 'theme.json' );
-		$names = wp_list_pluck( $theme['settings']['color']['palette'], 'name', 'slug' );
-		$files = (array) glob( get_theme_file_path( 'styles/colors/*.json' ) );
-		$this->assertCount( 3, $files );
+		$palette = array_column( wp_get_global_settings( array( 'color', 'palette', 'theme' ) ), 'color', 'slug' );
+		$this->assertSame(
+			array(
+				'base'        => '#f4f4f2',
+				'surface'     => '#fafafa',
+				'contrast'    => '#393d45',
+				'heading'     => '#000000',
+				'muted'       => '#585f6c',
+				'accent'      => '#1348dc',
+				'on-accent'   => '#ffffff',
+				'accent-deep' => '#053794',
+				'wash'        => '#ebebec',
+				'border'      => '#dadde2',
+				'rule'        => '#cbcfd4',
+				'slab'        => '#1348dc',
+				'on-slab'     => '#ffffff',
+			),
+			$palette
+		);
+		$dark = wp_get_global_settings( array( 'custom', 'color', 'dark' ) );
+		$this->assertSame(
+			array(
+				'base'        => '#16181d',
+				'surface'     => '#1c1f26',
+				'contrast'    => '#d3d6dc',
+				'heading'     => '#f2f3f5',
+				'muted'       => '#a3aab7',
+				'accent'      => '#7d9bff',
+				'on-accent'   => '#0b1433',
+				'accent-deep' => '#4f73e6',
+				'wash'        => '#232730',
+				'border'      => '#2e323b',
+				'rule'        => '#2c3038',
+				'slab'        => '#1640b8',
+				'on-slab'     => '#ffffff',
+			),
+			$dark
+		);
 
-		$palettes = array( 'theme.json' => $theme );
-		foreach ( $files as $file ) {
-			$name   = basename( (string) $file );
-			$preset = self::theme_json( 'styles/colors/' . $name );
-			$parts  = array_intersect_key( $preset, array_flip( array( 'settings', 'styles' ) ) );
-			$this->assertSame( $parts, self::only( $parts, array( 'color' ) ), "$name: colours only" );
-			$this->assertSame( $names, wp_list_pluck( $preset['settings']['color']['palette'], 'name', 'slug' ), "$name: the theme's colour names" );
-			$palettes[ $name ] = $preset;
-		}
-
-		$pairs = array( array( 'contrast', 'base' ), array( 'muted', 'base' ), array( 'accent', 'base' ), array( 'contrast', 'wash' ), array( 'muted', 'wash' ), array( 'accent', 'wash' ) );
-		foreach ( $palettes as $name => $data ) {
-			$schemes = array(
-				'light' => wp_list_pluck( $data['settings']['color']['palette'], 'color', 'slug' ),
-				'dark'  => (array) ( $data['settings']['custom']['color']['dark'] ?? array() ),
-			);
-			foreach ( $schemes as $scheme => $colors ) {
-				$this->assertEqualsCanonicalizing( array_keys( $names ), array_keys( $colors ), "$name, $scheme: six colours" );
-				foreach ( $colors as $color ) {
-					$this->assertMatchesRegularExpression( '/^#[0-9a-f]{6}$/i', $color, "$name, $scheme" );
-				}
-				foreach ( $pairs as list( $text, $background ) ) {
-					$this->assertGreaterThanOrEqual( 6, self::contrast( $colors[ $text ], $colors[ $background ] ), "$name, $scheme: $text on $background" );
-				}
+		$pairs = array( array( 'contrast', 'base' ), array( 'heading', 'base' ), array( 'muted', 'base' ), array( 'accent', 'base' ), array( 'muted', 'surface' ), array( 'contrast', 'wash' ), array( 'muted', 'wash' ), array( 'accent', 'wash' ), array( 'on-accent', 'accent' ), array( 'on-slab', 'slab' ) );
+		foreach ( array(
+			'light' => $palette,
+			'dark'  => $dark,
+		) as $scheme => $colors ) {
+			foreach ( $pairs as list( $text, $background ) ) {
+				$this->assertGreaterThanOrEqual( 4.5, self::contrast( $colors[ $text ], $colors[ $background ] ), "$scheme: $text on $background" );
 			}
 		}
 	}
 
 	/**
-	 * Typography presets use only the theme's system fonts (nothing to download) and set only
-	 * typography, so the Site Editor lists them as typography presets. Each lists the theme's font
-	 * families as they are, and names its fonts as CSS variables: the Site Editor's preview of a
-	 * preset reads the fonts from the preset itself, in that form.
+	 * The type scale: six sizes from meta text to display titles, as written (WordPress doesn't make
+	 * them fluid; the two largest are fluid already).
 	 */
 	public function test_typography_presets(): void {
-		$theme    = self::theme_json( 'theme.json' )['settings']['typography']['fontFamilies'];
-		$families = wp_list_pluck( $theme, 'slug' );
-		$files    = (array) glob( get_theme_file_path( 'styles/typography/*.json' ) );
-		$this->assertCount( 2, $files );
-		foreach ( $files as $file ) {
-			$name   = basename( (string) $file );
-			$preset = self::theme_json( 'styles/typography/' . $name );
-			$parts  = array_intersect_key( $preset, array_flip( array( 'settings', 'styles' ) ) );
-			$this->assertSame( $parts, self::only( $parts, array( 'typography' ) ), "$name: typography only" );
-			$this->assertSame( array( 'typography' => array( 'fontFamilies' => $theme ) ), $preset['settings'] ?? null, "$name: the theme's font families, no others" );
-			$this->assertStringNotContainsString( 'var:preset', (string) wp_json_encode( $preset ), "$name: fonts as CSS variables" );
-			preg_match_all( '/var\(--wp--preset--font-family--([a-z0-9-]+)\)/', (string) wp_json_encode( $preset, JSON_UNESCAPED_SLASHES ), $used );
-			$this->assertNotEmpty( $used[1], $name );
-			$this->assertSame( array(), array_diff( $used[1], $families ), "$name: the theme's font families" );
+		$sizes = array(
+			'x-small'  => '0.8125rem',
+			'small'    => '0.9375rem',
+			'medium'   => '1.0625rem',
+			'large'    => '1.1875rem',
+			'x-large'  => 'clamp(1.5rem, 1.3rem + 0.9vw, 2rem)',
+			'xx-large' => 'clamp(2.25rem, 1.4rem + 3.6vw, 3.75rem)',
+		);
+		$this->assertSame( $sizes, array_column( wp_get_global_settings( array( 'typography', 'fontSizes', 'theme' ) ), 'size', 'slug' ) );
+		$variables = wp_get_global_stylesheet( array( 'variables' ) );
+		foreach ( $sizes as $slug => $size ) {
+			$this->assertStringContainsString( "--wp--preset--font-size--$slug: $size;", $variables );
+		}
+	}
+
+	/**
+	 * Inter, self-hosted with its licence: the only font family besides its display cut, with
+	 * fallbacks sized like it; the two Latin files every page needs are preloaded before any CSS.
+	 */
+	public function test_inter_font(): void {
+		$families = array_column( wp_get_global_settings( array( 'typography', 'fontFamilies', 'theme' ) ), null, 'slug' );
+		$this->assertSame( array( 'inter', 'inter-display' ), array_keys( $families ) );
+		$this->assertStringStartsWith( '"Inter", "Inter Fallback", "Inter Fallback Roboto"', $families['inter']['fontFamily'] );
+		$this->assertFileExists( get_theme_file_path( 'assets/fonts/OFL.txt' ) );
+		foreach ( $families as $family ) {
+			foreach ( $family['fontFace'] as $face ) {
+				$this->assertFileExists( get_theme_file_path( str_replace( 'file:./', '', $face['src'][0] ) ) );
+			}
+		}
+
+		// A fresh style queue, so the theme's styles print in this <head> whatever printed before.
+		$GLOBALS['wp_styles'] = new WP_Styles();
+		$head                 = get_echo( 'wp_head' );
+		$this->assertSame( 1, substr_count( $head, 'InterVariable-latin.woff2" as="font" type="font/woff2" crossorigin' ) );
+		$this->assertSame( 1, substr_count( $head, 'InterDisplay-LightItalic-latin.woff2" as="font" type="font/woff2" crossorigin' ) );
+		$this->assertLessThan( strpos( $head, '<style' ), strpos( $head, 'rel="preload"' ), 'Preloads before styles.' );
+		foreach ( array( 'InterVariable-latin.woff2', 'InterDisplay-LightItalic-latin.woff2' ) as $file ) {
+			$this->assertStringContainsString( "url('" . get_theme_file_uri( "assets/fonts/$file" ) . "') format('woff2')", $head, "$file: the preloaded file is the one the CSS asks for" );
 		}
 	}
 
 	/**
 	 * The browser's theme colour and the dark-mode colours follow a chosen colour preset, also when
 	 * the person who chose it can't save unfiltered HTML: WordPress then keeps only the palette, and
-	 * the dark colours come from the preset's file. A palette changed after choosing a preset is the
-	 * site's own, with the theme's dark colours.
+	 * the dark colours come from the preset's file. The theme ships no presets, but a child theme
+	 * can (tests/phpunit/fixtures/themes/tala-blog-child). A palette changed after choosing a preset
+	 * is the site's own, with the theme's dark colours.
 	 */
 	public function test_dark_colours_follow_a_colour_preset(): void {
-		$sepia     = self::theme_json( 'styles/colors/sepia.json' );
-		$dark_base = $sepia['settings']['custom']['color']['dark']['base'];
-		$light     = '<meta name="theme-color" content="' . wp_list_pluck( $sepia['settings']['color']['palette'], 'color', 'slug' )['base'] . '" media="(prefers-color-scheme: light)">';
-		$dark      = '<meta name="theme-color" content="' . $dark_base . '" media="(prefers-color-scheme: dark)">';
+		$themes = dirname( __DIR__ ) . '/fixtures/themes';
+		$preset = (array) wp_json_file_decode( "$themes/tala-blog-child/styles/colors/slate.json", array( 'associative' => true ) );
+		$base   = wp_list_pluck( $preset['settings']['color']['palette'], 'color', 'slug' )['base'];
+		$dark   = $preset['settings']['custom']['color']['dark']['base'];
+		$child  = static fn(): string => 'tala-blog-child';
+		register_theme_directory( $themes );
+		search_theme_directories( true );
+		add_filter( 'stylesheet', $child );
 		try {
+			$this->assertSame( 'tala-blog', wp_get_theme()->get_template(), 'A child theme of Tala Blog' );
 			foreach ( array(
 				'unfiltered' => false,
 				'filtered'   => true,
 			) as $case => $filtered ) {
-				$this->choose_variation( $sepia, $filtered );
+				$this->choose_variation( $preset, $filtered );
 				$meta = get_echo( 'tala_blog_theme_color' );
-				$this->assertStringContainsString( $light, $meta, $case );
-				$this->assertStringContainsString( $dark, $meta, $case );
-				$this->assertStringContainsString( '--wp--custom--color--dark--base: ' . $dark_base, wp_get_global_stylesheet( array( 'variables' ) ), $case );
+				$this->assertStringContainsString( '<meta name="theme-color" content="' . $base . '" media="(prefers-color-scheme: light)">', $meta, $case );
+				$this->assertStringContainsString( '<meta name="theme-color" content="' . $dark . '" media="(prefers-color-scheme: dark)">', $meta, $case );
+				$this->assertStringContainsString( '--wp--custom--color--dark--base: ' . $dark, wp_get_global_stylesheet( array( 'variables' ) ), $case );
 			}
 
-			$changed = $sepia;
+			$changed = $preset;
 			$changed['settings']['color']['palette'][0]['color'] = '#ffffff';
 			$this->choose_variation( $changed, true );
-			$this->assertStringContainsString( 'content="#121212" media="(prefers-color-scheme: dark)"', get_echo( 'tala_blog_theme_color' ) );
+			$this->assertStringContainsString( 'content="#16181d" media="(prefers-color-scheme: dark)"', get_echo( 'tala_blog_theme_color' ) );
 		} finally {
+			remove_filter( 'stylesheet', $child );
+			$GLOBALS['wp_theme_directories'] = array_values( array_diff( $GLOBALS['wp_theme_directories'], array( $themes ) ) );
+			search_theme_directories( true );
 			WP_Theme_JSON_Resolver::clean_cached_data();
 			wp_clean_theme_json_cache();
 		}

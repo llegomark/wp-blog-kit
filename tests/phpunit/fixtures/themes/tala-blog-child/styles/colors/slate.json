@@ -1,0 +1,43 @@
+{
+	"$schema": "https://schemas.wp.org/wp/7.0/theme.json",
+	"version": 3,
+	"title": "Slate",
+	"settings": {
+		"color": {
+			"palette": [
+				{ "slug": "base", "name": "Paper", "color": "#f1f3f5" },
+				{ "slug": "surface", "name": "Surface", "color": "#f8f9fa" },
+				{ "slug": "contrast", "name": "Text", "color": "#343a40" },
+				{ "slug": "heading", "name": "Headings", "color": "#000000" },
+				{ "slug": "muted", "name": "Secondary text", "color": "#555c63" },
+				{ "slug": "accent", "name": "Accent", "color": "#0b5f73" },
+				{ "slug": "on-accent", "name": "Text on accent", "color": "#ffffff" },
+				{ "slug": "accent-deep", "name": "Accent, deep", "color": "#073f4d" },
+				{ "slug": "wash", "name": "Wash", "color": "#e9ecef" },
+				{ "slug": "border", "name": "Borders", "color": "#d6dadf" },
+				{ "slug": "rule", "name": "Lines", "color": "#c8cdd2" },
+				{ "slug": "slab", "name": "Footer", "color": "#0b5f73" },
+				{ "slug": "on-slab", "name": "Text on footer", "color": "#ffffff" }
+			]
+		},
+		"custom": {
+			"color": {
+				"dark": {
+					"base": "#14181b",
+					"surface": "#1a1f23",
+					"contrast": "#d0d5d9",
+					"heading": "#f1f3f5",
+					"muted": "#a0a8af",
+					"accent": "#6cc3d8",
+					"on-accent": "#06232a",
+					"accent-deep": "#3f9fb6",
+					"wash": "#21272c",
+					"border": "#2c3338",
+					"rule": "#2a3035",
+					"slab": "#0b5f73",
+					"on-slab": "#ffffff"
+				}
+			}
+		}
+	}
+}
