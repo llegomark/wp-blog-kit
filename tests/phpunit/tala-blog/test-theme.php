@@ -403,12 +403,14 @@ HTML;
 			'header'             => 'header',
 			'footer'             => 'footer',
 			'navigation-overlay' => 'navigation-overlay',
+			'footer-note'        => 'uncategorized',
 		);
 		foreach ( $areas as $slug => $area ) {
 			$part = get_block_template( 'tala-blog//' . $slug, 'wp_template_part' );
 			$this->assertInstanceOf( WP_Block_Template::class, $part, $slug );
 			$this->assertSame( $area, $part->area, $slug );
 		}
+		$this->assertNull( get_block_template( 'tala-blog//footer-without-search', 'wp_template_part' ), 'One footer' );
 		$classes = static fn( array $block ): array => preg_split( '/\s+/', $block['attrs']['className'] ?? '', -1, PREG_SPLIT_NO_EMPTY );
 		foreach ( array( 'home', 'index', 'single', 'page', 'archive', 'author', 'search', '404' ) as $slug ) {
 			$content = get_block_template( 'tala-blog//' . $slug )->content;
@@ -466,6 +468,189 @@ HTML;
 		$this->assertSame( array_keys( $order ), array_keys( $sorted ), 'Brand, menu (and its overlay), search, switch' );
 		// The separator is drawn by CSS: an empty Group would show its placeholder in the Site Editor.
 		$this->assertStringNotContainsString( 'tala-separator', $header );
+	}
+
+	/**
+	 * The footer, rendered as every template places it.
+	 *
+	 * @return string
+	 */
+	private function footer(): string {
+		return do_blocks( '<!-- wp:template-part {"slug":"footer","theme":"tala-blog","tagName":"footer"} /-->' );
+	}
+
+	/**
+	 * The breadcrumbs (open elements, outermost first, from the footer element) of the link with
+	 * a given text in some HTML, or null when there is none.
+	 *
+	 * @param string $html HTML.
+	 * @param string $text Link text.
+	 * @return string[]|null
+	 */
+	private function link_breadcrumbs( string $html, string $text ): ?array {
+		$tags = WP_HTML_Processor::create_fragment( $html );
+		$this->assertNotNull( $tags );
+		while ( $tags->next_token() ) {
+			if ( '#text' === $tags->get_token_type() && $text === $tags->get_modifiable_text() ) {
+				$crumbs = array_slice( $tags->get_breadcrumbs(), 0, -1 ); // Without the text itself.
+				return array_slice( $crumbs, (int) array_search( 'FOOTER', $crumbs, true ) );
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The footer slab: a hairline grid of cells, the brand cell first (site title, tagline, the
+	 * footer note part), then the site's menu as columns, then the bottom bar and the wordmark.
+	 * Each top-level item with a submenu is a column under its label, with every submenu open
+	 * (no buttons: nothing to open) and a third level listed under its parent; top-level items
+	 * without a submenu gather in a last column. Without a menu, the pages make one column.
+	 */
+	public function test_footer_menu_columns(): void {
+		$this->publish_post(
+			array(
+				'post_type'  => 'page',
+				'post_title' => 'Contact',
+			)
+		);
+		self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_navigation',
+				'post_status'  => 'publish',
+				'post_title'   => 'Menu',
+				'post_content' => '<!-- wp:navigation-link {"label":"News","url":"/news/","kind":"custom"} /-->'
+					. '<!-- wp:navigation-submenu {"label":"Grades","url":"/grades/","kind":"custom"} -->'
+					. '<!-- wp:navigation-link {"label":"Grade 1","url":"/grade-1/","kind":"custom"} /-->'
+					. '<!-- wp:navigation-submenu {"label":"Grade 2","url":"/grade-2/","kind":"custom"} -->'
+					. '<!-- wp:navigation-link {"label":"Grade 2 Math","url":"/grade-2-math/","kind":"custom"} /-->'
+					. '<!-- /wp:navigation-submenu -->'
+					. '<!-- /wp:navigation-submenu -->'
+					. '<!-- wp:navigation-link {"label":"About","url":"/about/","kind":"custom"} /-->',
+			)
+		);
+		$footer = $this->footer();
+		$this->assertMatchesRegularExpression( '#^<footer[^>]*>\s*<div class="wp-block-group tala-slab[ "]#', $footer );
+		$this->assertMatchesRegularExpression( '/<div class="wp-block-group tala-rail[ "]/', $footer );
+		$this->assertMatchesRegularExpression( '/<div class="wp-block-group tala-cells[ "]/', $footer );
+		$this->assertSame( 1, preg_match_all( '/<nav [^>]*>/', $footer, $navs ), 'One menu' );
+		$this->assertStringContainsString( 'tala-footer-menu', $navs[0][0] );
+		// Core numbers a name it has already used on the page ("Footer 2"), as each test renders the footer again.
+		$this->assertMatchesRegularExpression( '/ aria-label="Footer( \d+)?"/', $navs[0][0] );
+		$this->assertStringContainsString( '--tala-columns:2', $navs[0][0], 'Grades, then News and About' );
+		$this->assertStringNotContainsString( 'wp-block-navigation__submenu-icon', $footer, 'Submenus are open: no buttons' );
+		$this->assertStringNotContainsString( '<button', $footer );
+		$this->assertStringNotContainsString( 'wp-block-navigation__responsive-container', $footer, 'Never folded' );
+		$this->assertStringNotContainsString( '>Contact<', $footer, 'The menu, not the pages' );
+
+		$column = array( 'FOOTER', 'DIV', 'DIV', 'DIV', 'NAV', 'UL', 'LI' );
+		$this->assertSame( array_merge( $column, array( 'A', 'SPAN' ) ), $this->link_breadcrumbs( $footer, 'Grades' ), 'A column, under its label' );
+		$this->assertSame( array_merge( $column, array( 'UL', 'LI', 'A', 'SPAN' ) ), $this->link_breadcrumbs( $footer, 'Grade 1' ) );
+		$this->assertSame( array_merge( $column, array( 'UL', 'LI', 'UL', 'LI', 'A', 'SPAN' ) ), $this->link_breadcrumbs( $footer, 'Grade 2 Math' ), 'The third level under its parent' );
+		foreach ( array( 'News', 'About' ) as $leaf ) {
+			$this->assertSame( array_merge( $column, array( 'UL', 'LI', 'A', 'SPAN' ) ), $this->link_breadcrumbs( $footer, $leaf ), "$leaf: in the last column" );
+		}
+		$order = array_map( static fn( $text ) => strpos( $footer, ">$text<" ), array( 'Grades', 'Grade 2 Math', 'News', 'About' ) );
+		$this->assertNotContains( false, $order );
+		$sorted = $order;
+		sort( $sorted );
+		$this->assertSame( $sorted, $order, 'Columns first, then the gathered items in their order' );
+		$this->assertMatchesRegularExpression( '#<li class="wp-block-navigation-item tala-footer-menu__links"><ul class="wp-block-navigation__submenu-container">\s*<li[^>]*><a[^>]*><span[^>]*>News</span>#', $footer );
+
+		// Brand cell first: the site title (no link, it's the footer), the tagline.
+		$brand = strpos( $footer, 'tala-footer-brand' );
+		$this->assertNotFalse( $brand );
+		$this->assertLessThan( strpos( $footer, '<nav ' ), $brand );
+		$this->assertMatchesRegularExpression( '#tala-footer-brand[^>]*>\s*<p class="wp-block-site-title">' . preg_quote( get_bloginfo( 'name' ), '#' ) . '</p>#', $footer );
+
+		// Without a menu: the pages, in one column.
+		foreach ( get_posts( array( 'post_type' => 'wp_navigation' ) ) as $menu ) {
+			wp_delete_post( $menu->ID, true );
+		}
+		$footer = $this->footer();
+		$this->assertSame( array_merge( $column, array( 'UL', 'LI', 'A' ) ), $this->link_breadcrumbs( $footer, 'Contact' ), 'Pages in one column' );
+		$this->assertMatchesRegularExpression( '/<nav [^>]*--tala-columns:1[;"]/', $footer );
+		$this->assertStringNotContainsString( 'wp-block-page-list', $footer );
+	}
+
+	/**
+	 * The wordmark: the site title in giant capitals (CSS), sized from its length (characters as
+	 * readers see them, spaces counted), hidden from screen readers and not a link. It is not a
+	 * second site title: the brand cell's is the one.
+	 */
+	public function test_wordmark(): void {
+		$wordmark = static function ( string $html ): string {
+			return preg_match( '#<p [^>]*tala-wordmark[^>]*>.*?</p>#s', $html, $match ) ? $match[0] : '';
+		};
+		update_option( 'blogname', 'DepEd Tambayan' );
+		$mark = $wordmark( $this->footer() );
+		$this->assertNotSame( '', $mark );
+		$this->assertStringContainsString( 'aria-hidden="true"', $mark );
+		$this->assertStringContainsString( 'style="--tala-chars:14"', $mark );
+		$this->assertStringContainsString( '>DepEd Tambayan</p>', $mark );
+		$this->assertStringNotContainsString( '<a', $mark );
+		$this->assertStringNotContainsString( 'wp-block-site-title', $mark, 'Not another site title' );
+
+		// Characters, not bytes or entities.
+		update_option( 'blogname', 'Niño & Co' );
+		$this->assertStringContainsString( 'style="--tala-chars:9"', $wordmark( $this->footer() ) );
+
+		// A link (the block's "Make title link to home page") is taken out of the tab order too.
+		$linked = do_blocks( '<!-- wp:site-title {"level":0,"className":"tala-wordmark"} /-->' );
+		$this->assertStringContainsString( 'tabindex="-1"', $linked );
+		$this->assertStringContainsString( 'aria-hidden="true"', $linked );
+
+		// Other site titles are left alone.
+		$this->assertStringNotContainsString( 'aria-hidden', do_blocks( '<!-- wp:site-title {"level":0} /-->' ) );
+
+		update_option( 'blogname', '' );
+		$this->assertSame( '', trim( $wordmark( $this->footer() ) ), 'No title, no wordmark' );
+	}
+
+	/**
+	 * The year in the footer's copyright line comes from the "tala-blog/year" Block Bindings
+	 * source: this year in the site's time zone, never a year written into the pattern.
+	 */
+	public function test_year_binding(): void {
+		$this->assertTrue( get_block_bindings_source( 'tala-blog/year' ) instanceof WP_Block_Bindings_Source );
+		$year = do_blocks( '<!-- wp:paragraph {"metadata":{"bindings":{"content":{"source":"tala-blog/year"}}}} --><p></p><!-- /wp:paragraph -->' );
+		$this->assertMatchesRegularExpression( '#^<p[^>]*>' . wp_date( 'Y' ) . '</p>$#', trim( $year ) );
+
+		$footer = $this->footer();
+		$this->assertMatchesRegularExpression( '#<p class="tala-year[ "][^>]*>' . wp_date( 'Y' ) . '</p>#', $footer );
+		$this->assertDoesNotMatchRegularExpression( '/\b20\d\d\b(?<!' . wp_date( 'Y' ) . ')/', wp_strip_all_tags( $footer ), 'No other year' );
+	}
+
+	/**
+	 * The footer note: a template part the theme ships empty, filled per site in the Site
+	 * Editor. Empty, it prints nothing (not even its wrapper); filled, its text shows in the brand
+	 * cell. Any empty template part prints nothing.
+	 */
+	public function test_empty_footer_note_prints_nothing(): void {
+		$part = get_block_template( 'tala-blog//footer-note', 'wp_template_part' );
+		$this->assertInstanceOf( WP_Block_Template::class, $part );
+		$this->assertSame( 'uncategorized', $part->area );
+		$this->assertSame( '', trim( $part->content ) );
+
+		$footer = $this->footer();
+		$this->assertSame( 1, substr_count( $footer, 'wp-block-template-part' ), 'Only the footer itself' );
+
+		$this->assertSame( '', tala_blog_empty_part( "<div class=\"wp-block-template-part\">\n\t </div>", array( 'blockName' => 'core/template-part' ) ) );
+		$this->assertSame( '<div class="wp-block-template-part"><p>x</p></div>', tala_blog_empty_part( '<div class="wp-block-template-part"><p>x</p></div>', array( 'blockName' => 'core/template-part' ) ) );
+
+		$note = self::factory()->post->create(
+			array(
+				'post_type'    => 'wp_template_part',
+				'post_status'  => 'publish',
+				'post_name'    => 'footer-note',
+				'post_title'   => 'Footer note',
+				'post_content' => '<!-- wp:paragraph --><p>An independent site.</p><!-- /wp:paragraph -->',
+				'tax_input'    => array( 'wp_theme' => array( 'tala-blog' ) ),
+			)
+		);
+		wp_set_post_terms( $note, array( 'tala-blog' ), 'wp_theme' );
+		$footer = $this->footer();
+		$this->assertMatchesRegularExpression( '#tala-footer-brand.*<div class="wp-block-template-part">\s*<p[^>]*>An independent site.</p>\s*</div>#s', $footer );
+		$this->assertLessThan( strpos( $footer, '<nav ' ), strpos( $footer, 'An independent site.' ), 'In the brand cell' );
 	}
 
 	/**

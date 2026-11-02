@@ -192,6 +192,151 @@ function tala_blog_empty_related( $html, $block ) {
 	return tala_blog_block_has_class( $block, 'tala-related' ) && ! tala_blog_has_link( $html ) ? '' : $html;
 }
 
+add_filter( 'render_block_core/template-part', 'tala_blog_empty_part', 10, 2 );
+
+/**
+ * A template part with nothing in it prints nothing, not even its wrapper. The theme ships parts
+ * that each site fills in the Site Editor (the footer note), and empty they would leave an empty
+ * box, with its spacing, on every page.
+ *
+ * @param string               $html  Rendered Template Part.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_empty_part( $html, $block ) {
+	if ( 'core/template-part' !== ( $block['blockName'] ?? '' ) ) {
+		return $html;
+	}
+	$html = trim( $html );
+	// The wrapper's start tag ends at the first ">" (WordPress escapes ">" in attribute values),
+	// and its end tag is the last "</".
+	$start = strpos( $html, '>' );
+	$end   = strrpos( $html, '</' );
+	if ( false === $start || false === $end || $end <= $start ) {
+		return $html;
+	}
+	return '' === trim( substr( $html, $start + 1, $end - $start - 1 ) ) ? '' : $html;
+}
+
+add_action( 'init', 'tala_blog_register_bindings' );
+
+/**
+ * The "tala-blog/year" Block Bindings source: this year, in the site's time zone. The footer's
+ * copyright line binds a paragraph to it, so the year is never written into the theme or a
+ * site's saved footer, and changes by itself on 1 January.
+ */
+function tala_blog_register_bindings(): void {
+	register_block_bindings_source(
+		'tala-blog/year',
+		array(
+			'label'              => _x( 'Current year', 'name of a block binding', 'tala-blog' ),
+			'get_value_callback' => 'tala_blog_current_year',
+		)
+	);
+}
+
+/**
+ * This year, in the site's time zone.
+ *
+ * @return string
+ */
+function tala_blog_current_year() {
+	return (string) wp_date( 'Y' );
+}
+
+add_filter( 'render_block_core/site-title', 'tala_blog_wordmark', 10, 2 );
+
+/**
+ * The footer's wordmark (the Site Title block with the class "tala-wordmark"): the site title in
+ * giant outlined capitals, sized from its length (--tala-chars, the characters a reader sees,
+ * spaces counted) so any title spans the rail. It repeats the title for the eye only: hidden from
+ * screen readers, never in the tab order, and without the site title's class, so the brand cell's
+ * title stays the site title.
+ *
+ * @param string               $html  Rendered Site Title.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_wordmark( $html, $block ) {
+	if ( '' === trim( $html ) || ! tala_blog_block_has_class( $block, 'tala-wordmark' ) ) {
+		return $html;
+	}
+	$title = html_entity_decode( wp_strip_all_tags( get_bloginfo( 'name' ) ), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+	$chars = max( 1, mb_strlen( $title ) );
+	$mark  = new WP_HTML_Tag_Processor( $html );
+	if ( ! $mark->next_tag() ) {
+		return $html;
+	}
+	$mark->remove_class( 'wp-block-site-title' );
+	$mark->set_attribute( 'aria-hidden', 'true' );
+	$style = trim( (string) $mark->get_attribute( 'style' ) );
+	$mark->set_attribute( 'style', ( '' === $style ? '' : rtrim( $style, ';' ) . ';' ) . '--tala-chars:' . $chars );
+	while ( $mark->next_tag( array( 'tag_name' => 'a' ) ) ) {
+		$mark->set_attribute( 'tabindex', '-1' );
+	}
+	return $mark->get_updated_html();
+}
+
+add_filter( 'render_block_core/navigation', 'tala_blog_footer_columns', 10, 2 );
+
+/**
+ * The footer menu (the Navigation block with the class "tala-footer-menu") as columns: each
+ * top-level item with a submenu is a column under its label, and the top-level items without one
+ * (or the pages, while the site has no menu) gather in a last column, in their order. The menu
+ * gets the number of columns as --tala-columns, which sets its share of the footer's width.
+ * Markup the HTML API can't read is left as it is: then each item is a column of its own.
+ *
+ * @param string               $html  Rendered Navigation.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_footer_columns( $html, $block ) {
+	if ( ! tala_blog_block_has_class( $block, 'tala-footer-menu' ) ) {
+		return $html;
+	}
+	$tags = WP_HTML_Processor::create_fragment( $html );
+	if ( null === $tags ) {
+		return $html;
+	}
+	$menu    = '';
+	$gather  = '';
+	$list    = 0; // Depth of the menu's list, once it opens; -1 once it has closed.
+	$columns = 0;
+	$leaf    = false;
+	while ( $tags->next_token() ) {
+		$tag    = $tags->get_tag();
+		$closer = $tags->is_tag_closer();
+		if ( 0 === $list && 'UL' === $tag && ! $closer && $tags->has_class( 'wp-block-navigation__container' ) ) {
+			$list = $tags->get_current_depth();
+		} elseif ( $list > 0 && 'LI' === $tag && ! $closer && $tags->get_current_depth() === $list + 1 ) {
+			$leaf     = ! $tags->has_class( 'has-child' );
+			$columns += $leaf ? 0 : 1;
+		} elseif ( $list > 0 && 'UL' === $tag && $closer && $tags->get_current_depth() === $list - 1 ) {
+			if ( '' !== $gather ) {
+				$menu .= '<li class="wp-block-navigation-item tala-footer-menu__links"><ul class="wp-block-navigation__submenu-container">' . $gather . '</ul></li>';
+				++$columns;
+			}
+			$list = -1;
+			$leaf = false;
+		}
+		if ( $leaf ) {
+			$gather .= $tags->serialize_token();
+		} else {
+			$menu .= $tags->serialize_token();
+		}
+	}
+	if ( null !== $tags->get_last_error() || $list >= 0 ) {
+		return $html;
+	}
+	$nav = new WP_HTML_Tag_Processor( $menu );
+	if ( ! $nav->next_tag( array( 'tag_name' => 'nav' ) ) ) {
+		return $html;
+	}
+	$style = trim( (string) $nav->get_attribute( 'style' ) );
+	$nav->set_attribute( 'style', ( '' === $style ? '' : rtrim( $style, ';' ) . ';' ) . '--tala-columns:' . max( 1, $columns ) );
+	return $nav->get_updated_html();
+}
+
 // Don't fetch pattern directory patterns into the editor.
 add_filter( 'should_load_remote_block_patterns', '__return_false' );
 

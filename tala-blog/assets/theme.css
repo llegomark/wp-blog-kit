@@ -709,16 +709,263 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	}
 }
 
-.tala-footer {
-	margin-block-start: var(--wp--preset--spacing--60);
-	padding-block: var(--wp--preset--spacing--40);
-	border-top: 1px solid var(--wp--preset--color--rule);
-	color: var(--wp--preset--color--muted);
-	font-size: var(--wp--preset--font-size--small);
+/* The footer slab, as NASH Reviewer's: full-bleed cobalt with white text and hairlines at white
+   24%, the rail running on through it. A grid of cells (the brand cell, then the menu's columns),
+   the bottom bar, and the hatched band with the wordmark. Its own padding sets every space in it. */
+.tala-slab {
+	--tala-line: color-mix(in srgb, var(--wp--preset--color--on-slab) 24%, transparent);
+	position: relative;
+	padding-block-end: env(safe-area-inset-bottom, 0);
+	background-color: var(--wp--preset--color--slab);
+	color: var(--wp--preset--color--on-slab);
 }
 
-.tala-footer .wp-block-site-title {
-	font-size: inherit;
+@media (width >= 86rem) {
+
+	.tala-slab::before {
+		content: "";
+		position: absolute;
+		inset-block: 0;
+		inset-inline: calc(50% - var(--tala-rail) / 2 - 7rem);
+		border-inline: 1px solid color-mix(in srgb, var(--tala-line) 55%, transparent);
+		pointer-events: none;
+	}
+}
+
+.tala-slab > .tala-rail {
+	container: tala-footer / inline-size;
+	padding: 0;
+	border-color: var(--tala-line);
+}
+
+.tala-slab > .tala-rail > *,
+.tala-cells > *,
+.tala-footer-brand > *,
+.tala-footer-bar p {
+	margin-block: 0;
+}
+
+/* Links on the slab: white, underlined at white 45%, solid white on hover. */
+.tala-slab a:where(:not(.wp-element-button)) {
+	color: inherit;
+	text-decoration-line: underline;
+	text-decoration-style: solid;
+	text-decoration-color: color-mix(in srgb, var(--wp--preset--color--on-slab) 45%, transparent);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.3em;
+}
+
+@media (hover: hover) and (pointer: fine) {
+
+	.tala-slab a:where(:not(.wp-element-button)):hover {
+		color: inherit;
+		text-decoration-line: underline;
+		text-decoration-color: var(--wp--preset--color--on-slab);
+	}
+}
+
+/* The focus ring on the slab is white: cobalt on cobalt wouldn't show. */
+.tala-slab :where(a, button, input, select, textarea, summary):focus-visible {
+	outline-color: var(--wp--preset--color--on-slab);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+
+	.tala-slab a {
+		transition: text-decoration-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+	}
+}
+
+/* The cells: hairline gaps on the line colour. On a phone each takes the rail's width (the menu's
+   columns go two up inside theirs); from 48rem of footer the brand cell takes two shares and each
+   column of the menu one (--tala-columns, set by tala_blog_footer_columns()). */
+.tala-cells {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1px;
+	background-color: var(--tala-line);
+}
+
+.tala-cells > * {
+	flex: 1 1 100%;
+	min-inline-size: 0;
+	background-color: var(--wp--preset--color--slab);
+}
+
+@container tala-footer (width >= 48rem) {
+
+	.tala-cells > .tala-footer-brand {
+		flex: 2 1 0%;
+	}
+
+	.tala-cells > .tala-footer-menu {
+		flex: var(--tala-columns, 2) 1 0%;
+	}
+}
+
+.tala-footer-brand {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+	box-sizing: border-box;
+	padding: 2rem var(--tala-rail-pad);
+}
+
+.tala-footer-brand .wp-block-site-title {
+	padding-block-end: 1.25rem;
+	border-block-end: 1px solid var(--tala-line);
+	font-size: 1.3125rem;
+	letter-spacing: -0.025em;
+}
+
+.tala-footer-brand .wp-block-site-tagline {
+	max-inline-size: calc(60 * 0.628em);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.6;
+}
+
+/* The footer note (a template part each site fills in, empty in the theme): small print. */
+.tala-footer-brand .wp-block-template-part {
+	font-size: var(--wp--preset--font-size--x-small);
+	line-height: 1.5;
+	opacity: 0.85;
+}
+
+.tala-footer-brand .wp-block-template-part > * {
+	margin-block: 0;
+}
+
+/* The menu as columns: every submenu open and in the flow, each top-level item a cell with its
+   label as the heading (h2-sized, regular) and its links below, 15px and 40px tall; a third level
+   indented under its parent. Columns wrap two up on a phone, and a last odd one takes the row. */
+.tala-slab .tala-footer-menu {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0;
+}
+
+.tala-slab .tala-footer-menu:empty {
+	display: none;
+}
+
+.tala-slab .tala-footer-menu .wp-block-navigation__container {
+	flex: 1 0 auto;
+	flex-flow: row wrap;
+	align-items: stretch;
+	gap: 1px;
+	background-color: var(--tala-line);
+}
+
+.tala-slab .tala-footer-menu.wp-block-navigation .wp-block-navigation__container > .wp-block-navigation-item {
+	display: flex;
+	flex: 1 1 10rem;
+	flex-flow: column nowrap;
+	align-items: flex-start;
+	justify-content: flex-start;
+	gap: 1rem;
+	box-sizing: border-box;
+	min-inline-size: 0;
+	padding: 2rem var(--tala-rail-pad);
+	background-color: var(--wp--preset--color--slab);
+}
+
+.tala-slab .tala-footer-menu.wp-block-navigation .wp-block-navigation-item .wp-block-navigation__submenu-container {
+	position: static;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0;
+	inline-size: auto;
+	min-inline-size: 0;
+	block-size: auto;
+	padding: 0;
+	overflow: visible;
+	border: 0;
+	background: none;
+	color: inherit;
+	opacity: 1;
+	visibility: visible;
+}
+
+.tala-slab .tala-footer-menu.wp-block-navigation .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container {
+	padding-inline-start: 1rem;
+}
+
+.tala-slab .tala-footer-menu.wp-block-navigation .wp-block-navigation__submenu-container .wp-block-navigation-item {
+	display: block;
+	max-inline-size: 100%;
+}
+
+.tala-slab .tala-footer-menu.wp-block-navigation .wp-block-navigation-item .wp-block-navigation-item__content {
+	display: inline-flex;
+	align-items: center;
+	min-block-size: 2.5rem;
+	padding: 0;
+	font-size: var(--wp--preset--font-size--small);
+	overflow-wrap: anywhere;
+}
+
+.tala-slab .tala-footer-menu.wp-block-navigation .wp-block-navigation__container > .wp-block-navigation-item > .wp-block-navigation-item__content {
+	font-size: var(--wp--preset--font-size--large);
+	font-weight: 400;
+	line-height: 1.3;
+}
+
+/* The bottom bar: small capitals, tracked, at 80%: "© year site title" left, the tagline right. */
+.tala-footer-bar {
+	gap: 0.5rem 2rem;
+	padding: 1.25rem var(--tala-rail-pad);
+	border-block-start: 1px solid var(--tala-line);
+	font-size: var(--wp--preset--font-size--x-small);
+	letter-spacing: 0.12em;
+	line-height: 1.5;
+	text-transform: uppercase;
+	opacity: 0.8;
+}
+
+.tala-footer-bar .wp-block-site-title,
+.tala-footer-bar .wp-block-site-tagline {
+	font: inherit;
+	letter-spacing: inherit;
+}
+
+.tala-copyright {
+	gap: 0.4em;
+}
+
+.tala-year::before {
+	content: "© ";
+}
+
+/* The wordmark: the site title in giant outlined capitals on NASH's -45deg hatching, sized from
+   its length (--tala-chars, set by tala_blog_wordmark()) so it spans the band whatever the title;
+   the band clips the bottoms of the letters. Inter's display cut at every size (as NASH's SVG
+   wordmark, drawn at 330px), so a title's width doesn't change with the window: its capitals
+   average about 0.6em, and 1.6em per character spans 92-98% of the band for most titles. One of
+   unusually wide letters overflows both ends equally. The fill paints over the stroke's inner
+   half, which hides the variable font's overlapping contours. */
+.tala-wordmark-band {
+	container-type: inline-size;
+	overflow: hidden;
+	border-block-start: 1px solid var(--tala-line);
+	background-image: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--wp--preset--color--on-slab) 9%, transparent) 0 1px, transparent 1px 7px);
+}
+
+.tala-wordmark-band > .tala-wordmark {
+	margin: 0 0 -0.22em;
+	padding-block-start: 0.09em;
+	color: var(--wp--preset--color--slab);
+	display: flex;
+	justify-content: center;
+	font: 300 calc(100cqi / var(--tala-chars, 12) * 1.6) / 0.8 var(--wp--preset--font-family--inter);
+	font-variation-settings: "opsz" 32;
+	letter-spacing: -0.018em;
+	text-transform: uppercase;
+	white-space: nowrap;
+	-webkit-text-stroke: 2px color-mix(in srgb, #fff 45%, var(--wp--preset--color--slab));
+	paint-order: stroke fill;
+	user-select: none;
 }
 
 /* The article: on an article page its title and dates are the article's header; a page's title

@@ -3,7 +3,7 @@
  * and short pages keep their footer at the bottom of the window.
  */
 import { test, expect } from '@playwright/test';
-import { demoPages, PHONE, DESKTOP, wp } from './utils.mjs';
+import { demoPages, PHONE, DESKTOP, wp, axeViolations } from './utils.mjs';
 
 const pages = demoPages();
 
@@ -258,5 +258,124 @@ test.describe( 'the text column, desktop', () => {
 		// Its text starts where the column's does (within the 0.7 px between measure-72, 768.7 px, and
 		// the 48rem content size the editor uses, which centres the Group's text in it).
 		expect( Math.abs( column.text ) ).toBeLessThan( 1 );
+	} );
+} );
+
+/**
+ * The footer slab: the site's menu as columns of links on the cobalt slab, and the site title as a
+ * giant outlined wordmark that spans the rail whatever its length, never widening the page.
+ */
+test.describe( 'the footer', () => {
+	const title = wp( 'option', 'get', 'blogname' );
+	let menu;
+
+	test.beforeAll( () => {
+		const content =
+			'<!-- wp:navigation-submenu {"label":"Guides","url":"/category/classroom-guides/","kind":"custom"} -->' +
+			'<!-- wp:navigation-link {"label":"Classroom guides","url":"/category/classroom-guides/","kind":"custom"} /-->' +
+			'<!-- wp:navigation-submenu {"label":"Teaching","url":"/tag/teaching/","kind":"custom"} -->' +
+			'<!-- wp:navigation-link {"label":"Reading","url":"/?s=reading","kind":"custom"} /-->' +
+			'<!-- /wp:navigation-submenu -->' +
+			'<!-- /wp:navigation-submenu -->' +
+			'<!-- wp:navigation-submenu {"label":"About","url":"/about/","kind":"custom"} -->' +
+			'<!-- wp:navigation-link {"label":"Contact","url":"/about/#contact","kind":"custom"} /-->' +
+			'<!-- /wp:navigation-submenu -->' +
+			'<!-- wp:navigation-link {"label":"Hello","url":"/hello-world/","kind":"custom"} /-->';
+		menu = wp( 'post', 'create', '--post_type=wp_navigation', '--post_status=publish', '--post_title=Footer test menu', `--post_content=${ content }`, '--porcelain' );
+	} );
+
+	test.afterAll( () => {
+		wp( 'post', 'delete', menu, '--force' );
+		wp( 'option', 'update', 'blogname', title );
+	} );
+
+	/**
+	 * Where the wordmark's letters are, against its band, the rail and the window.
+	 *
+	 * @param {import('@playwright/test').Page} page Page.
+	 * @return {Promise<Object>} Boxes.
+	 */
+	const wordmark = ( page ) =>
+		page.evaluate( () => {
+			const mark = document.querySelector( 'footer .tala-wordmark' );
+			const letters = document.createRange();
+			letters.selectNodeContents( mark );
+			const box = ( r ) => ( { left: r.left, right: r.right, width: r.width } );
+			return {
+				scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+				window: document.documentElement.clientWidth,
+				mark: box( mark.getBoundingClientRect() ),
+				letters: box( letters.getBoundingClientRect() ),
+				band: box( mark.parentElement.getBoundingClientRect() ),
+				rail: document.querySelector( 'footer .tala-rail' ).clientWidth,
+				hidden: mark.getAttribute( 'aria-hidden' ),
+				transform: getComputedStyle( mark ).textTransform,
+			};
+		} );
+
+	test( 'wordmark fits any title at 320 px', async ( { page } ) => {
+		await page.setViewportSize( { width: 320, height: 800 } );
+		wp( 'option', 'update', 'blogname', 'Department of Education Teachers Network' );
+		await page.goto( pages.article );
+		const narrow = await wordmark( page );
+		expect( narrow.scroll, 'No sideways scrolling' ).toBe( 0 );
+		expect( narrow.mark.left ).toBeGreaterThanOrEqual( 0 );
+		expect( narrow.mark.right ).toBeLessThanOrEqual( narrow.window );
+		// The whole title shows: its letters sit inside the band.
+		expect( narrow.letters.left ).toBeGreaterThanOrEqual( narrow.band.left );
+		expect( narrow.letters.right ).toBeLessThanOrEqual( narrow.band.right );
+		expect( narrow.hidden ).toBe( 'true' );
+		expect( narrow.transform ).toBe( 'uppercase' );
+
+		await page.setViewportSize( DESKTOP.viewport );
+		wp( 'option', 'update', 'blogname', 'DepEd Tambayan' );
+		await page.goto( pages.article );
+		const wide = await wordmark( page );
+		expect( wide.scroll ).toBe( 0 );
+		expect( wide.letters.width, 'The title spans the rail' ).toBeGreaterThanOrEqual( 0.9 * wide.rail );
+		expect( wide.letters.left ).toBeGreaterThanOrEqual( wide.band.left );
+		expect( wide.letters.right ).toBeLessThanOrEqual( wide.band.right );
+	} );
+
+	test.describe( 'phone', () => {
+		test.use( { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true } );
+
+		test( 'menu columns two up under the brand cell; links on the slab pass contrast', async ( { page } ) => {
+			for ( const colorScheme of [ 'light', 'dark' ] ) {
+				await page.emulateMedia( { colorScheme } );
+				await page.goto( pages.article );
+				const cells = await page.evaluate( () => {
+					const box = ( el ) => {
+						const r = el.getBoundingClientRect();
+						return { left: Math.round( r.left ), top: Math.round( r.top ), width: Math.round( r.width ) };
+					};
+					const columns = [ ...document.querySelectorAll( 'footer .tala-footer-menu .wp-block-navigation__container > li' ) ];
+					return {
+						rail: document.querySelector( 'footer .tala-rail' ).clientWidth,
+						brand: box( document.querySelector( 'footer .tala-footer-brand' ) ),
+						columns: columns.map( ( li ) => ( { ...box( li ), heading: li.querySelector( ':scope > a' )?.textContent ?? '' } ) ),
+						reading: !! document.querySelector( 'footer .wp-block-navigation__submenu-container .wp-block-navigation__submenu-container a[href="/?s=reading"]' ),
+						slab: getComputedStyle( document.querySelector( 'footer .tala-slab' ) ).backgroundColor,
+						underline: getComputedStyle( document.querySelector( 'footer .tala-footer-menu li li a' ) ).textDecorationLine,
+					};
+				} );
+				expect( cells.slab, colorScheme ).toBe( 'light' === colorScheme ? 'rgb(19, 72, 220)' : 'rgb(22, 64, 184)' );
+				expect( cells.brand.width, 'The brand cell spans the rail' ).toBe( cells.rail );
+				expect( cells.columns.map( ( c ) => c.heading ) ).toEqual( [ 'Guides', 'About', '' ] );
+				const [ first, second, last ] = cells.columns;
+				expect( second.top, 'Two up' ).toBe( first.top );
+				expect( second.left ).toBeGreaterThan( first.left );
+				expect( Math.abs( second.width - first.width ) ).toBeLessThanOrEqual( 1 );
+				expect( last.top, 'The odd column on a row of its own' ).toBeGreaterThan( first.top );
+				expect( last.width ).toBe( cells.rail );
+				expect( cells.reading, 'The third level is listed' ).toBe( true );
+				expect( cells.underline ).toBe( 'underline' );
+				expect( await axeViolations( page ), colorScheme ).toEqual( [] );
+				// The focus ring shows on the slab: white, not cobalt on cobalt.
+				const link = page.locator( 'footer .tala-footer-menu a' ).first();
+				await link.focus();
+				expect( await link.evaluate( ( a ) => [ a.matches( ':focus-visible' ), getComputedStyle( a ).outlineColor, getComputedStyle( a ).outlineWidth ] ) ).toEqual( [ true, 'rgb(255, 255, 255)', '2px' ] );
+			}
+		} );
 	} );
 } );
