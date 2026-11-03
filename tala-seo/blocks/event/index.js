@@ -122,7 +122,7 @@
 					{ label: __( 'Taking place as planned', 'tala-seo' ), value: 'EventScheduled' },
 					{ label: __( 'Rescheduled to the dates above', 'tala-seo' ), value: 'EventRescheduled' },
 					{ label: __( 'Postponed, new date not set', 'tala-seo' ), value: 'EventPostponed' },
-					{ label: __( 'Cancelled', 'tala-seo' ), value: 'EventCancelled' },
+					{ label: __( 'Canceled', 'tala-seo' ), value: 'EventCancelled' },
 				] ),
 				'EventRescheduled' === a.status &&
 					field( props, 'previousStartDate', __( 'First planned for', 'tala-seo' ), { type: 'date' } ),

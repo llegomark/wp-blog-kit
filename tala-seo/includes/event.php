@@ -34,7 +34,7 @@ function tala_seo_register_event_block(): void {
 function tala_seo_event_statuses() {
 	return array(
 		'EventScheduled'   => '',
-		'EventCancelled'   => __( 'Cancelled', 'tala-seo' ),
+		'EventCancelled'   => __( 'Canceled', 'tala-seo' ),
 		'EventPostponed'   => __( 'Postponed: the new date isn\'t set yet', 'tala-seo' ),
 		'EventRescheduled' => __( 'Rescheduled', 'tala-seo' ),
 	);

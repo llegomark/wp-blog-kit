@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.18.2
+Stable tag: 1.18.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,19 +12,19 @@ Lean SEO for blogs: meta descriptions, canonicals, JSON-LD, breadcrumbs and a pu
 
 == Description ==
 
-Tala SEO covers what a blog needs to follow Google Search Central's guidelines, without upsells or licences.
+Tala SEO covers what a blog needs to follow Google Search Central's guidelines, without upsells or licenses.
 
 * **Publish check.** A post can't be published or scheduled without a meta description, a featured image, and alternative text on that image (pages need a description). Enforced on the server, so it holds for the block editor, Quick Edit, the REST API and WP-CLI. Already-published posts stay editable.
 * **SEO panel** in the block editor: search result preview, SEO title and meta description with length meters, primary category, "minor edit" switch (keeps the updated date for typo fixes), hide from search engines, canonical URL, redirect, and a checklist when you press Publish.
 * **Length meters** measure titles and descriptions in pixels, the way Google cuts them (a "W" takes more room than an "i"). The preview shortens them where Google would.
-* **SEO column** in the Posts, Pages, Categories and Tags lists: what each item has and still needs at a glance. Every status pairs a symbol with a word, so it never depends on colour.
+* **SEO column** in the Posts, Pages, Categories and Tags lists: what each item has and still needs at a glance. Every status pairs a symbol with a word, so it never depends on color.
 * **Primary category:** choose which category leads the breadcrumbs (and the address, when the permalink contains %category%) for posts filed under several.
 * **Categories, tags and authors** get their own SEO title, meta description and "hide from search engines" switch.
 * **Head tags:** wrapped in a comment that names the plugin, its version and https://edventure.com.ph, so the page source shows what Tala SEO wrote. `<title>` as "Title | Site name", with the separator you choose (the name only once when a page is named like the site), meta description, self-referencing canonical on every indexable page (paginated archives included), noindex for search results, 404s, date archives, empty categories and tag pages with too few posts, Open Graph and Twitter card tags with a 1200 × 630 share image (the 1.91:1 shape of link previews on Facebook, LinkedIn, X and messaging apps), and a `fediverse:creator` tag that credits the author when an article is shared on Mastodon.
 * **Feeds and sitemaps** send `X-Robots-Tag: noindex, follow`, so they never show up in search results themselves (search engines still read them).
 * **Structured data (JSON-LD):** WebSite and Organization on the home page (its kind, such as an educational organization, with description, legal name, postal address, telephone, email and a customer support contact point when set), BlogPosting on posts (image in 16:9, 4:3 and 1:1), ProfilePage on author pages, BreadcrumbList matching the visible Breadcrumbs block, on pages that show it.
 * **Videos:** each YouTube video in an Embed block is described as a VideoObject (title, thumbnail, player address, the caption as its description). The title and thumbnail are fetched from YouTube once, when the post is saved. Google also needs the date the video was published, which YouTube doesn't share this way: enter it in the SEO panel, where each video gets a date field.
-* **Event block:** when, where, tickets and organizer, shown as a card and described as an Event the way Google's event results ask: start and end with the UTC offset (or the date alone for an all-day event), the venue's address, status (cancelled, postponed, rescheduled), price and ticket page, and the featured image. One per post, as Google supports pages about a single event.
+* **Event block:** when, where, tickets and organizer, shown as a card and described as an Event the way Google's event results ask: start and end with the UTC offset (or the date alone for an all-day event), the venue's address, status (canceled, postponed, rescheduled), price and ticket page, and the featured image. One per post, as Google supports pages about a single event.
 * **Course block:** a course's description, provider (the site unless you name another), level, format (online, in person or both), time, instructor and cost with an enrollment link, shown as a card and described as a Course for Google's course list, a carousel in English searches. A post with one course is its detail page; a category (or other list of posts) whose posts are all courses, three or more, becomes their summary page; a post with several courses lists them itself. Google uses the name, description and provider; the other details were its Course info result, retired in 2025, and stay for other search engines and AI assistants.
 * **FAQ and How-to:** two Group blocks in the inserter, made of core blocks: an FAQ with a Details block (opens on click) for each question, and a how-to guide with a heading, an introduction and a numbered list of steps (a post's only how-to guide may leave the heading out: it is then named after the post). They are described as FAQPage and HowTo. Google no longer shows these as rich results; the markup is valid schema.org that other search engines and AI assistants can read, and it only repeats what the page shows. Without the plugin they are ordinary blocks.
 * **Sitemap:** WordPress's own `/wp-sitemap.xml` with accurate `lastmod`, where the sitemap addresses of Yoast SEO and Rank Math (`sitemap_index.xml`, `post-sitemap.xml` and the like) now lead, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, or hidden author pages. It exists only while search engines may index the site.
@@ -104,6 +104,9 @@ Include that file in nginx's `http` block, and in the site's PDF location add `a
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.18.3 =
+* Changed: American spelling: a canceled event's card reads "Canceled", and the Event block's status setting says so too.
 
 = 1.18.2 =
 * Changed: sitemaps are plain XML, without WordPress's XSLT stylesheet. The stylesheet only drew a table for people who open a sitemap in a browser (search engines never use it), and browsers are removing XSLT; Chrome showed a warning on every sitemap. A browser now shows the XML itself.
@@ -215,9 +218,9 @@ Include that file in nginx's `http` block, and in the site's PDF location add `a
 * New: Settings → SEO → Search engine verification. Paste the code from Google Search Console or Bing Webmaster Tools (or the whole meta tag they show) and the verification tag is added to the home page. A value that isn't a valid code is refused, and the code saved before stays.
 
 = 1.3.0 =
-* New: an SEO column in the Posts, Pages, Categories and Tags lists. Each status pairs a symbol with a word (colour only helps), and screen readers hear a full sentence.
+* New: an SEO column in the Posts, Pages, Categories and Tags lists. Each status pairs a symbol with a word (color only helps), and screen readers hear a full sentence.
 * New: length meters for the SEO title and meta description, measured in pixels like Google's results. The search preview now shortens long titles and descriptions where Google would.
-* New: primary category for posts in several categories. It leads the breadcrumbs, and the address too when the permalink contains %category%; addresses don't change until one is chosen. Primary categories set in Yoast SEO, Rank Math, The SEO Framework or SEOPress are honoured.
+* New: primary category for posts in several categories. It leads the breadcrumbs, and the address too when the permalink contains %category%; addresses don't change until one is chosen. Primary categories set in Yoast SEO, Rank Math, The SEO Framework or SEOPress are honored.
 * New: SEO title, meta description and "hide from search engines" for categories, tags (and other public taxonomies) and author pages. Hidden ones leave the sitemap.
 * New: empty categories and tags get noindex and leave the sitemap.
 * New: feeds and sitemaps send `X-Robots-Tag: noindex, follow`.

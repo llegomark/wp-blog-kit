@@ -84,7 +84,7 @@ Yes, with Cloudflare's test keys (developers.cloudflare.com/turnstile/troublesho
 == Changelog ==
 
 = 1.1.0 =
-* The widget follows the page's colour scheme: light or dark when the page declares one (as a theme's Light/Dark switch does), the device's otherwise, and it switches with the page when a reader changes it.
+* The widget follows the page's color scheme: light or dark when the page declares one (as a theme's Light/Dark switch does), the device's otherwise, and it switches with the page when a reader changes it.
 
 = 1.0.0 =
 * First release: Cloudflare Turnstile in the comment form, confirmed with Cloudflare's Siteverify (success, the "comment" action and the site's hostname) before a comment is saved, failing closed; the script loads as the form comes near; keys on Settings → Discussion or in wp-config.php.

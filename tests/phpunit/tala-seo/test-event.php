@@ -232,11 +232,11 @@ class Test_Tala_SEO_Event extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * A cancelled or rescheduled event says so on the card and in the markup.
+	 * A canceled or rescheduled event says so on the card and in the markup.
 	 */
 	public function test_status(): void {
 		$this->open_event( $this->workshop( array( 'status' => 'EventCancelled' ) ) );
-		$this->assertStringContainsString( '<p class="wp-block-tala-seo-event__status"><strong>Cancelled</strong></p>', $this->card() );
+		$this->assertStringContainsString( '<p class="wp-block-tala-seo-event__status"><strong>Canceled</strong></p>', $this->card() );
 		$this->assertSame( 'https://schema.org/EventCancelled', $this->nodes( 'Event' )[0]['eventStatus'] );
 
 		$this->open_event(

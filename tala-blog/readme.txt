@@ -12,7 +12,7 @@ A fast blog theme for long reads on phones, in a "drafting paper" look: dark ink
 
 Tala Blog is a block theme for blogs that are mostly read on phones.
 
-* A "drafting paper" look: dark ink on a warm paper colour, one cobalt accent used sparingly, and every section a full-width band ruled underneath, with a centred rail (60rem, so side-rail ads keep room beside it) whose side rules meet the bands at small diamond nodes. Graph paper shows only behind the title bands, the call to action and the 404 panel, never behind text.
+* A "drafting paper" look: dark ink on a warm paper color, one cobalt accent used sparingly, and every section a full-width band ruled underneath, with a centered rail (60rem, so side-rail ads keep room beside it) whose side rules meet the bands at small diamond nodes. Graph paper shows only behind the title bands, the call to action and the 404 panel, never behind text.
 * Inter, self-hosted: the variable Latin font (and its Latin Extended and italic subsets only for the characters that need them) ships with the theme and is preloaded, with metric-matched fallbacks so the page barely moves when it arrives. No font service is called, and the theme's CSS is inlined, so a page needs no stylesheet requests.
 * A Light/Dark switch in the header: until the reader chooses, the page follows their device; their choice is kept in the browser and applied on every page before it paints, so it never flashes. It is a toggle button named "Dark theme", pressed in dark mode. Without JavaScript the page follows the device and the switch is hidden.
 * A header with the site logo (when the site has one) beside the site title, the site's menu (or its pages until there is one), a search button that opens into a field, and the switch. On narrow screens the menu folds behind a button and opens as a side sheet.
@@ -20,7 +20,7 @@ Tala Blog is a block theme for blogs that are mostly read on phones.
 * Article lists (home page, archives, search results) as ruled rows without pictures: the date and first category on the left, the title and summary on the right, then "Previous page" and "Next page". The home page opens with the site title, a search field and the top-level categories as chips. Numbered pages are a choice in Appearance → Customize → Article lists, off by default.
 * Article pages: a title band with the breadcrumbs, the first category, the title in large italic display type, the excerpt, the author, the "Published" and "Updated" dates and the reading time (220 words a minute); then the text in a 72-character column, with "On this page" after the opening paragraphs on articles with three sections or more (a closed box listing each section and its subsections, linked to readable anchors; Appearance → Customize → Table of contents turns it off or sets the number of sections; the class tala-no-contents keeps a heading out of it); then the categories and tags as chips, "Read next" (up to three recent articles from the same categories, then the older and newer articles), the author box with biography, and comments with their dates.
 * A "Call to action" template part after the content of every post, page and list, empty until it is filled in the Site Editor; the "Closing call to action" pattern gives a ready band (heading, lead, one button) to fill it with. An empty part prints nothing.
-* Accessible: one H1 per page, uniquely named landmarks, a skip link, visible keyboard focus, targets of at least 44 px, text contrast of at least 4.5:1 (body text far more) and form field edges of at least 3:1 in both colour schemes, and long words that wrap instead of widening the page when zoomed.
+* Accessible: one H1 per page, uniquely named landmarks, a skip link, visible keyboard focus, targets of at least 44 px, text contrast of at least 4.5:1 (body text far more) and form field edges of at least 3:1 in both color schemes, and long words that wrap instead of widening the page when zoomed.
 * Forms and embeds follow the switch: Gravity Forms (Orbital and the 2.5 theme), the comment form, the search fields and PDF Embedder's viewer take the theme's controls in light and dark.
 * Prints just the article, with its dates and author, in black on white.
 * Translation-ready: every text in the templates comes from translatable patterns (text domain tala-blog), and translated block settings are escaped as JSON, so no translation can break a block.
@@ -55,15 +55,15 @@ In Appearance → Editor → Patterns, open the "Call to action" template part a
 
 In Appearance → Editor → Patterns → Header, select the logo placeholder beside the site title and choose an image. It appears 28 px wide in the header and in the menu sheet. A square or round image works best. The logo isn't a link and screen readers skip it, because the site title beside it already names the site and links to the home page.
 
-= Can I change the colours or the font? =
+= Can I change the colors or the font? =
 
-The theme has one look on purpose: version 2 has no colour or serif presets. Appearance → Editor → Styles still changes colours and fonts for a site, as with any block theme. A preset picked in version 1 stays saved and overrides the new colours or Inter until the site's styles are reset in Appearance → Editor → Styles.
+The theme has one look on purpose: version 2 has no color or serif presets. Appearance → Editor → Styles still changes colors and fonts for a site, as with any block theme. A preset picked in version 1 stays saved and overrides the new colors or Inter until the site's styles are reset in Appearance → Editor → Styles.
 
 = Does it work with Gravity Forms? =
 
-Yes. Forms take the theme's colours, font and controls, in light and dark mode and with the Light/Dark switch, with either of Gravity Forms' form themes (Orbital, or the Gravity Forms 2.5 theme). The rules load only on pages with a form, right after Gravity Forms' own stylesheet.
+Yes. Forms take the theme's colors, font and controls, in light and dark mode and with the Light/Dark switch, with either of Gravity Forms' form themes (Orbital, or the Gravity Forms 2.5 theme). The rules load only on pages with a form, right after Gravity Forms' own stylesheet.
 
-With Orbital, the theme's colours replace the colours set in a form block's style settings, so every form matches the page. Other form plugins that leave their fields to the browser follow the page's light or dark mode as well.
+With Orbital, the theme's colors replace the colors set in a form block's style settings, so every form matches the page. Other form plugins that leave their fields to the browser follow the page's light or dark mode as well.
 
 == Changelog ==
 
@@ -89,23 +89,23 @@ With Orbital, the theme's colours replace the colours set in a form block's styl
 * New look, "drafting paper": dark ink on warm paper (#393d45 on #f4f4f2; #d3d6dc on #16181d in dark mode), black headings, one cobalt accent (#1348dc, #7d9bff in dark mode), hairline rules and borders, square cards and 4 px controls with a deep-cobalt lip on buttons.
 * New: Inter, self-hosted in the theme (Inter 4.1 under the SIL Open Font License, credited below): the variable Latin font and the display italic are preloaded; the Latin Extended and italic subsets load only for the characters they cover. Metric-matched fallbacks keep the swap from moving the page. Headings are light to regular weight; titles in large italic display type.
 * New: a Light/Dark switch in the header. It follows the device until the reader chooses, keeps the choice in the browser and applies it before the page paints. A toggle button with one name, "Dark theme", pressed in dark mode; hidden without JavaScript.
-* New: every section is a full-width band ruled underneath, on a centred 60rem rail with side rules and diamond nodes; graph paper behind the title bands, the call to action and the 404 panel only.
+* New: every section is a full-width band ruled underneath, on a centered 60rem rail with side rules and diamond nodes; graph paper behind the title bands, the call to action and the 404 panel only.
 * New: the footer is a cobalt slab: the site title and tagline, the "Footer note" part, the site's menu as columns (one per item with a submenu, the rest in a last column), the copyright line and tagline, and the site title as a giant outlined wordmark. The footer search field is gone; search is in the header, a button that opens into a field.
 * New: the header menu opens as a side sheet on narrow screens; the home page opens with the site title, a search field and the top-level categories as chips.
 * Changed: article lists are ruled rows without thumbnails (date and first category, then title and summary), with "Previous page" and "Next page" buttons.
 * New: articles open with a title band: breadcrumbs, the first category, the title, the excerpt, the author, the dates and the reading time. "In this article" becomes "On this page", a closed box at every width. "Keep reading" becomes "Read next"; topics are chips; the author box is a card.
 * New: empty "Call to action" and "Footer note" template parts, filled per site in the Site Editor, and a "Closing call to action" pattern for the first. Empty, they print nothing.
 * Changed: Gravity Forms, the comment form, PDF Embedder's viewer and print follow the new look and the Light/Dark switch; form field edges keep 3:1 contrast.
-* Removed: the Sepia, Blue and Green colour presets and the Serif and Serif headings typography presets. One look on every site.
+* Removed: the Sepia, Blue and Green color presets and the Serif and Serif headings typography presets. One look on every site.
 
 = 1.13.0 =
 * Faster articles with a PDF: PDF Embedder's scripts (PDF.js, its viewer and the jQuery they need, about 140 KB, 490 KB unpacked) now load deferred instead of blocking the page from its head, so the article's text shows before them. Lighthouse estimated they held a phone's first paint back by up to 2.2 seconds. The viewer starts when the page is ready, as before; a script that needs jQuery at once (a Gravity Forms form) keeps it blocking.
-* PDF Embedder's toolbar is readable: its light grey text now sits on the theme's dark grey (7:1, was 2.6:1).
+* PDF Embedder's toolbar is readable: its light gray text now sits on the theme's dark gray (7:1, was 2.6:1).
 * The site title's link is at least 24 px tall, a touch target of the size WCAG 2.5.8 asks for.
 
 = 1.12.0 =
-* New: Gravity Forms support, in light and dark mode. The theme now styles Gravity Forms forms with the page's colours, font and field style.
-* Orbital forms: labels, fields, descriptions, buttons and focus rings use the theme's colour presets through Gravity Forms' CSS API, so they change with dark mode and the colour variations. Previously their dark labels disappeared on the dark page.
+* New: Gravity Forms support, in light and dark mode. The theme now styles Gravity Forms forms with the page's colors, font and field style.
+* Orbital forms: labels, fields, descriptions, buttons and focus rings use the theme's color presets through Gravity Forms' CSS API, so they change with dark mode and the color variations. Previously their dark labels disappeared on the dark page.
 * Gravity Forms 2.5 theme forms: fields and buttons look like the theme's own.
 * Both form themes: field text is 16 px, so phones don't zoom in when a field is tapped. In dark mode, the red "Required" marks and error messages are a lighter red with 7:1 contrast.
 * Loaded only on pages with a form, right after Gravity Forms' own stylesheet.
@@ -125,17 +125,17 @@ With Orbital, the theme's colours replace the colours set in a form block's styl
 * Changed: article lists link to newer and older articles without numbered pages, so the number of pages isn't on show. Appearance → Customize → Article lists → "Show numbered pages" brings them back.
 
 = 1.8.1 =
-* Fixed: a palette entry saved in the site's styles that isn't a colour (which a multisite administrator's styles can hold, saved as written) no longer stops every page of the site with an error; the theme colour and the dark colours just leave it out.
+* Fixed: a palette entry saved in the site's styles that isn't a color (which a multisite administrator's styles can hold, saved as written) no longer stops every page of the site with an error; the theme color and the dark colors just leave it out.
 
 = 1.8.0 =
-* New: "Keep reading" right after the article: up to three recent articles from the same categories (title, date and thumbnail, like the article list), then the older and newer articles as two cards that are tap targets in full, with arrows. The author box follows it. The links were small text below the author box before, and were labelled "Previous" and "Next", which read backwards; they now say "Older article" and "Newer article", as the article lists do.
+* New: "Keep reading" right after the article: up to three recent articles from the same categories (title, date and thumbnail, like the article list), then the older and newer articles as two cards that are tap targets in full, with arrows. The author box follows it. The links were small text below the author box before, and were labeled "Previous" and "Next", which read backwards; they now say "Older article" and "Newer article", as the article lists do.
 * Changed: a Group block that is a navigation landmark is left out when it holds no link, whatever text it has (it kept text before): "Keep reading" disappears on a site's only article, heading and all. Single templates customized in the Site Editor keep their old markup until their customizations are cleared.
 
 = 1.7.0 =
-* New: colour presets Sepia, Blue and Green, each with its own dark mode, and typography presets Serif and Serif headings (Appearance → Editor → Styles → Browse styles). Every preset keeps text contrast at 6:1 or more in light and dark mode and uses system fonts only.
+* New: color presets Sepia, Blue and Green, each with its own dark mode, and typography presets Serif and Serif headings (Appearance → Editor → Styles → Browse styles). Every preset keeps text contrast at 6:1 or more in light and dark mode and uses system fonts only.
 * New: the article's title and dates are its header and its categories and tags its footer; the links to the previous and next articles are a navigation landmark named "Previous and next articles" (none when there is no other article); each comment is an article.
 * New: the Site Editor's List View names the theme's groups ("Article", "Title and dates", "Comment", "Article list" and so on) instead of "Group".
-* Changed: the dark-mode colours are in settings.custom.color.dark in theme.json; custom CSS that used the --wp--custom--dark--* variables needs the --wp--custom--color--dark--* names. Single and page templates customized in the Site Editor keep their old markup until their customizations are cleared.
+* Changed: the dark-mode colors are in settings.custom.color.dark in theme.json; custom CSS that used the --wp--custom--dark--* variables needs the --wp--custom--color--dark--* names. Single and page templates customized in the Site Editor keep their old markup until their customizations are cleared.
 
 
 = 1.6.2 =
@@ -147,7 +147,7 @@ With Orbital, the theme's colours replace the colours set in a form block's styl
 * Readme: installing from the GitHub releases.
 
 = 1.6.0 =
-* New: classic content from the classic editor looks right: images aligned left, right or centred with text around them, captions and [gallery] grids, video players and wide images that fit a phone, and plain tables and quotes styled like their blocks.
+* New: classic content from the classic editor looks right: images aligned left, right or centered with text around them, captions and [gallery] grids, video players and wide images that fit a phone, and plain tables and quotes styled like their blocks.
 * New: "Pinned" marks the sticky post at the top of the home page; "Author" marks the comments of the article's author; "Comments are closed." appears under the comments of a post that no longer takes them.
 * New: a post without a title gets its date as the heading, linked in article lists, so it can still be opened.
 * Fixed: the breadcrumbs come from a pattern that is empty without the Tala SEO plugin, so the Site Editor no longer reports a missing block when the plugin is off.
@@ -172,12 +172,12 @@ With Orbital, the theme's colours replace the colours set in a form block's styl
 * Changed: requires PHP 8.5 or newer, the version the servers run. The theme's PHP uses current language features (array_find(), arrow functions); nothing changes in how it looks or works.
 
 = 1.3.0 =
-* New: the header shows the site's menu (a Navigation block named "Primary"), or the site's pages until there is one, as a single list for screen readers. On phones it folds behind a menu button and opens full screen in the page's colours, light or dark, with the site title and a close button. That screen is the "Menu overlay" template part.
+* New: the header shows the site's menu (a Navigation block named "Primary"), or the site's pages until there is one, as a single list for screen readers. On phones it folds behind a menu button and opens full screen in the page's colors, light or dark, with the site title and a close button. That screen is the "Menu overlay" template part.
 * Changed: requires WordPress 7.0 or newer, and the theme carries no code for older versions. A header customized in the Site Editor before this update keeps its old page list; clear its customizations (Appearance → Editor → Patterns → Header) to get the new menu.
 
 = 1.2.0 =
-* Changed: a minimalist look. Light mode is near-black text (#3f3f3f) on a near-white page (#fcfcfc), with black for emphasis; dark mode is the same, inverted (#e3e3e3 on #121212). The pad-paper margin line and the chalkboard colours are gone, and the palette colours are named by their role.
-* Changed: a 640 px reading column, line height 1.6, semibold headings on a calmer scale, fine dotted link underlines in the text colour, quotes and code in soft boxes, and table header rows and stripes that suit both colour schemes.
+* Changed: a minimalist look. Light mode is near-black text (#3f3f3f) on a near-white page (#fcfcfc), with black for emphasis; dark mode is the same, inverted (#e3e3e3 on #121212). The pad-paper margin line and the chalkboard colors are gone, and the palette colors are named by their role.
+* Changed: a 640 px reading column, line height 1.6, semibold headings on a calmer scale, fine dotted link underlines in the text color, quotes and code in soft boxes, and table header rows and stripes that suit both color schemes.
 * New: the two search forms on search results and 404 pages are named differently ("Articles", "Site"), and the header menu is named "Primary".
 * New: form fields keep at least 3:1 contrast; long words and web addresses wrap instead of widening the page; fewer lonely last words in headings and paragraphs; links to a section leave room above it; a short crossfade between pages, unless the reader prefers less motion.
 * Fixed: translated text in block settings is escaped as JSON, so a translation with a quote or backslash can't break a block.
@@ -193,10 +193,10 @@ With Orbital, the theme's colours replace the colours set in a form block's styl
 * New: "Filed under" categories at the end of an article, next to the tags.
 * New: comments show their date (linked to the comment) and an edit link for editors.
 * New: print styles that print only the article, with its dates and author.
-* Accessibility: breadcrumb links are underlined in the text colour, so they stand apart from the current page; the header menu is a labelled navigation landmark.
+* Accessibility: breadcrumb links are underlined in the text color, so they stand apart from the current page; the header menu is a labeled navigation landmark.
 * All template text (404 page, search form, author box, article navigation, categories and tags) moved into translatable patterns.
-* The dark palette is defined once, in theme.json (settings.custom.dark), and used by both the CSS and the browser's theme colour.
-* readme.txt with copyright and licence information.
+* The dark palette is defined once, in theme.json (settings.custom.dark), and used by both the CSS and the browser's theme color.
+* readme.txt with copyright and license information.
 
 = 1.0.1 =
 * Theme header: author and author URI.
@@ -207,7 +207,7 @@ With Orbital, the theme's colours replace the colours set in a form block's styl
 == Upgrade Notice ==
 
 = 2.0.0 =
-A new look. A 1.x colour or typography preset you picked stays saved and overrides the new colours or Inter: reset Appearance → Editor → Styles. The Call to action and Footer note parts are empty until filled. Templates or parts customized in the Site Editor keep their old markup until cleared.
+A new look. A 1.x color or typography preset you picked stays saved and overrides the new colors or Inter: reset Appearance → Editor → Styles. The Call to action and Footer note parts are empty until filled. Templates or parts customized in the Site Editor keep their old markup until cleared.
 
 == Copyright ==
 
