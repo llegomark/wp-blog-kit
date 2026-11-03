@@ -45,7 +45,7 @@
 		},
 		"layout": {
 			"contentSize": "48rem",
-			"wideSize": "70rem"
+			"wideSize": "60rem"
 		},
 		"spacing": {
 			"defaultSpacingSizes": false,

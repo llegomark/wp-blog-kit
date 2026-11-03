@@ -78,7 +78,7 @@
 
 	/* The page frame (the design system's): one rail every band shares, its inner padding, the diamond
 	   nodes, the graph paper's pitch and lines, and the header's 44px controls and their gap. */
-	--tala-rail: 70rem;
+	--tala-rail: 60rem;
 	--tala-rail-pad: clamp(1rem, 0.25rem + 3vw, 2.5rem);
 	--tala-node: 7px;
 	--tala-grid-pitch: 16px;
@@ -393,7 +393,7 @@ footer.wp-block-template-part,
 }
 
 /* The page frame, as the design system's: every section is a full-width band ruled underneath. Inside
-   it, a centred rail (70rem, the design system's, so these sites line up with its other apps) with
+   it, a centred rail (60rem, narrower than the design system's 70rem so side-rail ads keep room beside it) with
    hairline side rules and a 7px diamond node where they cross the band's top rule. Bands follow
    each other with no gap, so the rails run unbroken from the header to the footer. Wide windows
    get a fainter outer pair of rules. In the editor a rail Group has no nodes: the editor draws a
