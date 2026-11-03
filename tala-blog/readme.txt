@@ -67,6 +67,9 @@ With Orbital, the theme's colors replace the colors set in a form block's style 
 
 == Changelog ==
 
+= 2.0.8 =
+* Fixed: the logo keeps its size when the site title beside it wraps onto two lines (on phones it shrank), and beside a long menu on a small desktop (it shrank away there, leaving its room to the title).
+
 = 2.0.7 =
 * Changed: on phones and tablets the menu button ends the header row, after the search and the Light/Dark switch, where a thumb reaches it, and the menu's close button opens in its place. Tab moves through the row in the order it shows (in browsers that support CSS reading-flow), and the search field opens before its button.
 * Fixed: a one-word site title beside a logo keeps its room. On phones narrower than 24rem the header's buttons sit closer together (still 44px targets), below 22.5rem the logo gives way to the title, and beside a long menu on a small desktop the menu wraps instead of running into the title. Very large text no longer makes the phone header scroll sideways: its buttons wrap below the title.

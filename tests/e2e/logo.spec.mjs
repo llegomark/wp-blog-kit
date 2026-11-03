@@ -133,11 +133,42 @@ test.describe( 'with a logo and a one-word title', () => {
 				clear: Math.round( head.querySelector( 'nav.wp-block-navigation' ).getBoundingClientRect().left - brand.getBoundingClientRect().right ),
 				rows: new Set( [ ...menu.children ].map( ( li ) => Math.round( li.getBoundingClientRect().top ) ) ).size,
 				scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+				logo: brand.querySelector( '.tala-logo img' ).getBoundingClientRect().width,
 			};
 		} );
+		expect( row.logo, 'The logo keeps its size' ).toBe( 28 );
 		expect( row.over, 'The title inside the brand' ).toBeLessThanOrEqual( 0 );
 		expect( row.clear, 'The menu clear of the brand' ).toBeGreaterThanOrEqual( 0 );
 		expect( row.rows, 'The menu wraps instead' ).toBeGreaterThan( 1 );
 		expect( row.scroll, 'No sideways scrolling' ).toBe( 0 );
+	} );
+} );
+
+test.describe( 'with a logo and a title that wraps', () => {
+	let name;
+
+	test.beforeAll( () => {
+		name = wp( 'option', 'get', 'blogname' );
+		wp( 'option', 'update', 'blogname', 'DepEd Tambayan' );
+		const image = wp( 'post', 'list', '--post_type=attachment', '--post_mime_type=image', '--posts_per_page=1', '--field=ID' );
+		wp( 'option', 'update', 'site_logo', image );
+	} );
+
+	test.afterAll( () => {
+		wp( 'option', 'update', 'blogname', name );
+	} );
+
+	test( 'the logo keeps its size beside a title on two lines', async ( { page } ) => {
+		await page.setViewportSize( { width: 360, height: 800 } );
+		await page.goto( pages.home );
+		const brand = await page.evaluate( () => {
+			const title = document.querySelector( '.tala-header .wp-block-site-title' );
+			return {
+				lines: Math.round( title.getBoundingClientRect().height / parseFloat( getComputedStyle( title ).lineHeight ) ),
+				logo: document.querySelector( '.tala-header .tala-logo img' ).getBoundingClientRect().width,
+			};
+		} );
+		expect( brand.lines, 'The title wraps' ).toBe( 2 );
+		expect( brand.logo ).toBe( 28 );
 	} );
 } );

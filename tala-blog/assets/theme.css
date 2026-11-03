@@ -510,6 +510,13 @@ footer.wp-block-template-part,
 	min-inline-size: 0;
 }
 
+/* The logo keeps its size when the title beside it wraps onto a second line, and counts in the
+   brand's narrowest width (an image that may shrink to 100% of its box would count as nothing). */
+.tala-brand .tala-logo {
+	flex: none;
+	min-inline-size: max-content;
+}
+
 /* Beside the full menu, though, the brand is never narrower than its logo and longest word: a
    one-word title would otherwise run into the menu, which wraps first. */
 @media (width >= 52rem) {
