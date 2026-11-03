@@ -67,6 +67,10 @@ With Orbital, the theme's colors replace the colors set in a form block's style 
 
 == Changelog ==
 
+= 2.0.6 =
+* Fixed: a theme chosen in another tab, or on another page of the site before the reader went Back, now shows on the open page too. Other apps on the same address that keep the choice under the same key ("tala-theme") stay in step with the theme the same way.
+* Changed: American spelling in the theme's description and readme.
+
 = 2.0.5 =
 * Changed: the page's rail is back to 60rem, so side-rail ads keep their room beside it on laptop screens.
 

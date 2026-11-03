@@ -1,7 +1,8 @@
 /**
  * The Light/Dark switch in the header: the page follows the device until the reader chooses Light
  * or Dark, the choice is kept for every page (localStorage "tala-theme") and applied before the
- * first paint, the switch still works for the visit when storage is blocked, and without
+ * first paint, a choice made in another tab or before going Back shows on the open page, the
+ * switch still works for the visit when storage is blocked, and without
  * JavaScript it isn't shown (the Site Editor, which doesn't run the theme's script, shows it).
  */
 import { test, expect } from '@playwright/test';
@@ -106,6 +107,49 @@ test.describe( 'light device', () => {
 		expect( await transitions() ).toEqual( [] );
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'light' );
 		await expect( page.locator( 'html' ) ).not.toHaveClass( /tala-switching/ );
+	} );
+
+	test( 'a choice made in another tab holds on the open page', async ( { page, context } ) => {
+		await page.goto( pages.article );
+		await expect( page.locator( 'html' ) ).not.toHaveAttribute( 'data-theme' );
+		const other = await context.newPage();
+		await other.goto( pages.home );
+		await other.locator( '.tala-theme-switch' ).click();
+		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
+		await expect( page.locator( '.tala-theme-switch' ) ).toHaveAttribute( 'aria-pressed', 'true' );
+		expect( await background( page ) ).toBe( paper.dark );
+		expect( await themeColors( page ) ).toEqual( [ themeColor.dark, themeColor.dark ] );
+		// Another key changing (an ad script's, say) changes nothing: once the page has heard of it,
+		// the theme is the same.
+		await page.evaluate( () => {
+			window.heard = [];
+			window.addEventListener( 'storage', ( event ) => window.heard.push( event.key ) );
+		} );
+		await other.evaluate( () => window.localStorage.setItem( 'something-else', 'light' ) );
+		await expect.poll( () => page.evaluate( () => window.heard ) ).toContain( 'something-else' );
+		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
+		await other.close();
+	} );
+
+	test( 'a page back from the back/forward cache shows the choice made since', async ( { page } ) => {
+		await page.goto( pages.article );
+		// As when the reader chose Dark on another page (on this site, or another app on the same
+		// origin that keeps the same key), then went Back: the browser restores this page as it was,
+		// and fires pageshow with persisted set.
+		await page.evaluate( () => {
+			window.localStorage.setItem( 'tala-theme', 'dark' );
+			window.dispatchEvent( new PageTransitionEvent( 'pageshow', { persisted: true } ) );
+		} );
+		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
+		await expect( page.locator( '.tala-theme-switch' ) ).toHaveAttribute( 'aria-pressed', 'true' );
+		await expect( page.locator( 'html' ) ).not.toHaveClass( /tala-switching/ );
+		expect( await background( page ) ).toBe( paper.dark );
+		// A first load's pageshow (persisted false) reads nothing again.
+		await page.evaluate( () => {
+			window.localStorage.setItem( 'tala-theme', 'light' );
+			window.dispatchEvent( new PageTransitionEvent( 'pageshow', { persisted: false } ) );
+		} );
+		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
 	} );
 
 	test( 'switch works when storage is blocked', async ( { page } ) => {

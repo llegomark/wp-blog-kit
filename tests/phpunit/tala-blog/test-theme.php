@@ -124,6 +124,8 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 		$this->assertMatchesRegularExpression( '/if\s*\(\s*"light"\s*===\s*(\w+)\s*\|\|\s*"dark"\s*===\s*\1\s*\)\s*\{?\s*\w+\.dataset\.theme\s*=\s*\1\b/', $js, 'Only "light" or "dark" becomes the theme' );
 		$this->assertMatchesRegularExpression( '/\.add\("tala-js"\)/', $js, '<html> gets the class tala-js' );
 		$this->assertMatchesRegularExpression( '/\.setAttribute\("aria-pressed",/', $js, 'Sets the state' );
+		$this->assertMatchesRegularExpression( '/addEventListener\("storage",(\w+)=>\{"tala-theme"===\1\.key&&/', $js, 'Follows a choice made in another tab' );
+		$this->assertMatchesRegularExpression( '/addEventListener\("pageshow",(\w+)=>\{\1\.persisted&&/', $js, 'Reads the choice again on a page back from the back/forward cache' );
 		$this->assertStringNotContainsString( 'aria-label', $js, 'Never changes the name' );
 		$this->assertStringNotContainsString( 'Dark theme', $js );
 
