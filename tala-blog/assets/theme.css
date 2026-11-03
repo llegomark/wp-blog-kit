@@ -485,13 +485,20 @@ footer.wp-block-template-part,
 
 /* The header: one band, at least 4rem tall, not sticky. Its row: the brand (logo and title), the
    menu, a separator, the search button and the Light/Dark switch, 44px targets with 0.5rem between
-   them. The menu overlay's top bar is the same band and row, so it covers the header exactly. */
+   them; where the menu folds behind its button, the button ends the row (below). The menu overlay's
+   top bar is the same band and row, so it covers the header exactly. */
 .tala-header > .tala-rail,
 .tala-band > .tala-overlay-bar {
 	gap: var(--tala-header-gap);
 	align-items: center;
 	min-block-size: 4rem;
 	padding-block: 0;
+}
+
+/* Tab moves through the header in the order it shows, also where the menu button is moved to the end
+   (browsers without reading-flow keep the markup's order: menu, search, switch). */
+.tala-header > .tala-rail {
+	reading-flow: flex-visual;
 }
 
 /* The brand starts from 10rem, not from its own width, so the title wraps before the menu does when
@@ -501,6 +508,32 @@ footer.wp-block-template-part,
 .tala-overlay-bar .tala-brand {
 	flex: 1 1 10rem;
 	min-inline-size: 0;
+}
+
+/* Beside the full menu, though, the brand is never narrower than its logo and longest word: a
+   one-word title would otherwise run into the menu, which wraps first. */
+@media (width >= 52rem) {
+
+	.tala-header .tala-brand {
+		min-inline-size: min-content;
+	}
+}
+
+/* With a logo, a narrow phone's row needs more room for the title: below 24rem the header's buttons
+   sit 0.25rem apart (still 44px targets), and below 22.5rem the logo gives way to the title, in the
+   header and the menu alike. */
+@media (width < 24rem) {
+
+	.tala-header:has(.tala-logo) {
+		--tala-header-gap: 0.25rem;
+	}
+}
+
+@media (width < 22.5rem) {
+
+	.tala-brand .tala-logo {
+		display: none;
+	}
 }
 
 /* The site title in the header and the phone menu's bar in capitals, slightly tracked. Only how it
@@ -604,6 +637,25 @@ footer.wp-block-template-part,
 	.tala-header .wp-block-search::before {
 		content: none;
 	}
+
+	/* The menu button ends the row, after the search and the switch, where the thumb reaches it and
+	   where the overlay's close button opens over it. It keeps its 44px: the brand takes what the
+	   buttons leave (it starts from nothing here, so it never pushes them). When even the buttons
+	   don't fit beside it (very large text on a small phone), they wrap to a second row at its end,
+	   rather than overlap or make the page scroll sideways. */
+	.tala-header > .tala-rail {
+		flex-wrap: wrap;
+		justify-content: flex-end;
+	}
+
+	.tala-header .tala-brand {
+		flex-basis: 0;
+	}
+
+	.tala-header .wp-block-navigation {
+		flex: none;
+		order: 1;
+	}
 }
 
 @media (600px <= width < 52rem) {
@@ -620,7 +672,8 @@ footer.wp-block-template-part,
 /* Search: a button that opens into a field. The field opens over the row, to the left of the
    button, so nothing in the header moves: it is placed in the header's rail (the nearest
    positioned box), between the rail's padding and the search button (the switch follows that
-   button, so the field ends one button and one gap before it), at most 20rem wide. */
+   button, so the field ends one button and one gap before it; two where the menu button ends the
+   row), at most 20rem wide. */
 .tala-header .wp-block-search__input {
 	position: absolute;
 	z-index: 3;
@@ -636,6 +689,13 @@ footer.wp-block-template-part,
 	font: inherit;
 	font-size: var(--wp--preset--font-size--small);
 	transition: none;
+}
+
+@media (width < 52rem) {
+
+	.tala-header .wp-block-search__input {
+		inset-inline-end: calc(var(--tala-rail-pad) + 3 * (var(--tala-control) + var(--tala-header-gap)));
+	}
 }
 
 /* The menu overlay, as the design system's side sheet: it covers the window and dims the page; the sheet is the

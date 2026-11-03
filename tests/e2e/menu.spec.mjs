@@ -95,6 +95,66 @@ test.describe( 'phone', () => {
 		expect( close.gap, 'At the end of the bar, inside its padding' ).toBeCloseTo( 0, 1 );
 	} );
 
+	test( 'the menu button ends the row, after the search and the switch, in the order Tab takes, and the close button opens over it', async ( { page } ) => {
+		await page.goto( pages.article );
+		const row = () =>
+			page.evaluate( () => {
+				const rail = document.querySelector( '.tala-header > .tala-rail' );
+				const s = getComputedStyle( rail );
+				const boxes = [ '.wp-block-site-title', '.wp-block-search__button', '.tala-theme-switch', '.wp-block-navigation__responsive-container-open' ].map( ( selector ) => rail.querySelector( selector ).getBoundingClientRect() );
+				const round = ( n ) => Math.round( n * 10 ) / 10;
+				return {
+					gaps: boxes.slice( 1 ).map( ( b, i ) => round( b.left - boxes[ i ].right ) ),
+					end: round( rail.getBoundingClientRect().right - parseFloat( s.borderRightWidth ) - parseFloat( s.paddingRight ) - boxes[ 3 ].right ),
+				};
+			} );
+		// Also on a narrow phone, where the row is short of room and the brand gives way.
+		for ( const width of [ 412, 360 ] ) {
+			await page.setViewportSize( { width, height: 800 } );
+			const { gaps, end } = await row();
+			expect( gaps[ 0 ], `${ width }px: the search after the brand` ).toBeGreaterThanOrEqual( 8 );
+			expect( gaps.slice( 1 ), `${ width }px: the switch after the search, the menu button after the switch, 8px apart` ).toEqual( [ 8, 8 ] );
+			expect( end, `${ width }px: the menu button at the row's end` ).toBeCloseTo( 0, 1 );
+		}
+
+		// The header's buttons, in the order Tab reaches them from the top of the page.
+		const focused = [];
+		for ( let i = 0; i < 6; i++ ) {
+			await page.keyboard.press( 'Tab' );
+			focused.push( await page.locator( ':focus' ).evaluate( ( el ) => ( el.matches( '.tala-header button' ) ? el.getAttribute( 'aria-label' ) : '' ) ) );
+		}
+		expect( focused.filter( Boolean ), 'Tab follows the row' ).toEqual( [ 'Expand search field', 'Dark theme', 'Open menu' ] );
+
+		const at = ( selector ) => page.evaluate( ( s ) => JSON.stringify( document.querySelector( s ).getBoundingClientRect() ), selector );
+		const open = await at( '.tala-header .wp-block-navigation__responsive-container-open svg' );
+		await openMenu( page );
+		expect( await at( '.wp-block-navigation-overlay-close svg' ), 'The close button opens over the menu button' ).toBe( open );
+	} );
+
+	test( 'the search field opens before its button, over the brand, without moving anything', async ( { page } ) => {
+		await page.goto( pages.article );
+		const where = () =>
+			page.evaluate( () =>
+				[ '.tala-header .wp-block-site-title', '.tala-header .wp-block-search__button', '.tala-header .tala-theme-switch', '.tala-header .wp-block-navigation__responsive-container-open' ]
+					.map( ( s ) => JSON.stringify( document.querySelector( s ).getBoundingClientRect() ) )
+					.join( '\n' ),
+			);
+		const before = await where();
+		await page.getByRole( 'button', { name: 'Expand search field' } ).click();
+		const field = page.getByRole( 'searchbox', { name: 'Search' } );
+		await expect( field ).toBeFocused();
+		expect( await where() ).toBe( before );
+		const boxes = await page.evaluate( () => {
+			const rail = document.querySelector( '.tala-header > .tala-rail' );
+			const s = getComputedStyle( rail );
+			const [ f, b ] = [ '.wp-block-search__input', '.wp-block-search__button' ].map( ( selector ) => rail.querySelector( selector ).getBoundingClientRect() );
+			return { gap: Math.round( b.left - f.right ), start: Math.round( f.left - rail.getBoundingClientRect().left - parseFloat( s.borderLeftWidth ) - parseFloat( s.paddingLeft ) ), width: f.width };
+		} );
+		expect( boxes.gap, 'The field ends 8px before its button' ).toBe( 8 );
+		expect( boxes.start, 'and starts at the row\'s start' ).toBeCloseTo( 0, 0 );
+		expect( boxes.width ).toBeGreaterThanOrEqual( 180 );
+	} );
+
 	test( 'a sheet the width of the screen, links at least 48 px tall with hairlines', async ( { page } ) => {
 		await page.setViewportSize( { width: 390, height: 844 } );
 		await page.goto( pages.home );

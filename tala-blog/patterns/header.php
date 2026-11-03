@@ -7,7 +7,7 @@
  * Inserter: no
  * Description: The header band: the site logo (when there is one) and title, the site's menu (its pages until a menu is made), the
  * site search (a button that opens into a field, with a separator before it) and the Light/Dark switch. The menu is a navigation landmark named
- * "Primary"; on narrow screens it folds behind a button and opens into the navigation overlay template part.
+ * "Primary"; on narrow screens it folds behind a button at the end of the row and opens into the navigation overlay template part.
  *
  * @package TalaBlog
  */
