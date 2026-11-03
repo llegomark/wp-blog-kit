@@ -133,10 +133,10 @@ Headings are never bold (300–450; 500 at most on small labels). theme.json fon
 
 - Every section is a full-width band with a 1 px bottom rule. Inside it, a centred rail with 1 px side rules
   and NASH's 7 px diamond nodes where the rail meets a band's top rule.
-- Rail width 60rem, not NASH's 70rem: AdSense side-rail ads need free space beside the content, and
-  side rails earned about 12% of depedtambayan's October AdSense income. At 1366 px a 70rem rail leaves
-  about 120 px per side; 60rem leaves about 200 px. Measured before release at 1366, 1440, 1536 and
-  1920 px. Inner padding `clamp(1rem, 0.25rem + 3vw, 2.5rem)` everywhere, so edges line up.
+- Rail width 70rem, NASH's (since 2.0.4, at the owner's request, so the sites line up with nash.com.ph,
+  its blog and the TeacherPH schools directory). 2.0.0 shipped 60rem to leave AdSense side-rail ads more
+  room (side rails earned about 12% of depedtambayan's October AdSense income; at 1366 px a 70rem rail
+  leaves about 120 px per side, 60rem about 200 px). Inner padding `clamp(1rem, 0.25rem + 3vw, 2.5rem)` everywhere, so edges line up.
 - The article text column is `measure-72` (about 45em of 17 px text), centred in the rail.
 - Graph paper (16 px grid of `gridline`) only behind the home header band, post and page title bands,
   the call to action and the 404 panel; never behind dense text.

@@ -12,7 +12,7 @@ A fast blog theme for long reads on phones, in a "drafting paper" look: dark ink
 
 Tala Blog is a block theme for blogs that are mostly read on phones.
 
-* A "drafting paper" look: dark ink on a warm paper colour, one cobalt accent used sparingly, and every section a full-width band ruled underneath, with a centred rail (60rem, so side-rail ads keep room beside it) whose side rules meet the bands at small diamond nodes. Graph paper shows only behind the title bands, the call to action and the 404 panel, never behind text.
+* A "drafting paper" look: dark ink on a warm paper colour, one cobalt accent used sparingly, and every section a full-width band ruled underneath, with a centred 70rem rail whose side rules meet the bands at small diamond nodes. Graph paper shows only behind the title bands, the call to action and the 404 panel, never behind text.
 * Inter, self-hosted: the variable Latin font (and its Latin Extended and italic subsets only for the characters that need them) ships with the theme and is preloaded, with metric-matched fallbacks so the page barely moves when it arrives. No font service is called, and the theme's CSS is inlined, so a page needs no stylesheet requests.
 * A Light/Dark switch in the header: until the reader chooses, the page follows their device; their choice is kept in the browser and applied on every page before it paints, so it never flashes. It is a toggle button named "Dark theme", pressed in dark mode. Without JavaScript the page follows the device and the switch is hidden.
 * A header with the site logo (when the site has one) beside the site title, the site's menu (or its pages until there is one), a search button that opens into a field, and the switch. On narrow screens the menu folds behind a button and opens as a side sheet.
@@ -66,6 +66,9 @@ Yes. Forms take the theme's colours, font and controls, in light and dark mode a
 With Orbital, the theme's colours replace the colours set in a form block's style settings, so every form matches the page. Other form plugins that leave their fields to the browser follow the page's light or dark mode as well.
 
 == Changelog ==
+
+= 2.0.4 =
+* Changed: the page's rail is 70rem wide (was 60rem), so the header, the lists, the footer and the call to action line up with the design system's other apps. The text column keeps its width.
 
 = 2.0.3 =
 * New: Appearance → Customize → Header and footer menus: pick which menu the header shows and which one the footer shows, so the footer can hold other links (such as legal pages). "Automatic" leaves it to WordPress, its newest menu, but the header never takes the footer's menu.

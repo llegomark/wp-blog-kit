@@ -80,7 +80,7 @@ test.describe( 'desktop', () => {
 } );
 
 /**
- * The frame: every section is a full-width band ruled underneath; inside it a centred 60rem rail
+ * The frame: every section is a full-width band ruled underneath; inside it a centred 70rem rail
  * with hairline side rules and a 7 px diamond where they meet the band's top rule. Bands stack with
  * no gap, so the rails run unbroken from the header to the footer. Graph paper only in paper bands.
  *
@@ -139,7 +139,7 @@ test.describe( 'the site title, desktop', () => {
 test.describe( 'the frame, desktop', () => {
 	test.use( DESKTOP );
 
-	test( 'bands with a centred 60rem rail, side rules and diamond nodes, stacked without gaps', async ( { page } ) => {
+	test( 'bands with a centred 70rem rail, side rules and diamond nodes, stacked without gaps', async ( { page } ) => {
 		for ( const path of Object.values( pages ) ) {
 			await page.goto( path );
 			const { width, bands, header } = await frame( page );
@@ -151,7 +151,7 @@ test.describe( 'the frame, desktop', () => {
 				expect( band, path ).toMatchObject( {
 					fullWidth: true,
 					bottomRule: '1px solid',
-					rail: { left: ( width - 960 ) / 2, width: 960 },
+					rail: { left: ( width - 1120 ) / 2, width: 1120 },
 					sideRules: '1px solid 1px solid',
 					node: '7px 7px 45deg 1px',
 				} );
@@ -221,10 +221,10 @@ test.describe( 'the frame, wide desktop', () => {
 			const r = band.getBoundingClientRect();
 			return { content: s.content, left: parseFloat( s.left ), right: parseFloat( s.right ), width: s.borderLeftWidth, band: r.width };
 		} );
-		// 50% - 30rem - 7rem from each side of the band.
+		// 50% - 35rem - 7rem from each side of the band.
 		expect( outer ).toMatchObject( { content: '""', width: '1px' } );
-		expect( outer.left ).toBeCloseTo( ( outer.band / 2 ) - 592, 0 );
-		expect( outer.right ).toBeCloseTo( ( outer.band / 2 ) - 592, 0 );
+		expect( outer.left ).toBeCloseTo( ( outer.band / 2 ) - 672, 0 );
+		expect( outer.right ).toBeCloseTo( ( outer.band / 2 ) - 672, 0 );
 	} );
 } );
 
