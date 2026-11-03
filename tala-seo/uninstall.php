@@ -3,7 +3,7 @@
  * Runs when Tala SEO is deleted from Plugins (not on deactivation).
  *
  * Removes the plugin's settings, the one-save "minor edit" flags, the remembered old addresses
- * of pages and terms (they only serve the plugin's redirects), the "share crop tried" markers and
+ * of pages, terms and author pages (they only serve the plugin's redirects), the "share crop tried" markers and
  * the video titles fetched from YouTube.
  * The image crops stay: they are ordinary files of the media library. Keeps what editors wrote (SEO
  * titles, meta descriptions, canonical, noindex, redirect and primary-category choices of posts,
@@ -23,3 +23,4 @@ delete_post_meta_by_key( '_tala_seo_share_crop_tried' );
 delete_post_meta_by_key( '_tala_seo_videos' );
 delete_post_meta_by_key( '_tala_seo_video_failures' );
 delete_metadata( 'term', 0, '_tala_seo_old_path', '', true );
+delete_metadata( 'user', 0, '_tala_seo_old_path', '', true );

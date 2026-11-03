@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Tala SEO
  * Description:       Lean SEO for blogs: titles, meta descriptions, canonicals, Open Graph, JSON-LD structured data (articles, YouTube videos, events, courses, FAQ and how-to), visible breadcrumbs, sitemap and robots.txt tuning, and a publish check that blocks posts without a meta description or featured image.
- * Version:           1.18.3
+ * Version:           1.19.0
  * Requires at least: 7.0
  * Requires PHP:      8.5
  * Author:            Edventure
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const TALA_SEO_VERSION = '1.18.3';
+const TALA_SEO_VERSION = '1.19.0';
 const TALA_SEO_FILE    = __FILE__;
 
 // Post meta keys. The leading underscore hides them from the Custom Fields box.
@@ -35,6 +35,12 @@ const TALA_SEO_SHARE_CROP_TRIED = '_tala_seo_share_crop_tried';
 
 // Post and term meta: addresses a page or term archive had before it moved (see redirects.php).
 const TALA_SEO_OLD_PATH = '_tala_seo_old_path';
+
+// User meta: the author's other profile addresses (one per line), for the Person markup's sameAs.
+const TALA_SEO_PROFILES = 'tala_seo_profiles';
+
+// How many "other profiles" an author can list.
+const TALA_SEO_PROFILES_MAX = 20;
 
 // Post meta for embedded YouTube videos (see content-schema.php): the date each was published on
 // YouTube, as the author enters it, the title and thumbnail fetched from YouTube on save, and when

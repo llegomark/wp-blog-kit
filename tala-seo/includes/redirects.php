@@ -1,11 +1,12 @@
 <?php
 /**
- * Redirects for pages and term archives (categories, tags) whose address changed.
+ * Redirects for pages, term archives (categories, tags) and author pages whose address changed.
  *
  * WordPress only redirects posts whose slug changed (wp_old_slug_redirect()); a page or category
- * that is renamed or moved simply starts returning 404 at its old address, and links and search
- * results pointing there break. Here every published page and public term remembers the addresses
- * it had, and a request that would end in a 404 at an old address gets a 301 to the current one.
+ * that is renamed or moved, or an author whose slug (user_nicename) changes, simply starts returning
+ * 404 at its old address, and links and search results pointing there break. Here every published
+ * page, public term and author remembers the addresses it had, and a request that would end in a 404
+ * at an old address gets a 301 to the current one.
  * Children move with their parent, so an old address also matches as a prefix:
  * old-parent/child → new-parent/child, category/old/page/2 → category/new/page/2.
  *
@@ -70,13 +71,13 @@ function tala_seo_redirect_taxonomies() {
 }
 
 /**
- * Records that a page or term moved from one address to another.
+ * Records that a page, term or author page moved from one address to another.
  *
- * Each old address belongs to one page or term at a time (the latest to leave it), and an address
- * that becomes current again stops being an old one.
+ * Each old address belongs to one page, term or author at a time (the latest to leave it), and an
+ * address that becomes current again stops being an old one.
  *
- * @param string $meta_type 'post' or 'term'.
- * @param int    $id        Post or term ID.
+ * @param string $meta_type 'post', 'term' or 'user'.
+ * @param int    $id        Post, term or user ID.
  * @param string $old_url   Address before the change.
  * @param string $new_url   Address after the change.
  */
@@ -86,9 +87,9 @@ function tala_seo_remember_move( $meta_type, $id, $old_url, $new_url ): void {
 	if ( '' === $old || $old === $new ) {
 		return;
 	}
-	// The old address now belongs to this page or term only, and the new one, a current address
-	// again, to no one's old addresses.
-	foreach ( array( 'post', 'term' ) as $type ) {
+	// The old address now belongs to this page, term or author only, and the new one, a current
+	// address again, to no one's old addresses.
+	foreach ( array( 'post', 'term', 'user' ) as $type ) {
 		delete_metadata( $type, 0, TALA_SEO_OLD_PATH, $old, true );
 		delete_metadata( $type, 0, TALA_SEO_OLD_PATH, $new, true );
 	}
@@ -117,6 +118,23 @@ function tala_seo_page_moved( $post_id, $post_after, $post_before ): void {
 	}
 	// get_permalink() builds the address from the object it gets, so $post_before gives the old one.
 	tala_seo_remember_move( 'post', (int) $post_id, (string) get_permalink( $post_before ), (string) get_permalink( $post_after ) );
+}
+
+add_action( 'profile_update', 'tala_seo_author_moved', 10, 2 );
+
+/**
+ * An author whose slug (user_nicename, the last part of their author page's address) changed.
+ *
+ * @param int     $user_id       User ID.
+ * @param WP_User $old_user_data The user before the save.
+ */
+function tala_seo_author_moved( $user_id, $old_user_data ): void {
+	$user = get_userdata( (int) $user_id );
+	if ( ! $user || '' === $old_user_data->user_nicename
+		|| $old_user_data->user_nicename === $user->user_nicename ) {
+		return;
+	}
+	tala_seo_remember_move( 'user', $user->ID, get_author_posts_url( $user->ID, $old_user_data->user_nicename ), get_author_posts_url( $user->ID ) );
 }
 
 add_action( 'edit_terms', 'tala_seo_term_before_edit', 10, 2 );
@@ -252,6 +270,23 @@ function tala_seo_moved_target( $request, $candidates ) {
 					'is_post' => false,
 				);
 			}
+		}
+	}
+
+	$users = get_users(
+		array(
+			'meta_query'  => $meta_query, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- only on 404s.
+			'number'      => 10,
+			'fields'      => 'ID',
+			'count_total' => false,
+		)
+	);
+	foreach ( $users as $user_id ) {
+		foreach ( (array) get_user_meta( (int) $user_id, TALA_SEO_OLD_PATH, false ) as $path ) {
+			$moved[ (string) $path ] = array(
+				'url'     => get_author_posts_url( (int) $user_id ),
+				'is_post' => false,
+			);
 		}
 	}
 

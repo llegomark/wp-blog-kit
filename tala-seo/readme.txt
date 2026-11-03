@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.18.3
+Stable tag: 1.19.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,11 +29,11 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **FAQ and How-to:** two Group blocks in the inserter, made of core blocks: an FAQ with a Details block (opens on click) for each question, and a how-to guide with a heading, an introduction and a numbered list of steps (a post's only how-to guide may leave the heading out: it is then named after the post). They are described as FAQPage and HowTo. Google no longer shows these as rich results; the markup is valid schema.org that other search engines and AI assistants can read, and it only repeats what the page shows. Without the plugin they are ordinary blocks.
 * **Sitemap:** WordPress's own `/wp-sitemap.xml` with accurate `lastmod`, where the sitemap addresses of Yoast SEO and Rank Math (`sitemap_index.xml`, `post-sitemap.xml` and the like) now lead, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, or hidden author pages. It exists only while search engines may index the site.
 * **robots.txt:** points to the sitemap; blocks nothing else, and AI crawlers are welcome.
-* **Redirects:** a page, category or tag whose address changes (new slug or parent) sends visitors and search engines from the old address to the new one (301). WordPress does this for posts only. Children move with their parent. A post can also send its visitors to another address on purpose (301), for example after two guides are merged.
+* **Redirects:** a page, category or tag whose address changes (new slug or parent), or an author whose slug changes, sends visitors and search engines from the old address to the new one (301). WordPress does this for posts only. Children and numbered pages move with their parent. A post can also send its visitors to another address on purpose (301), for example after two guides are merged.
 * **Attachment pages:** the setup checklist turns off the thin page WordPress made for every uploaded image on sites older than WordPress 6.4, in one click; their addresses then lead to the files (301), as with Yoast SEO and Rank Math.
 * **Permalinks:** the setup checklist switches a site with plain URLs to post-name URLs in one click, and Settings → Permalinks warns before a structure change moves every published post. The plugin never changes the permalinks on its own.
 * **Hidden-site warning:** while "Discourage search engines" is on, every admin screen and the pre-publish checklist say so.
-* **Authors:** a real author photo (no Gravatar request), social profile links (TikTok and Mastodon included) for the author markup, and a Fediverse handle.
+* **Authors:** a real author photo (no Gravatar request), social profile links (TikTok and Mastodon included) and other profile addresses (an author page on another site, GitHub, Gravatar) for the author markup's sameAs, and a Fediverse handle.
 * **Settings → SEO:** the title separator (vertical bar, hyphen, dashes, colon, middle dot or bullet), site owner, official profiles (the organization's sameAs), its kind, legal name, address, telephone and email, home description (also the Organization description), default share image, the minimum number of posts for tag pages to be indexed (2 by default), Google Search Console, Bing Webmaster Tools and Meta (Facebook) verification codes, and a setup checklist.
 * **WP-CLI:** `wp tala-seo audit` lists published posts that are missing something; `wp tala-seo import` copies data from Yoast SEO, Rank Math, The SEO Framework or SEOPress; `wp tala-seo describe` writes the missing meta descriptions from each post's opening text, once, for you to edit; `wp tala-seo pdf-canonicals` maps each PDF to its article for the web server's rel="canonical" header.
 
@@ -104,6 +104,11 @@ Include that file in nginx's `http` block, and in the site's PDF location add `a
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.19.0 =
+* New: Users → Profile → Other profiles: addresses of pages about the author elsewhere, one per line (their author page on another site, GitHub, Gravatar and the like). The author markup lists them as sameAs with the social profiles.
+* New: an author whose slug changes (the last part of their author page's address) keeps their old address: it and its numbered pages answer with a 301 to the new ones.
+* Changed: the author markup's sameAs no longer lists the author's own page on the site or the site's home page (a website field set to the site itself, say): neither tells search engines who the person is.
 
 = 1.18.3 =
 * Changed: American spelling: a canceled event's card reads "Canceled", and the Event block's status setting says so too.

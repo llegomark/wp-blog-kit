@@ -322,6 +322,38 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * "Other profiles" keeps its http(s) addresses, one per line, for the person who may edit the
+	 * user and with the form's check; emptied, it is removed.
+	 */
+	public function test_other_profiles_saved(): void {
+		$author = self::factory()->user->create( array( 'role' => 'author' ) );
+		$other  = self::factory()->user->create( array( 'role' => 'author' ) );
+		wp_set_current_user( $author );
+		$_POST = array(
+			'tala_seo_profiles'       => "https://github.com/tala\r\nnot a link\n\nhttps://github.com/tala\nhttps://huggingface.co/tala",
+			'tala_seo_profiles_nonce' => wp_create_nonce( 'tala_seo_profiles_' . $author ),
+		);
+		tala_seo_save_profiles( $author );
+		$this->assertSame( "https://github.com/tala\nhttps://huggingface.co/tala", get_user_meta( $author, TALA_SEO_PROFILES, true ) );
+
+		tala_seo_save_profiles( $other );
+		$this->assertSame( '', get_user_meta( $other, TALA_SEO_PROFILES, true ), "Can't edit another author" );
+
+		$_POST['tala_seo_profiles_nonce'] = 'wrong';
+		$_POST['tala_seo_profiles']       = '';
+		tala_seo_save_profiles( $author );
+		$this->assertNotSame( '', get_user_meta( $author, TALA_SEO_PROFILES, true ), 'Without the check, nothing changes' );
+
+		$_POST['tala_seo_profiles_nonce'] = wp_create_nonce( 'tala_seo_profiles_' . $author );
+		tala_seo_save_profiles( $author );
+		$this->assertSame( array(), get_user_meta( $author, TALA_SEO_PROFILES, false ), 'Emptied: removed' );
+
+		$field = get_echo( 'tala_seo_profiles_field', array( get_userdata( $author ) ) );
+		$this->assertStringContainsString( '<label for="tala-seo-profiles">', $field );
+		$this->assertStringContainsString( 'name="tala_seo_profiles_nonce"', $field );
+	}
+
+	/**
 	 * The author photo can only be an image the person saving the profile may see: not one attached
 	 * to someone else's draft.
 	 */

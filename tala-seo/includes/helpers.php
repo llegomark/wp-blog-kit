@@ -415,7 +415,9 @@ function tala_seo_author_photo( $user_id ) {
 }
 
 /**
- * Public profile links for an author (website and social profiles from their user profile).
+ * Public profile links for an author: the website, the social profiles and the other profiles from
+ * their user profile, for the Person markup's sameAs. The author's own page on this site is the
+ * Person's url, and the site's home page is the publisher's, so neither is listed.
  *
  * @param int $user_id User ID.
  * @return string[]
@@ -425,8 +427,47 @@ function tala_seo_author_profiles( $user_id ) {
 	foreach ( array_keys( tala_seo_social_fields() ) as $field ) {
 		$links[] = get_the_author_meta( $field, $user_id );
 	}
+	$links = array_merge( $links, tala_seo_profile_lines( get_user_meta( $user_id, TALA_SEO_PROFILES, true ) ) );
 	$links = array_filter( array_map( tala_seo_sanitize_url( ... ), $links ) );
+	$own   = array( tala_seo_address_key( get_author_posts_url( $user_id ) ), tala_seo_address_key( home_url( '/' ) ) );
+	$links = array_filter( $links, static fn( string $link ): bool => ! in_array( tala_seo_address_key( $link ), $own, true ) );
 	return array_values( array_unique( $links ) );
+}
+
+/**
+ * The addresses in an "other profiles" text, one per line: http(s) addresses only, each once, at most
+ * TALA_SEO_PROFILES_MAX.
+ *
+ * @param mixed $text Raw text.
+ * @return string[]
+ */
+function tala_seo_profile_lines( $text ) {
+	$links = array();
+	$lines = preg_split( '/\R/', tala_seo_scalar( $text ) );
+	foreach ( false === $lines ? array() : $lines as $line ) {
+		$url = tala_seo_sanitize_url( $line );
+		if ( '' !== $url && ! in_array( $url, $links, true ) ) {
+			$links[] = $url;
+		}
+	}
+	return array_slice( $links, 0, TALA_SEO_PROFILES_MAX );
+}
+
+/**
+ * An address in a form that compares equal for the same page: no scheme, host in lower case without
+ * "www.", no trailing slash. "https://www.Example.com/a/" and "http://example.com/a" match.
+ *
+ * @param string $url URL.
+ * @return string
+ */
+function tala_seo_address_key( $url ) {
+	$parts = wp_parse_url( $url );
+	if ( ! is_array( $parts ) || empty( $parts['host'] ) ) {
+		return '';
+	}
+	$host = (string) preg_replace( '/^www\./', '', strtolower( $parts['host'] ) );
+	$path = untrailingslashit( $parts['path'] ?? '' );
+	return $host . $path . ( isset( $parts['query'] ) ? '?' . $parts['query'] : '' );
 }
 
 /**

@@ -119,6 +119,62 @@ class Test_Tala_SEO_Redirects extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * An author whose slug changes: the old author page and its numbered pages go to the new ones;
+	 * a slug given back is the author page again, and another author taking an old slug keeps it.
+	 */
+	public function test_moved_authors(): void {
+		$author = self::factory()->user->create(
+			array(
+				'role'          => 'author',
+				'user_login'    => 'tala.login',
+				'user_nicename' => 'tala-old-slug',
+			)
+		);
+		$this->publish_post( array( 'post_author' => $author ) );
+		$this->assertNull( $this->moved( '/author/tala-old-slug/' ), 'The author page itself answers.' );
+
+		wp_update_user(
+			array(
+				'ID'            => $author,
+				'user_nicename' => 'tala-new-slug',
+			)
+		);
+		$redirect = $this->moved( '/author/tala-old-slug/' );
+		$this->assertSame( home_url( '/author/tala-new-slug/' ), $redirect?->location );
+		$this->assertSame( 301, $redirect?->status );
+		$this->assertSame( home_url( '/author/tala-new-slug/page/2/' ), $this->moved( '/author/tala-old-slug/page/2/' )?->location );
+		$this->assertNull( $this->moved( '/author/tala-new-slug/' ), 'The new address is the author page.' );
+		$this->assertSame( array( 'author/tala-old-slug' ), get_user_meta( $author, TALA_SEO_OLD_PATH, false ) );
+
+		// Other profile fields saved without a new slug record nothing.
+		wp_update_user(
+			array(
+				'ID'          => $author,
+				'description' => 'Teaches Grade 5.',
+			)
+		);
+		$this->assertSame( array( 'author/tala-old-slug' ), get_user_meta( $author, TALA_SEO_OLD_PATH, false ) );
+
+		wp_update_user(
+			array(
+				'ID'            => $author,
+				'user_nicename' => 'tala-old-slug',
+			)
+		);
+		$this->assertNull( $this->moved( '/author/tala-old-slug/' ), 'Given back: the address is the author page again.' );
+		$this->assertSame( home_url( '/author/tala-old-slug/' ), $this->moved( '/author/tala-new-slug/' )?->location );
+
+		$other = self::factory()->user->create(
+			array(
+				'role'          => 'author',
+				'user_nicename' => 'tala-new-slug',
+			)
+		);
+		$this->publish_post( array( 'post_author' => $other ) );
+		$this->assertNull( $this->moved( '/author/tala-new-slug/' ), 'Another author who takes the slug keeps their page.' );
+	}
+
+	/**
 	 * Looking up an old address costs little whatever the visitor asks for: long or deep made-up
 	 * paths don't grow the database query with the length of the URL.
 	 */

@@ -647,6 +647,60 @@ function tala_seo_photo_field( $user ): void {
 	<?php
 }
 
+add_action( 'show_user_profile', 'tala_seo_profiles_field' );
+add_action( 'edit_user_profile', 'tala_seo_profiles_field' );
+
+/**
+ * The "Other profiles" field on the profile screen: the author's pages elsewhere (another site's
+ * author page, GitHub, Gravatar and the like), which the Person markup lists as sameAs with the
+ * social profiles above.
+ *
+ * @param WP_User $user User being edited.
+ */
+function tala_seo_profiles_field( $user ): void {
+	$lines = tala_seo_profile_lines( get_user_meta( $user->ID, TALA_SEO_PROFILES, true ) );
+	?>
+	<h2><?php esc_html_e( 'Other profiles', 'tala-seo' ); ?></h2>
+	<table class="form-table" role="presentation">
+		<tr>
+			<th scope="row"><label for="tala-seo-profiles"><?php esc_html_e( 'Profile addresses', 'tala-seo' ); ?></label></th>
+			<td>
+				<textarea id="tala-seo-profiles" name="tala_seo_profiles" rows="6" class="large-text code" aria-describedby="tala-seo-profiles-description"><?php echo esc_textarea( implode( "\n", $lines ) ); ?></textarea>
+				<p class="description" id="tala-seo-profiles-description">
+					<?php
+					/* translators: %d: how many addresses can be listed. */
+					echo esc_html( sprintf( __( 'One address per line, up to %d: pages about this author elsewhere, such as their author page on another site, GitHub or Gravatar. Search engines read them, with the social profiles above, as the same person. Their author page on this site and the site\'s home page are left out.', 'tala-seo' ), TALA_SEO_PROFILES_MAX ) );
+					?>
+				</p>
+				<?php wp_nonce_field( 'tala_seo_profiles_' . $user->ID, 'tala_seo_profiles_nonce' ); ?>
+			</td>
+		</tr>
+	</table>
+	<?php
+}
+
+add_action( 'personal_options_update', 'tala_seo_save_profiles' );
+add_action( 'edit_user_profile_update', 'tala_seo_save_profiles' );
+
+/**
+ * Saves the "Other profiles" field: its http(s) addresses, one per line.
+ *
+ * @param int $user_id User ID.
+ */
+function tala_seo_save_profiles( $user_id ): void {
+	if ( ! current_user_can( 'edit_user', $user_id )
+		|| ! isset( $_POST['tala_seo_profiles_nonce'], $_POST['tala_seo_profiles'] )
+		|| ! wp_verify_nonce( sanitize_key( wp_unslash( $_POST['tala_seo_profiles_nonce'] ) ), 'tala_seo_profiles_' . $user_id ) ) {
+		return;
+	}
+	$lines = tala_seo_profile_lines( wp_unslash( $_POST['tala_seo_profiles'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- each line is sanitized as a URL.
+	if ( $lines ) {
+		update_user_meta( $user_id, TALA_SEO_PROFILES, implode( "\n", $lines ) );
+	} else {
+		delete_user_meta( $user_id, TALA_SEO_PROFILES );
+	}
+}
+
 add_action( 'personal_options_update', 'tala_seo_save_photo' );
 add_action( 'edit_user_profile_update', 'tala_seo_save_photo' );
 

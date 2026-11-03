@@ -124,6 +124,44 @@ class Test_Tala_SEO_Schema extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * The author's other profiles join the social ones in sameAs: each address once, http(s) only,
+	 * never their own author page here or the site's home page (however they are written).
+	 */
+	public function test_other_profiles(): void {
+		$author = self::factory()->user->create(
+			array(
+				'role'     => 'author',
+				'user_url' => home_url( '/' ),
+			)
+		);
+		update_user_meta( $author, 'tala_x', 'https://x.com/tala' );
+		update_user_meta(
+			$author,
+			TALA_SEO_PROFILES,
+			implode(
+				"\r\n",
+				array(
+					'https://github.com/tala',
+					'',
+					'  https://gravatar.com/tala  ',
+					'not a link',
+					'javascript:alert(1)',
+					'https://x.com/tala',
+					'https://example.org/author/tala/',
+					untrailingslashit( str_replace( 'http://', 'https://', get_author_posts_url( $author ) ) ),
+				)
+			)
+		);
+		$this->publish_post( array( 'post_author' => $author ) );
+		$this->go_to( get_author_posts_url( $author ) );
+		$this->assertSame(
+			array( 'https://x.com/tala', 'https://github.com/tala', 'https://gravatar.com/tala', 'https://example.org/author/tala/' ),
+			$this->schema()['ProfilePage']['mainEntity']['sameAs']
+		);
+		$this->assertSame( array_slice( range( 1, 30 ), 0, TALA_SEO_PROFILES_MAX ), array_map( static fn( string $url ): int => (int) basename( $url ), tala_seo_profile_lines( implode( "\n", array_map( static fn( int $n ): string => "https://example.org/$n", range( 1, 30 ) ) ) ) ), 'At most TALA_SEO_PROFILES_MAX' );
+	}
+
+	/**
 	 * The author photo is shown (avatar, ProfilePage) only while visitors may see the image: never one
 	 * attached to a draft, even when the profile already points at it.
 	 */
