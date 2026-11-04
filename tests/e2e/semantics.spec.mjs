@@ -251,3 +251,49 @@ for ( const colorScheme of [ 'light', 'dark' ] ) {
 		} );
 	} );
 }
+
+// A site fills the Before Read next part from the theme's "Call to action before Read next" pattern: a card at
+// the end of the post's text, after its topics and before Read next, a complementary landmark of its own name
+// (not the closing call to action's), so axe finds nothing.
+test.describe( 'the call to action before Read next, filled from the pattern', () => {
+	test.use( PHONE );
+	let part;
+
+	test.beforeAll( () => {
+		const content = wp( 'eval', 'echo WP_Block_Patterns_Registry::get_instance()->get_registered( "tala-blog/before-read-next" )["content"];' );
+		part = wp( 'post', 'create', '--post_type=wp_template_part', '--post_status=publish', '--post_name=before-read-next', '--post_title=Before Read next', `--post_content=${ content }`, '--porcelain' );
+		wp( 'post', 'term', 'set', part, 'wp_theme', 'tala-blog' );
+	} );
+
+	test.afterAll( () => {
+		wp( 'post', 'delete', part, '--force' );
+	} );
+
+	for ( const colorScheme of [ 'light', 'dark' ] ) {
+		test( `in the article, after the topics and before Read next, and axe finds nothing (${ colorScheme })`, async ( { page } ) => {
+			await page.emulateMedia( { colorScheme } );
+			await page.goto( pages.article );
+			const card = page.getByRole( 'complementary', { name: 'Recommended' } );
+			await expect( card ).toHaveCount( 1 );
+			await expect( card.getByRole( 'heading', { level: 2, name: 'Worth a look next' } ) ).toBeVisible();
+			await expect( card.getByRole( 'link', { name: 'Take a look' } ) ).toBeVisible();
+			expect(
+				await page.evaluate( () => {
+					const aside = document.querySelector( 'aside.tala-cta-card' );
+					const next = document.querySelector( 'nav.tala-post-nav' );
+					return [
+						!! aside.closest( 'article' ),
+						aside.compareDocumentPosition( next ) === Node.DOCUMENT_POSITION_FOLLOWING,
+						document.documentElement.scrollWidth <= window.innerWidth,
+					];
+				} ),
+			).toEqual( [ true, true, true ] );
+			expect( await axeViolations( page ) ).toEqual( [] );
+		} );
+	}
+
+	test( 'pages have no Read next and no card', async ( { page } ) => {
+		await page.goto( pages.page );
+		await expect( page.locator( 'aside.tala-cta-card' ) ).toHaveCount( 0 );
+	} );
+} );

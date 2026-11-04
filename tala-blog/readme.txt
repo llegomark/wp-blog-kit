@@ -67,6 +67,9 @@ With Orbital, the theme's colors replace the colors set in a form block's style 
 
 == Changelog ==
 
+= 2.0.9 =
+* Added: a "Before Read next" template part between a post's topics and Read next, empty until a site fills it, and a "Call to action before Read next" pattern to fill it with: a card in the text column (eyebrow, heading, lead, one button, a line of detail) on the closing call to action's surface.
+
 = 2.0.8 =
 * Fixed: the logo keeps its size when the site title beside it wraps onto two lines (on phones it shrank), and beside a long menu on a small desktop (it shrank away there, leaving its room to the title).
 

@@ -2085,6 +2085,35 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	color: var(--wp--preset--color--contrast);
 }
 
+/* A call to action before "Read next" (the "Call to action before Read next" pattern, for the Before Read next
+   part): in the text column, after the post's topics, the closing card's surface (hairline border, flat cobalt
+   offset shadow) at the column's size. Eyebrow, heading, lead, one button and a meta line, 0.75rem apart,
+   starting at the left like the text around it. */
+.tala-cta-card {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 0.75rem;
+	box-sizing: border-box;
+	padding: clamp(1.25rem, 1rem + 1.5vw, 2rem);
+	border: 1px solid var(--wp--preset--color--border);
+	background-color: var(--wp--preset--color--surface);
+	box-shadow: 6px 6px 0 color-mix(in srgb, var(--wp--preset--color--accent) 10%, transparent);
+}
+
+.tala-cta-card > * {
+	margin-block: 0;
+}
+
+.tala-cta-card > .tala-lead {
+	color: var(--wp--preset--color--contrast);
+	font-size: var(--wp--preset--font-size--medium);
+}
+
+.tala-cta-card > .wp-block-buttons {
+	margin-block-start: 0.25rem;
+}
+
 /* Title bands of the home page and the archives: the title, its lead, and on the home page a search
    field and the top-level categories as chips, 1.25rem apart. */
 

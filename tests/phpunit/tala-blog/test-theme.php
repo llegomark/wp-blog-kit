@@ -813,7 +813,7 @@ HTML;
 			$slug    = 'tala-blog/' . basename( $file, '.php' );
 			$pattern = $registry->get_registered( $slug );
 			$this->assertIsArray( $pattern, $slug );
-			if ( 'tala-blog/call-to-action' !== $slug ) {
+			if ( ! in_array( $slug, array( 'tala-blog/call-to-action', 'tala-blog/before-read-next' ), true ) ) {
 				$this->assertFalse( $pattern['inserter'] ?? true, "$slug stays out of the inserter" );
 			}
 			$this->assertNotEmpty( parse_blocks( $pattern['content'] ), $slug );
@@ -837,6 +837,7 @@ HTML;
 			'navigation-overlay' => 'navigation-overlay',
 			'footer-note'        => 'uncategorized',
 			'call-to-action'     => 'uncategorized',
+			'before-read-next'   => 'uncategorized',
 		);
 		foreach ( $areas as $slug => $area ) {
 			$part = get_block_template( 'tala-blog//' . $slug, 'wp_template_part' );
@@ -884,6 +885,34 @@ HTML;
 			}
 		}
 		$this->assertStringContainsString( '"slug":"tala-blog/search"', WP_Block_Patterns_Registry::get_instance()->get_registered( 'tala-blog/hidden-404' )['content'] );
+	}
+
+	/**
+	 * A post's text ends with its terms, then the "Before Read next" part (empty unless a site fills it, say
+	 * with a call to action from the theme's pattern), then Read next. Pages have no Read next and no part.
+	 */
+	public function test_before_read_next_part(): void {
+		$single = get_block_template( 'tala-blog//single' )->content;
+		$terms  = strpos( $single, '"slug":"tala-blog/post-terms"' );
+		$part   = strpos( $single, '<!-- wp:template-part {"slug":"before-read-next"' );
+		$next   = strpos( $single, '"slug":"tala-blog/post-footer"' );
+		$this->assertIsInt( $part, 'The part is in the single template' );
+		$this->assertTrue( $terms < $part && $part < $next, 'Between the terms and Read next' );
+		$this->assertStringNotContainsString( 'before-read-next', get_block_template( 'tala-blog//page' )->content );
+
+		// Empty, the part leaves nothing on the page.
+		$this->assertSame( '', trim( do_blocks( '<!-- wp:template-part {"slug":"before-read-next","theme":"tala-blog"} /-->' ) ) );
+
+		// The pattern a site fills it from: a card for the text column, a landmark of its own name (not the
+		// closing call to action's), with an eyebrow, a heading, a lead, one button and a line of detail.
+		$pattern = WP_Block_Patterns_Registry::get_instance()->get_registered( 'tala-blog/before-read-next' );
+		$this->assertIsArray( $pattern );
+		$this->assertContains( 'core/template-part/uncategorized', $pattern['blockTypes'] ?? array() );
+		$html = do_blocks( $pattern['content'] );
+		$this->assertMatchesRegularExpression( '/<aside class="wp-block-group tala-cta-card[ "][^>]* aria-label="Recommended"/', $html );
+		foreach ( array( 'tala-eyebrow', 'wp-block-heading', 'tala-lead', 'wp-block-button__link', 'tala-meta' ) as $class ) {
+			$this->assertStringContainsString( $class, $html, $class );
+		}
 	}
 
 	/**
