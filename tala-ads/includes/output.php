@@ -12,8 +12,9 @@ defined( 'ABSPATH' ) || exit;
 add_action( 'wp_enqueue_scripts', 'tala_ads_enqueue' );
 
 /**
- * The scripts in <head>, in the order Google asks for: Tag Manager as high as it can be, then the
- * consent message, then AdSense, which places the Auto ads itself.
+ * The scripts in <head>: AdSense, which places the Auto ads itself, at the top (see
+ * tala_ads_print_adsense()); Tag Manager, then the consent message, with the page's other head
+ * scripts.
  */
 function tala_ads_enqueue(): void {
 	$settings = tala_ads_settings();
@@ -86,23 +87,18 @@ function tala_ads_enqueue(): void {
 
 // Right after wp_enqueue_scripts and the title (both at 1), before the page's styles (8) and the
 // other head scripts (9).
-add_action( 'wp_head', 'tala_ads_print_head_scripts', 2 );
+add_action( 'wp_head', 'tala_ads_print_adsense', 2 );
 
 /**
- * Google's tags at the top of <head>, before the page's styles: a theme that inlines its CSS would
- * otherwise put many kilobytes of it before them, and the browser would start loading AdSense later.
- * They are printed in the order they were queued and marked done, so WordPress doesn't print them
- * again with the other head scripts.
+ * The AdSense tag at the top of <head>, before the page's styles: a theme that inlines its CSS would
+ * otherwise put many kilobytes of it first, and the browser would start loading AdSense later. Only
+ * AdSense goes ahead: Tag Manager, Google's messages and error protection print with the page's
+ * other head scripts, and Innity's scripts at the end of the page. Marked done, so WordPress doesn't
+ * print it again.
  */
-function tala_ads_print_head_scripts(): void {
-	$handles = array_values(
-		array_filter(
-			array( 'tala-ads-gtm', 'tala-ads-consent', 'tala-ads-consent-signal', 'tala-ads-error-protection', 'tala-ads-adsense' ),
-			static fn( string $handle ): bool => wp_script_is( $handle )
-		)
-	);
-	if ( array() !== $handles ) {
-		wp_scripts()->do_items( $handles );
+function tala_ads_print_adsense(): void {
+	if ( wp_script_is( 'tala-ads-adsense' ) ) {
+		wp_scripts()->do_items( array( 'tala-ads-adsense' ) );
 	}
 }
 

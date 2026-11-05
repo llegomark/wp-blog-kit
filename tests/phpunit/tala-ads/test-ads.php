@@ -236,8 +236,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * Tag Manager, the consent message and AdSense each appear once in <head>, before its styles,
-	 * AdSense with the attributes its code asks for, and Tag Manager's fallback right after <body>.
+	 * Tag Manager, the consent message and AdSense each appear once in <head>, AdSense first, with the
+	 * attributes its code asks for, and Tag Manager's fallback right after <body>.
 	 */
 	public function test_head_scripts_once(): void {
 		update_option( 'tala_ads', self::ALL );
@@ -256,17 +256,50 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertSame( 1, substr_count( $head, "'dataLayer',\"GTM-ABC1234\"" ), 'Tag Manager is loaded once.' );
 		$this->assertSame( 1, substr_count( $head, 'fundingchoicesmessages.google.com/i/pub-1234567890123456?ers=1' ), 'The consent message is loaded once.' );
 		$this->assertStringContainsString( 'signalGooglefcPresent', $head );
-		// WordPress also adds dns-prefetch hints for these hosts higher up: compare the scripts' own tags.
-		$this->assertLessThan( strpos( $head, 'id="tala-ads-consent-js"' ), strpos( $head, 'id="tala-ads-gtm-js-after"' ), 'Tag Manager comes first.' );
-		$this->assertLessThan( strpos( $head, 'id="tala-ads-adsense-js"' ), strpos( $head, 'id="tala-ads-consent-js"' ), 'The consent message comes before AdSense.' );
-		$this->assertLessThan( strpos( $head, '<style' ), strpos( $head, 'id="tala-ads-adsense-js"' ), 'Google\'s tags come before the page\'s styles, so the browser starts loading them first.' );
-		$this->assertSame( 1, substr_count( $head, 'id="tala-ads-gtm-js-after"' ), 'Printed once, not again with the other head scripts.' );
+		// WordPress also adds a dns-prefetch hint for AdSense's host higher up: compare the scripts' own tags.
+		$this->assertLessThan( strpos( $head, 'id="tala-ads-gtm-js-after"' ), strpos( $head, 'id="tala-ads-adsense-js"' ), 'AdSense comes first.' );
+		$this->assertLessThan( strpos( $head, 'id="tala-ads-consent-js"' ), strpos( $head, 'id="tala-ads-gtm-js-after"' ), 'Then Tag Manager, then the consent message.' );
+		$this->assertSame( 1, substr_count( $head, 'id="tala-ads-adsense-js"' ), 'Printed once, not again with the other head scripts.' );
+		$this->assertSame( 1, substr_count( $head, 'id="tala-ads-gtm-js-after"' ) );
 
 		$this->assertStringNotContainsString( 'tala-ads-error-protection', $head, 'No error protection without its code.' );
 
 		$body = get_echo( 'wp_body_open' );
 		$this->assertStringContainsString( '<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-ABC1234"', $body );
 		$this->assertStringContainsString( 'title="Google Tag Manager"', $body, 'The frame has a name for screen readers.' );
+	}
+
+	/**
+	 * Only AdSense goes ahead of the page's styles. Tag Manager, Google's messages and error
+	 * protection print with the page's other head scripts, after its styles, and Innity at the end of
+	 * the page. WordPress's early DNS lookups stay for every server, Innity's included.
+	 */
+	public function test_only_adsense_first(): void {
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+		update_option(
+			'tala_ads',
+			array_merge(
+				self::ALL,
+				array(
+					'innity_desktop'   => '103008',
+					'error_protection' => $this->error_protection(),
+				)
+			)
+		);
+		$this->go_to( get_permalink( $this->post() ) );
+		$head   = $this->page_head();
+		$styles = strpos( $head, '<style' );
+
+		$this->assertIsInt( $styles );
+		$this->assertLessThan( $styles, strpos( $head, 'id="tala-ads-adsense-js"' ), 'AdSense comes before the page\'s styles, so the browser starts loading it first.' );
+		foreach ( array( 'tala-ads-gtm-js-after', 'tala-ads-consent-js', 'tala-ads-consent-signal-js-after', 'tala-ads-error-protection-js-after' ) as $id ) {
+			$this->assertGreaterThan( $styles, strpos( $head, 'id="' . $id . '"' ), $id . ' prints with the other head scripts, after the page\'s styles.' );
+		}
+		$this->assertStringNotContainsString( 'admanager-async.js', $head, 'Innity\'s loader is not in <head>.' );
+		$this->assertStringContainsString( 'cdn.innity.net/admanager-async.js', get_echo( 'wp_print_footer_scripts' ), 'Innity loads at the end of the page.' );
+		foreach ( array( 'pagead2.googlesyndication.com', 'fundingchoicesmessages.google.com', 'cdn.innity.net' ) as $host ) {
+			$this->assertStringContainsString( "<link rel='dns-prefetch' href='//" . $host . "' />", $head, $host . ' keeps its early DNS lookup.' );
+		}
 	}
 
 	/**
