@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.8.1
+Stable tag: 1.8.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ AdSense Auto ads, Google Tag Manager, Google's consent and ad blocking recovery 
 
 Tala Ads puts a site's ad and tracking code in one place, outside the theme, so switching themes never takes the ads with it.
 
-* **AdSense Auto ads.** Enter the publisher ID and the AdSense code goes on every page, once, at the top of the head, before the page's styles, so the browser starts loading it first. Nothing else of Tala Ads goes ahead of the page. Google places every ad: you choose the formats (in-page, anchor, vignette, side rail, multiplex) and how many in AdSense. Tala Ads adds no ad units of its own and hides nothing Google places. Error pages and searches that found nothing get no ads, as AdSense doesn't allow ads on pages without the site's own content. An ad frame waiting for its ad stays see-through in dark mode instead of showing a white box.
+* **AdSense Auto ads.** Enter the publisher ID and the AdSense code goes on every page, once, at the top of the head, before the page's styles, so the browser starts loading it first. Just before it, the browser is told to connect to AdSense's servers early: the one the code comes from and the one the ads load from, which the browser would otherwise only learn of once the code has run. Nothing else of Tala Ads goes ahead of the page. Google places every ad: you choose the formats (in-page, anchor, vignette, side rail, multiplex) and how many in AdSense. Tala Ads adds no ad units of its own and hides nothing Google places. Error pages and searches that found nothing get no ads, as AdSense doesn't allow ads on pages without the site's own content. An ad frame waiting for its ad stays see-through in dark mode instead of showing a white box.
 * **Google Tag Manager.** Enter the container ID: the code goes in the head with the page's other scripts, and the fallback for browsers without JavaScript right after the opening body tag. The container then loads Google Analytics and the other tags.
 * **Google's consent and ad blocking recovery messages.** One switch loads the messages set up under Privacy & messaging in AdSense, which come from one Google tag: the consent message, which Google needs to show personalized ads to visitors from the European Economic Area, the UK and Switzerland, and the ad blocking recovery message.
 * **Error protection.** Google's optional error protection code, which asks readers to allow ads when an ad blocker stops the recovery message itself, goes on pages with ads. It is the one piece of code the settings keep: only in the shape Google gives it, for the site's own publisher ID, naming only Google's addresses, and only from people WordPress lets add scripts.
@@ -68,6 +68,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.8.2 =
+* New: on pages with ads, the browser connects early to AdSense's servers: preconnect to pagead2.googlesyndication.com (in the anonymous CORS mode the AdSense tag loads in) and to googleads.g.doubleclick.net, where the ads load, and a DNS lookup for tpc.googlesyndication.com, which serves the ads' files. The DNS lookups WordPress adds for Google's messages and Innity stay.
 
 = 1.8.1 =
 * Changed: only the AdSense tag comes first in the page's head, so the ads load first. Tag Manager, Google's messages and error protection print with the page's other head scripts, after its styles, as before 1.8.0.

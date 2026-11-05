@@ -102,6 +102,35 @@ function tala_ads_print_adsense(): void {
 	}
 }
 
+add_filter( 'wp_resource_hints', 'tala_ads_resource_hints', 10, 2 );
+
+/**
+ * On pages with ads, early connections to AdSense's servers, among the hints WordPress prints at the
+ * top of <head>, just before the AdSense tag: the tag's own server in CORS mode, as the tag loads
+ * (browsers keep those connections apart from the others), and the server of the ad frames, which
+ * the browser only learns of once AdSense's script has run; a DNS lookup for the ads' files. The
+ * hints WordPress adds itself, Innity's and Google's messages' included, stay.
+ *
+ * @param mixed  $urls          The hints (an array, unless another filter broke it).
+ * @param string $relation_type The kind of hint.
+ * @return mixed
+ */
+function tala_ads_resource_hints( $urls, $relation_type ) {
+	if ( ! is_array( $urls ) || ! wp_script_is( 'tala-ads-adsense' ) ) {
+		return $urls;
+	}
+	if ( 'preconnect' === $relation_type ) {
+		$urls[] = array(
+			'href'        => 'https://pagead2.googlesyndication.com',
+			'crossorigin' => 'anonymous',
+		);
+		$urls[] = 'https://googleads.g.doubleclick.net';
+	} elseif ( 'dns-prefetch' === $relation_type ) {
+		$urls[] = 'tpc.googlesyndication.com';
+	}
+	return $urls;
+}
+
 add_filter( 'wp_script_attributes', 'tala_ads_script_attributes' );
 
 /**

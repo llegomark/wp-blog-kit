@@ -303,6 +303,32 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * On pages with ads, the browser connects early to AdSense's servers, from the hints at the top of
+	 * <head>: the AdSense tag's server in CORS mode, as the tag loads, the ad frames' server in normal
+	 * mode, and a DNS lookup for the ads' files. Each once, before the AdSense tag; none without ads.
+	 */
+	public function test_ad_server_hints(): void {
+		update_option( 'tala_ads', self::ALL );
+		$this->go_to( get_permalink( $this->post() ) );
+		$head = $this->page_head();
+
+		$this->assertSame( 1, preg_match_all( "#<link(?=[^>]*rel='preconnect')(?=[^>]*href='https://pagead2\.googlesyndication\.com')(?=[^>]*crossorigin='anonymous')[^>]*/>#", $head ), 'AdSense\'s server, in CORS mode like its tag.' );
+		$this->assertSame( 1, preg_match_all( "#<link[^>]*href='https://googleads\.g\.doubleclick\.net'[^>]*/>#", $head, $frames ) );
+		$this->assertStringContainsString( "rel='preconnect'", $frames[0][0] );
+		$this->assertStringNotContainsString( 'crossorigin', $frames[0][0], 'The ad frames load in normal mode.' );
+		$this->assertSame( 1, substr_count( $head, "<link rel='dns-prefetch' href='//tpc.googlesyndication.com' />" ), 'The ads\' files: a DNS lookup.' );
+		foreach ( array( 'googleads.g.doubleclick.net', 'tpc.googlesyndication.com' ) as $host ) {
+			$this->assertLessThan( strpos( $head, 'id="tala-ads-adsense-js"' ), strpos( $head, $host ), $host . ' comes before the AdSense tag.' );
+		}
+
+		$this->go_to( home_url( '/no-such-page/' ) );
+		$head = $this->page_head();
+		$this->assertStringNotContainsString( 'googleads.g.doubleclick.net', $head, 'No ads, no early connections.' );
+		$this->assertStringNotContainsString( 'tpc.googlesyndication.com', $head );
+		$this->assertDoesNotMatchRegularExpression( "#rel='preconnect'[^>]*pagead2|pagead2[^>]*rel='preconnect'#", $head );
+	}
+
+	/**
 	 * The error protection code goes in <head> after Google's messages tag, on pages with ads, and
 	 * only while Google's messages are on.
 	 */
