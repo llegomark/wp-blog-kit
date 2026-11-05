@@ -49,19 +49,6 @@ function tala_ads_settings_fields(): void {
 			'help'        => __( 'Paste the ID, or any code AdSense gives you (the Auto ads code, an ads.txt line): only the publisher ID is kept.', 'tala-ads' ),
 		)
 	);
-	add_settings_field(
-		'tala_ads_in_article',
-		__( 'In-article ad unit', 'tala-ads' ),
-		'tala_ads_field_text',
-		'tala-ads',
-		'tala_ads_adsense',
-		array(
-			'label_for'   => 'tala-ads-in-article',
-			'key'         => 'in_article',
-			'placeholder' => '1234567890',
-			'help'        => __( 'Optional: the ID of an In-article ad unit (AdSense → Ads → By ad unit), the number after data-ad-slot. Pasting the unit\'s code works too: only the ID is kept. The ad goes after the second paragraph of each post, where Google suggests, with its space kept free while it loads so the text doesn\'t jump.', 'tala-ads' ),
-		)
-	);
 	add_settings_field( 'tala_ads_consent', __( 'Google\'s messages', 'tala-ads' ), 'tala_ads_field_consent', 'tala-ads', 'tala_ads_adsense' );
 	add_settings_field( 'tala_ads_error_protection', __( 'Error protection', 'tala-ads' ), 'tala_ads_field_error_protection', 'tala-ads', 'tala_ads_adsense', array( 'label_for' => 'tala-ads-error-protection' ) );
 
@@ -99,8 +86,8 @@ function tala_ads_settings_fields(): void {
 	add_settings_section( 'tala_ads_innity', __( 'Innity', 'tala-ads' ), 'tala_ads_section_innity', 'tala-ads' );
 	$innity = array(
 		'innity_key'     => array( __( 'Publisher key', 'tala-ads' ), '0123456789abcdef0123456789abcdef', __( 'The 32 letters and digits that come first in a zone tag\'s innity_adZone( … ). Pasting the whole zone tag works too.', 'tala-ads' ) ),
-		'innity_zone'    => array( __( 'Box zone', 'tala-ads' ), '100000', __( 'Optional: the ID of a Rectangle (300 × 250) zone, the number that comes second. The box goes after the sixth paragraph of each post and page. Set the zone\'s alternate ad to "Blank Ad" in Innity: the box then closes when nothing is sold, instead of showing Innity\'s own ad. Pasting the whole zone tag works too.', 'tala-ads' ) ),
-		'innity_desktop' => array( __( 'Universal tag, wide screens', 'tala-ads' ), '100000', __( 'Optional: the ID of a Universal Tag zone, for screens 768 px wide or more. Innity picks the format, such as an in-read ad, placed after the fourth paragraph, two below the In-article ad. Its in-image ads, laid over the site\'s images, stay off. Pasting the whole zone tag works too.', 'tala-ads' ) ),
+		'innity_zone'    => array( __( 'Box zone', 'tala-ads' ), '100000', __( 'Optional: the ID of a Rectangle (300 × 250) zone, the number that comes second. The box goes after the sixth paragraph of each post and page. Pasting the whole zone tag works too.', 'tala-ads' ) ),
+		'innity_desktop' => array( __( 'Universal tag, wide screens', 'tala-ads' ), '100000', __( 'Optional: the ID of a Universal Tag zone, for screens 768 px wide or more. Innity picks the format, such as an in-read ad, placed after the fourth paragraph. Its in-image ads, laid over the site\'s images, stay off. Pasting the whole zone tag works too.', 'tala-ads' ) ),
 		'innity_mobile'  => array( __( 'Universal tag, phones', 'tala-ads' ), '100000', __( 'Optional: the ID of a Mobile Universal Tag zone, for narrower screens. Its formats include full-screen ones, which cover the page and come on top of AdSense\'s vignette and anchor ads; leave it empty to keep them off.', 'tala-ads' ) ),
 		'innity_channel' => array( __( 'Channels', 'tala-ads' ), 'EDUCATION', __( 'Optional: the topics after "channel" in a zone tag (Innity allows three), separated by commas; they apply to every zone. Pasting the whole zone tag works too.', 'tala-ads' ) ),
 	);

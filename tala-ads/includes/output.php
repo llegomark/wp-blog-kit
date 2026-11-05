@@ -1,8 +1,8 @@
 <?php
 /**
- * What visitors get: Google Tag Manager, Google's consent message, the AdSense Auto ads code, the
- * In-article ad unit, and Innity's box and Universal tags. Every script goes through WordPress's
- * script loader, once per page, so it works with any theme and nothing loads twice.
+ * What visitors get: Google Tag Manager, Google's consent message, the AdSense Auto ads code, and
+ * Innity's box and Universal tags. Every script goes through WordPress's script loader, once per
+ * page, so it works with any theme and nothing loads twice.
  *
  * @package TalaAds
  */
@@ -64,16 +64,13 @@ function tala_ads_enqueue(): void {
 	}
 
 	if ( tala_ads_show_ads() ) {
-		// A slot Auto ads place but Google doesn't fill is marked "unfilled" (collapsed, but its ad
-		// frame stays visible: a white box over the text) or "unfill-optimized" (a blank gap). Google's
-		// recommendation is to hide unfilled slots; both are hidden here.
+		// Google places the Auto ads and decides what each place shows; nothing here hides any of them.
 		// Ad frames are light pages. On a page in dark mode the browser paints a frame of a light page
-		// white until its ad arrives (and through an unfilled slot's last moment); declared light, the
-		// frame stays see-through, as on a light page, and an ad paints its own background.
+		// white until its ad arrives; declared light, the frame stays see-through, as on a light page,
+		// and an ad paints its own background.
 		wp_register_style( 'tala-ads', false, array(), TALA_ADS_VERSION );
 		wp_enqueue_style( 'tala-ads' );
-		// The in-article unit's reserved space closes with its slot when Google leaves it unfilled.
-		wp_add_inline_style( 'tala-ads', 'ins.adsbygoogle[data-ad-status^="unfill"]{display:none!important}ins.adsbygoogle iframe{color-scheme:light}.tala-ads-in-article:has(>ins[data-ad-status^="unfill"]){display:none}' );
+		wp_add_inline_style( 'tala-ads', 'ins.adsbygoogle iframe{color-scheme:light}' );
 		wp_enqueue_script(
 			'tala-ads-adsense',
 			'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . $settings['adsense'],
@@ -84,6 +81,28 @@ function tala_ads_enqueue(): void {
 				'in_footer' => false,
 			)
 		);
+	}
+}
+
+// Right after wp_enqueue_scripts and the title (both at 1), before the page's styles (8) and the
+// other head scripts (9).
+add_action( 'wp_head', 'tala_ads_print_head_scripts', 2 );
+
+/**
+ * Google's tags at the top of <head>, before the page's styles: a theme that inlines its CSS would
+ * otherwise put many kilobytes of it before them, and the browser would start loading AdSense later.
+ * They are printed in the order they were queued and marked done, so WordPress doesn't print them
+ * again with the other head scripts.
+ */
+function tala_ads_print_head_scripts(): void {
+	$handles = array_values(
+		array_filter(
+			array( 'tala-ads-gtm', 'tala-ads-consent', 'tala-ads-consent-signal', 'tala-ads-error-protection', 'tala-ads-adsense' ),
+			static fn( string $handle ): bool => wp_script_is( $handle )
+		)
+	);
+	if ( array() !== $handles ) {
+		wp_scripts()->do_items( $handles );
 	}
 }
 
@@ -191,23 +210,23 @@ function tala_ads_innity_allowed() {
 }
 
 /**
- * The gate Innity's zones go through, window.talaAdsInnity( show, later, skip ): show() runs, any
+ * The gate Innity's zones go through, window.talaAdsInnity( show, later ): show() runs, any
  * error it throws caught; with later, only once the page has loaded and the browser is idle (or after 2 seconds).
  * With Google's messages on, it first waits for Google's consent data, and where the GDPR applies
- * runs skip() instead: Innity's tags read no consent signal of their own, and set an identifier
- * cookie (iUUID) and share it with partners.
+ * doesn't run: Innity's tags read no consent signal of their own, and set an identifier cookie
+ * (iUUID) and share it with partners.
  */
 function tala_ads_innity_gate(): void {
 	if ( wp_script_is( 'tala-ads-innity-gate', 'registered' ) ) {
 		return;
 	}
 	$consent = tala_ads_settings()['consent']
-		? 'window.googlefc=window.googlefc||{};googlefc.callbackQueue=googlefc.callbackQueue||[];googlefc.callbackQueue.push({CONSENT_DATA_READY:function(){if("function"!==typeof window.__tcfapi){run();return}__tcfapi("getTCData",2,function(d,ok){if(ok&&d&&true===d.gdprApplies){if(skip)skip()}else{run()}})}});'
+		? 'window.googlefc=window.googlefc||{};googlefc.callbackQueue=googlefc.callbackQueue||[];googlefc.callbackQueue.push({CONSENT_DATA_READY:function(){if("function"!==typeof window.__tcfapi){run();return}__tcfapi("getTCData",2,function(d,ok){if(!(ok&&d&&true===d.gdprApplies))run()})}});'
 		: 'run();';
 	wp_register_script( 'tala-ads-innity-gate', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
 	wp_add_inline_script(
 		'tala-ads-innity-gate',
-		'window.talaAdsInnity=function(show,later,skip){function go(){try{show()}catch(e){}}function run(){if(!later){go();return}function idle(){(window.requestIdleCallback||function(f){setTimeout(f,1)})(go,{timeout:2000})}if("complete"===document.readyState){idle()}else{window.addEventListener("load",idle)}}' . $consent . '};'
+		'window.talaAdsInnity=function(show,later){function go(){try{show()}catch(e){}}function run(){if(!later){go();return}function idle(){(window.requestIdleCallback||function(f){setTimeout(f,1)})(go,{timeout:2000})}if("complete"===document.readyState){idle()}else{window.addEventListener("load",idle)}}' . $consent . '};'
 	);
 }
 
@@ -309,9 +328,7 @@ add_filter( 'the_content', 'tala_ads_innity_box', 20 );
 /**
  * The Innity box (300 × 250) in the post or page the request shows, once: after its sixth
  * paragraph, where readers still are, or after its text when it has fewer. Its 250 px are kept free
- * while the ad loads, so the page doesn't jump, and close when Innity sends no ad (a zone whose
- * alternate ad is "Blank Ad", when nothing is sold), none arrives, as behind an ad blocker, or Innity
- * doesn't load (see tala_ads_innity_gate()).
+ * while the ad loads, so the page doesn't jump. The box is never hidden.
  *
  * @param string $content Post content.
  * @return string
@@ -330,19 +347,13 @@ function tala_ads_innity_box( $content ) {
 	tala_ads_innity_gate();
 	wp_register_script( 'tala-ads-innity-zone', false, array( 'tala-ads-innity-gate' ), TALA_ADS_VERSION, array( 'in_footer' => true ) );
 	wp_enqueue_script( 'tala-ads-innity-zone' );
-	// Innity draws its ad (or nothing) in a frame of the page's own origin, so the page can look
-	// inside. Its blank ad hides that frame; otherwise no element of at least 50 × 50 once the frame
-	// has finished loading means no ad.
 	wp_add_inline_script(
 		'tala-ads-innity-zone',
 		sprintf(
-			'(function(box){if(!box)return;function close(){box.parentNode.style.display="none"}' .
-			'talaAdsInnity(function(){window.innity_adZoneAsync=window.innity_adZoneAsync||{};innity_adZoneAsync.q=innity_adZoneAsync.q||[];innity_adZoneAsync.q.push(function(){try{innity_adZoneAsync.display(%1$s,%2$s,%3$s)}catch(e){}})},false,close);' .
-			'var waited=0,settled=0;function hasAd(d){var e=d.body?d.body.getElementsByTagName("*"):[];for(var i=0;i<e.length;i++){var r=e[i].getBoundingClientRect();if(r.width>=50&&r.height>=50)return true}return false}function check(){var f=box.getElementsByTagName("iframe")[0],d=null;if(f&&"none"===f.style.display){close();return}try{d=f?f.contentDocument:null}catch(x){return}if(d&&hasAd(d))return;waited++;if(d&&"complete"===d.readyState)settled++;if(settled<5&&waited<(f?40:15)){setTimeout(check,1000);return}close()}setTimeout(check,1000)})(document.getElementById(%4$s));',
+			'talaAdsInnity(function(){window.innity_adZoneAsync=window.innity_adZoneAsync||{};innity_adZoneAsync.q=innity_adZoneAsync.q||[];innity_adZoneAsync.q.push(function(){try{innity_adZoneAsync.display(%1$s,%2$s,%3$s)}catch(e){}})},false);',
 			wp_json_encode( tala_ads_settings()['innity_key'] ),
 			wp_json_encode( $zone ),
-			wp_json_encode( tala_ads_innity_args( $args ) ),
-			wp_json_encode( $target )
+			wp_json_encode( tala_ads_innity_args( $args ) )
 		)
 	);
 	tala_ads_innity_loader();
@@ -357,10 +368,10 @@ add_filter( 'the_content', 'tala_ads_innity_in_read', 21 );
 
 /**
  * With a Universal tag set, the place for Innity's in-read ad in the post or page the request shows,
- * once: after its fourth paragraph, two below the In-article ad, or after its text when it has
- * fewer. Without it, Innity looks for the article itself and puts its ad after the second
- * paragraph, on top of the In-article ad. Innity's loader looks for the place by its data-innity-slot
- * attribute or its id; its in-read ads look only for a span with the id or class innity-in-post.
+ * once: after its fourth paragraph, or after its text when it has fewer. Without it, Innity looks
+ * for the article itself and puts its ad after the second paragraph. Innity's loader looks for the
+ * place by its data-innity-slot attribute or its id; its in-read ads look only for a span with the
+ * id or class innity-in-post.
  *
  * @param string $content Post content.
  * @return string
@@ -376,44 +387,6 @@ function tala_ads_innity_in_read( $content ) {
 	wp_enqueue_script( 'tala-ads-innity-in-read' );
 	$slot = '<span id="innity-in-post" class="innity-in-post" data-innity-slot="in-read" style="display:block"></span>';
 	return tala_ads_after_paragraphs( $content, (int) apply_filters( 'tala_ads_innity_in_read_paragraphs', 4 ), $slot ) ?? $content . $slot;
-}
-
-// Before Innity's box (20) and in-read place (21): when a post is too short for them, they go after
-// its text, not after the in-article ad.
-add_filter( 'the_content', 'tala_ads_in_article', 19 );
-
-/**
- * The In-article ad unit after the post's second paragraph, where Google suggests placing it, on the
- * post the request shows (in the main loop, once). Its space is kept free while the ad loads, about
- * an In-article ad's height on a phone, so the text below doesn't jump. Only the article's own
- * paragraphs count, not those in lists, quotations, tables or FAQ answers; a post with fewer than
- * two, or nothing after its second, gets no in-article ad. Auto ads then keep their distance from it.
- *
- * @param string $content Post content.
- * @return string
- */
-function tala_ads_in_article( $content ) {
-	$settings = tala_ads_settings();
-	if ( '' === $settings['adsense'] || '' === $settings['in_article']
-		|| ! is_singular( (array) apply_filters( 'tala_ads_in_article_post_types', array( 'post' ) ) )
-		|| ! in_the_loop() || ! is_main_query() || get_the_ID() !== get_queried_object_id()
-		|| post_password_required() || wp_script_is( 'tala-ads-in-article' ) || ! tala_ads_show_ads() ) {
-		return $content;
-	}
-	$unit   = sprintf(
-		'<div class="tala-ads-in-article" style="min-height:280px;margin:2em 0"><ins class="adsbygoogle" style="display:block;text-align:center" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="%s" data-ad-slot="%s"></ins></div>',
-		esc_attr( $settings['adsense'] ),
-		esc_attr( $settings['in_article'] )
-	);
-	$placed = tala_ads_after_paragraphs( $content, 2, $unit );
-	if ( null === $placed ) {
-		return $content;
-	}
-	// AdSense fills the slot when asked; the request waits in its queue until its script has loaded.
-	wp_register_script( 'tala-ads-in-article', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
-	wp_enqueue_script( 'tala-ads-in-article' );
-	wp_add_inline_script( 'tala-ads-in-article', '(adsbygoogle=window.adsbygoogle||[]).push({});' );
-	return $placed;
 }
 
 /**

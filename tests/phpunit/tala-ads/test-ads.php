@@ -32,13 +32,15 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		parent::set_up();
 		$this->set_pretty_permalinks();
 		$GLOBALS['wp_scripts'] = new WP_Scripts();
+		$GLOBALS['wp_styles']  = new WP_Styles();
 	}
 
 	/**
-	 * Drops the scripts this test queued.
+	 * Drops the scripts and styles this test queued.
 	 */
 	public function tear_down(): void {
 		$GLOBALS['wp_scripts'] = new WP_Scripts();
+		$GLOBALS['wp_styles']  = new WP_Styles();
 		parent::tear_down();
 	}
 
@@ -107,7 +109,6 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertSame(
 			array(
 				'adsense'          => 'ca-pub-1234567890123456',
-				'in_article'       => '',
 				'consent'          => true,
 				'error_protection' => '',
 				'gtm'              => '',
@@ -235,8 +236,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * Tag Manager, the consent message and AdSense each appear once in <head>, AdSense with the
-	 * attributes its code asks for, and Tag Manager's fallback right after <body>.
+	 * Tag Manager, the consent message and AdSense each appear once in <head>, before its styles,
+	 * AdSense with the attributes its code asks for, and Tag Manager's fallback right after <body>.
 	 */
 	public function test_head_scripts_once(): void {
 		update_option( 'tala_ads', self::ALL );
@@ -244,7 +245,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$head = $this->page_head();
 
 		$this->assertSame( 1, substr_count( $head, 'adsbygoogle.js' ), 'AdSense is loaded once.' );
-		$this->assertStringContainsString( 'ins.adsbygoogle[data-ad-status^="unfill"]{display:none!important}', $head, 'Slots Google leaves empty are hidden.' );
+		$this->assertStringNotContainsString( 'data-ad-status', $head, 'No ad slot is ever hidden.' );
+		$this->assertMatchesRegularExpression( '#<style id=["\']tala-ads-inline-css["\']>\s*ins\.adsbygoogle iframe\{color-scheme:light\}\s*(/\*[^*]*\*/\s*)?</style>#', $head, 'Tala Ads\' only style hides nothing.' );
 		$this->assertStringContainsString( 'ins.adsbygoogle iframe{color-scheme:light}', $head, 'Ad frames stay see-through in dark mode.' );
 		$this->assertMatchesRegularExpression( '#<script[^>]+src="https://pagead2\.googlesyndication\.com/pagead/js/adsbygoogle\.js\?client=ca-pub-1234567890123456"[^>]*>#', $head );
 		$this->assertMatchesRegularExpression( '#<script(?=[^>]*\basync\b)(?=[^>]*crossorigin="anonymous")[^>]+adsbygoogle\.js#', $head, 'Async, with crossorigin="anonymous".' );
@@ -257,6 +259,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		// WordPress also adds dns-prefetch hints for these hosts higher up: compare the scripts' own tags.
 		$this->assertLessThan( strpos( $head, 'id="tala-ads-consent-js"' ), strpos( $head, 'id="tala-ads-gtm-js-after"' ), 'Tag Manager comes first.' );
 		$this->assertLessThan( strpos( $head, 'id="tala-ads-adsense-js"' ), strpos( $head, 'id="tala-ads-consent-js"' ), 'The consent message comes before AdSense.' );
+		$this->assertLessThan( strpos( $head, '<style' ), strpos( $head, 'id="tala-ads-adsense-js"' ), 'Google\'s tags come before the page\'s styles, so the browser starts loading them first.' );
+		$this->assertSame( 1, substr_count( $head, 'id="tala-ads-gtm-js-after"' ), 'Printed once, not again with the other head scripts.' );
 
 		$this->assertStringNotContainsString( 'tala-ads-error-protection', $head, 'No error protection without its code.' );
 
@@ -356,8 +360,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	/**
 	 * The Innity box: once, after the sixth paragraph (after the text of a shorter post), in the main
 	 * loop of the post the page shows, centred, with 250 px reserved; its zone in the footer as
-	 * Innity's direct tag gives it (no Ad Manager click macro), the check that closes the box when
-	 * no ad comes, and the loader.
+	 * Innity's direct tag gives it (no Ad Manager click macro), and the loader. The box is never
+	 * hidden.
 	 */
 	public function test_innity_box(): void {
 		update_option( 'tala_ads', self::ALL );
@@ -375,8 +379,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertSame( 1, substr_count( $footer, 'cdn.innity.net/admanager-async.js' ) );
 		$this->assertStringContainsString( 'innity_adZoneAsync.display("0123456789abcdef0123456789abcdef","103011",{"target":"div-ad-innity-103011\/0","width":"300","height":"250","channel":"TECHNOLOGY,LIFESTYLE"})', $footer );
 		$this->assertStringNotContainsString( 'CLICK_URL', $footer, 'No click macro: only Google Ad Manager fills it in.' );
-		$this->assertStringContainsString( '(document.getElementById("div-ad-innity-103011\/0"))', $footer, 'The box closes when no ad comes.' );
-		$this->assertStringContainsString( 'box.parentNode.style.display="none"', $footer );
+		$this->assertStringNotContainsString( 'display="none"', $footer, 'The box is never hidden.' );
 		$this->assertLessThan( strpos( $footer, 'admanager-async.js' ), strpos( $footer, 'innity_adZoneAsync.q.push' ), 'The zone is queued before the loader.' );
 		$this->assertStringNotContainsString( 'data-innity-slot', $content, 'No in-read place without a Universal tag.' );
 
@@ -439,9 +442,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 
 	/**
 	 * Innity's zones go through one gate: with Google's messages on, they wait for Google's consent
-	 * data and don't load where the GDPR applies (the box then closes); the Universal tag waits for
-	 * the page to load; errors in Innity's code are caught; the box closes as soon as Innity's blank
-	 * ad hides its frame.
+	 * data and don't load where the GDPR applies; the Universal tag waits for the page to load;
+	 * errors in Innity's code are caught; the box is never hidden.
 	 */
 	public function test_innity_gate(): void {
 		update_option( 'tala_ads', array_merge( self::ALL, array( 'innity_desktop' => '103008' ) ) );
@@ -451,14 +453,14 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		the_post();
 		apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
 		$footer = get_echo( 'wp_print_footer_scripts' );
-		$this->assertSame( 1, substr_count( $footer, 'window.talaAdsInnity=function(show,later,skip)' ), 'One gate for both zones.' );
+		$this->assertSame( 1, substr_count( $footer, 'window.talaAdsInnity=function(show,later)' ), 'One gate for both zones.' );
 		$this->assertStringContainsString( 'googlefc.callbackQueue.push({CONSENT_DATA_READY:', $footer );
-		$this->assertStringContainsString( 'if(ok&&d&&true===d.gdprApplies){if(skip)skip()}else{run()}', $footer, 'No Innity where the GDPR applies.' );
+		$this->assertStringContainsString( 'if(!(ok&&d&&true===d.gdprApplies))run()', $footer, 'No Innity where the GDPR applies.' );
 		$this->assertStringContainsString( 'window.addEventListener("load",idle)', $footer );
 		$this->assertStringContainsString( '}catch(e){}})},true)}})(window.matchMedia("(min-width: 768px)")', $footer, 'The Universal tag after the page has loaded.' );
 		$this->assertStringContainsString( 'try{innity_adZoneAsync.display("0123456789abcdef0123456789abcdef",zone,', $footer, 'Errors in Innity\'s code are caught.' );
-		$this->assertStringContainsString( '},false,close);', $footer, 'The box at once, closed when Innity may not load.' );
-		$this->assertStringContainsString( 'if(f&&"none"===f.style.display){close();return}', $footer, 'Closed as soon as the blank ad hides its frame.' );
+		$this->assertStringContainsString( '}catch(e){}})},false);', $footer, 'The box at once.' );
+		$this->assertStringNotContainsString( 'display="none"', $footer, 'The box is never hidden.' );
 		$this->assertLessThan( strpos( $footer, 'tala-ads-innity-universal-js-after' ), strpos( $footer, 'tala-ads-innity-gate-js-after' ), 'The gate comes first.' );
 
 		update_option( 'tala_ads', array_merge( self::ALL, array( 'consent' => false ) ) );
@@ -534,9 +536,25 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * With a Universal tag, the place for Innity's in-read ad: once, after the fourth paragraph (two
-	 * below the In-article ad, before the box), or after the text of a shorter post, so Innity
-	 * doesn't put it on the In-article ad.
+	 * Tala Ads adds no AdSense ad of its own: Google's Auto ads place every one. A site that saved an
+	 * In-article ad unit before 1.8.0 gets no unit in its posts, and the setting is gone.
+	 */
+	public function test_no_ad_units_of_its_own(): void {
+		update_option( 'tala_ads', array_merge( self::ALL, array( 'in_article' => '3203298627' ) ) );
+		$this->assertArrayNotHasKey( 'in_article', tala_ads_settings() );
+		$id = $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.', 'Three.', 'Four.' ) ) );
+		$this->go_to( get_permalink( $id ) );
+		$head = $this->page_head();
+		the_post();
+		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
+		$this->assertStringNotContainsString( 'adsbygoogle', $content, 'No ad unit in the post.' );
+		$this->assertStringNotContainsString( '3203298627', $content . $head . get_echo( 'wp_print_footer_scripts' ) );
+		$this->assertStringContainsString( 'adsbygoogle.js?client=ca-pub-1234567890123456', $head, 'Auto ads stay.' );
+	}
+
+	/**
+	 * With a Universal tag, the place for Innity's in-read ad: once, after the fourth paragraph
+	 * (before the box), or after the text of a shorter post.
 	 */
 	public function test_innity_in_read(): void {
 		update_option( 'tala_ads', array_merge( self::ALL, array( 'innity_desktop' => '103008' ) ) );
@@ -583,90 +601,6 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->go_to( get_permalink( $locked ) );
 		the_post();
 		$this->assertStringNotContainsString( 'tala-ads-innity', apply_filters( 'the_content', 'Text' ), 'Not before the password is entered.' );
-	}
-
-	/**
-	 * The In-article ad unit's ID is kept from the ID or from the unit's code AdSense gives; anything
-	 * else is dropped.
-	 */
-	public function test_in_article_unit_id(): void {
-		// AdSense's ad unit code, exactly as AdSense gives it: input for the ID, never printed.
-		$code = '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" crossorigin="anonymous"></script><ins class="adsbygoogle" style="display:block; text-align:center;" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="ca-pub-1234567890123456" data-ad-slot="3203298627"></ins><script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript
-		$this->assertSame( '3203298627', tala_ads_sanitize_ad_unit( ' 3203298627 ' ) );
-		$this->assertSame( '3203298627', tala_ads_sanitize_ad_unit( $code ) );
-		foreach ( array( '', '123', '32032986270', 'data-ad-slot="320329862"', '<script>alert(1)</script>', array( '3203298627' ) ) as $bad ) {
-			$this->assertSame( '', tala_ads_sanitize_ad_unit( $bad ) );
-		}
-		update_option( 'tala_ads', array( 'in_article' => $code ) );
-		$this->assertSame( '3203298627', tala_ads_settings()['in_article'] );
-	}
-
-	/**
-	 * The In-article ad: once, after the post's second paragraph (paragraphs in quotations and lists
-	 * don't count), with its space reserved and its request in the footer.
-	 */
-	public function test_in_article_ad(): void {
-		update_option( 'tala_ads', array_merge( self::ALL, array( 'in_article' => '3203298627' ) ) );
-		$id = $this->post(
-			array(
-				'post_content' => '<!-- wp:paragraph --><p>First.</p><!-- /wp:paragraph -->'
-					. '<!-- wp:quote --><blockquote class="wp-block-quote"><!-- wp:paragraph --><p>Quoted.</p><!-- /wp:paragraph --></blockquote><!-- /wp:quote -->'
-					. '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li><p>Listed.</p></li><!-- /wp:list-item --></ul><!-- /wp:list -->'
-					. '<!-- wp:paragraph --><p>Second.</p><!-- /wp:paragraph -->'
-					. '<!-- wp:heading --><h2 class="wp-block-heading">Next</h2><!-- /wp:heading -->'
-					. '<!-- wp:paragraph --><p>Third.</p><!-- /wp:paragraph -->',
-			)
-		);
-		$this->go_to( get_permalink( $id ) );
-		the_post();
-		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
-		$this->assertMatchesRegularExpression( '#<p class="wp-block-paragraph">Second\.</p>\s*<div class="tala-ads-in-article" style="min-height:280px;[^"]*"><ins class="adsbygoogle" style="display:block;text-align:center" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="ca-pub-1234567890123456" data-ad-slot="3203298627"></ins></div><h2#', $content );
-		$this->assertSame( 1, substr_count( $content, 'tala-ads-in-article' ) );
-		$this->assertStringNotContainsString( 'data-tala-ads-here', $content );
-		$this->assertStringNotContainsString( 'tala-ads-in-article', apply_filters( 'the_content', get_post_field( 'post_content', $id ) ), 'One per page.' );
-
-		$footer = get_echo( 'wp_print_footer_scripts' );
-		$this->assertSame( 1, substr_count( $footer, '(adsbygoogle=window.adsbygoogle||[]).push({});' ) );
-		$GLOBALS['wp_styles'] = new WP_Styles();
-		$this->assertStringContainsString( '.tala-ads-in-article:has(>ins[data-ad-status^="unfill"]){display:none}', $this->page_head(), 'Its space closes when Google leaves it unfilled.' );
-	}
-
-	/**
-	 * No In-article ad without its ID, on pages, on a post with nothing after its second paragraph,
-	 * or on a password-protected post.
-	 */
-	public function test_in_article_ad_only_where_it_belongs(): void {
-		$long  = '<!-- wp:paragraph --><p>One.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Two.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Three.</p><!-- /wp:paragraph -->';
-		$check = function ( int $id, string $why ): void {
-			$GLOBALS['wp_scripts'] = new WP_Scripts();
-			$this->go_to( get_permalink( $id ) );
-			the_post();
-			$this->assertStringNotContainsString( 'tala-ads-in-article', apply_filters( 'the_content', get_post_field( 'post_content', $id ) ), $why );
-		};
-
-		update_option( 'tala_ads', self::ALL );
-		$check( $this->post( array( 'post_content' => $long ) ), 'Not without an ad unit ID.' );
-
-		update_option( 'tala_ads', array_merge( self::ALL, array( 'in_article' => '3203298627' ) ) );
-		$check( $this->post( array( 'post_content' => '<!-- wp:paragraph --><p>One.</p><!-- /wp:paragraph --><!-- wp:paragraph --><p>Two.</p><!-- /wp:paragraph -->' ) ), 'Not when nothing follows the second paragraph.' );
-		$check(
-			$this->post(
-				array(
-					'post_type'    => 'page',
-					'post_content' => $long,
-				)
-			),
-			'Not on pages.'
-		);
-		$check(
-			$this->post(
-				array(
-					'post_password' => 'secret',
-					'post_content'  => $long,
-				)
-			),
-			'Not before the password is entered.'
-		);
 	}
 
 	/**
