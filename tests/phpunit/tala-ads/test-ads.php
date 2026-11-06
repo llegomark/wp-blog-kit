@@ -109,6 +109,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertSame(
 			array(
 				'adsense'          => 'ca-pub-1234567890123456',
+				'in_article'       => '',
+				'multiplex'        => '',
 				'consent'          => true,
 				'error_protection' => '',
 				'gtm'              => '',
@@ -417,10 +419,9 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * The Innity box: once, after the sixth paragraph (after the text of a shorter post), in the main
-	 * loop of the post the page shows, centred, with 250 px reserved; its zone in the footer as
-	 * Innity's direct tag gives it (no Ad Manager click macro), and the loader. The box is never
-	 * hidden.
+	 * The Innity box: once, after the post's text, in the main loop of the post the page shows,
+	 * centred, with 250 px reserved; its zone in the footer as Innity's direct tag gives it (no Ad
+	 * Manager click macro), and the loader. The box is never hidden.
 	 */
 	public function test_innity_box(): void {
 		update_option( 'tala_ads', self::ALL );
@@ -430,7 +431,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		the_post();
 
 		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
-		$this->assertMatchesRegularExpression( '#<p[^>]*>Six\.</p>\s*<div class="tala-ads-innity" style="min-height:250px;[^"]*text-align:center"><div id="div-ad-innity-103011/0" style="display:inline-block"></div></div>\s*<p[^>]*>Seven\.</p>#', $content );
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Seven\.</p>\s*<div class="tala-ads-innity" style="min-height:250px;[^"]*text-align:center"><div id="div-ad-innity-103011/0" style="display:inline-block"></div></div>$#', $content, 'After the text, not in it.' );
 		$this->assertSame( 1, substr_count( $content, 'tala-ads-innity' ) );
 		$this->assertStringNotContainsString( 'tala-ads-innity', apply_filters( 'the_content', 'Again' ), 'One box per page.' );
 
@@ -446,7 +447,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$short                 = $this->post( array( 'post_content' => $this->paragraphs( 'Only.' ) ) );
 		$this->go_to( get_permalink( $short ) );
 		the_post();
-		$this->assertMatchesRegularExpression( '#<p[^>]*>Only\.</p>\s*<div class="tala-ads-innity"[^>]*><div id="div-ad-innity-103011/0"[^>]*></div></div>$#', apply_filters( 'the_content', get_post_field( 'post_content', $short ) ), 'After the text of a shorter post.' );
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Only\.</p>\s*<div class="tala-ads-innity"[^>]*><div id="div-ad-innity-103011/0"[^>]*></div></div>$#', apply_filters( 'the_content', get_post_field( 'post_content', $short ) ), 'After the text of a short post too.' );
 	}
 
 	/**
@@ -595,25 +596,139 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * Tala Ads adds no AdSense ad of its own: Google's Auto ads place every one. A site that saved an
-	 * In-article ad unit before 1.8.0 gets no unit in its posts, and the setting is gone.
+	 * The In-article and Multiplex units' IDs are kept from the ID or from the unit's code AdSense
+	 * gives; anything else is dropped.
 	 */
-	public function test_no_ad_units_of_its_own(): void {
-		update_option( 'tala_ads', array_merge( self::ALL, array( 'in_article' => '3203298627' ) ) );
-		$this->assertArrayNotHasKey( 'in_article', tala_ads_settings() );
-		$id = $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.', 'Three.', 'Four.' ) ) );
-		$this->go_to( get_permalink( $id ) );
-		$head = $this->page_head();
-		the_post();
-		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
-		$this->assertStringNotContainsString( 'adsbygoogle', $content, 'No ad unit in the post.' );
-		$this->assertStringNotContainsString( '3203298627', $content . $head . get_echo( 'wp_print_footer_scripts' ) );
-		$this->assertStringContainsString( 'adsbygoogle.js?client=ca-pub-1234567890123456', $head, 'Auto ads stay.' );
+	public function test_ad_unit_ids(): void {
+		// AdSense's ad unit codes, exactly as AdSense gives them: input for the ID, never printed.
+		$in_article = '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" crossorigin="anonymous"></script><ins class="adsbygoogle" style="display:block; text-align:center;" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="ca-pub-1234567890123456" data-ad-slot="3203298627"></ins><script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript
+		$multiplex  = '<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" crossorigin="anonymous"></script><ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed" data-ad-client="ca-pub-1234567890123456" data-ad-slot="2403531897"></ins><script>(adsbygoogle = window.adsbygoogle || []).push({});</script>'; // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript
+		$this->assertSame( '3203298627', tala_ads_sanitize_ad_unit( ' 3203298627 ' ) );
+		$this->assertSame( '3203298627', tala_ads_sanitize_ad_unit( $in_article ) );
+		$this->assertSame( '2403531897', tala_ads_sanitize_ad_unit( $multiplex ) );
+		foreach ( array( '', '123', '32032986270', 'data-ad-slot="320329862"', '<script>alert(1)</script>', array( '3203298627' ) ) as $bad ) {
+			$this->assertSame( '', tala_ads_sanitize_ad_unit( $bad ) );
+		}
+		update_option(
+			'tala_ads',
+			array(
+				'in_article' => $in_article,
+				'multiplex'  => $multiplex,
+			)
+		);
+		$this->assertSame( '3203298627', tala_ads_settings()['in_article'] );
+		$this->assertSame( '2403531897', tala_ads_settings()['multiplex'] );
 	}
 
 	/**
-	 * With a Universal tag, the place for Innity's in-read ad: once, after the fourth paragraph
-	 * (before the box), or after the text of a shorter post.
+	 * On a post: the In-article ad after the second paragraph (paragraphs in quotations and lists
+	 * don't count), with its space reserved; the Multiplex ad right after the text; then Innity's
+	 * box and in-read place, below the AdSense ads. One request each in the footer. Nothing hides
+	 * any of them.
+	 */
+	public function test_adsense_units_then_innity(): void {
+		update_option(
+			'tala_ads',
+			array_merge(
+				self::ALL,
+				array(
+					'in_article'     => '3203298627',
+					'multiplex'      => '2403531897',
+					'innity_desktop' => '103008',
+				)
+			)
+		);
+		$id = $this->post(
+			array(
+				'post_content' => '<!-- wp:paragraph --><p>First.</p><!-- /wp:paragraph -->'
+					. '<!-- wp:quote --><blockquote class="wp-block-quote"><!-- wp:paragraph --><p>Quoted.</p><!-- /wp:paragraph --></blockquote><!-- /wp:quote -->'
+					. '<!-- wp:list --><ul class="wp-block-list"><!-- wp:list-item --><li><p>Listed.</p></li><!-- /wp:list-item --></ul><!-- /wp:list -->'
+					. '<!-- wp:paragraph --><p>Second.</p><!-- /wp:paragraph -->'
+					. '<!-- wp:heading --><h2 class="wp-block-heading">Next</h2><!-- /wp:heading -->'
+					. '<!-- wp:paragraph --><p>Third.</p><!-- /wp:paragraph -->',
+			)
+		);
+		$this->go_to( get_permalink( $id ) );
+		$head = $this->page_head();
+		$this->assertStringNotContainsString( 'adsbygoogle', apply_filters( 'the_content', 'Text' ), 'Nothing outside the loop.' );
+		the_post();
+		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
+
+		$this->assertMatchesRegularExpression( '#<p class="wp-block-paragraph">Second\.</p>\s*<div class="tala-ads-in-article" style="min-height:280px;[^"]*"><ins class="adsbygoogle" style="display:block;text-align:center" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="ca-pub-1234567890123456" data-ad-slot="3203298627"></ins></div><h2#', $content );
+		$this->assertMatchesRegularExpression(
+			'#<p class="wp-block-paragraph">Third\.</p>\s*'
+			. '<div class="tala-ads-multiplex" style="margin:2em 0"><ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed" data-ad-client="ca-pub-1234567890123456" data-ad-slot="2403531897"></ins></div>'
+			. '<div class="tala-ads-innity"[^>]*><div id="div-ad-innity-103011/0"[^>]*></div></div>'
+			. '<span id="innity-in-post"[^>]*></span>$#',
+			$content,
+			'The Multiplex ad right after the text, then Innity.'
+		);
+		$this->assertSame( 1, substr_count( $content, 'tala-ads-in-article' ) );
+		$this->assertSame( 1, substr_count( $content, 'tala-ads-multiplex' ) );
+		$this->assertStringNotContainsString( 'data-tala-ads-here', $content );
+		$this->assertStringNotContainsString( 'adsbygoogle', apply_filters( 'the_content', get_post_field( 'post_content', $id ) ), 'One of each per page.' );
+
+		$footer = get_echo( 'wp_print_footer_scripts' );
+		$this->assertSame( 2, substr_count( $footer, '(adsbygoogle=window.adsbygoogle||[]).push({});' ), 'One request for each unit.' );
+		$this->assertSame( 1, substr_count( $head, 'adsbygoogle.js?client=ca-pub-1234567890123456' ), 'Auto ads\' tag loads AdSense once, for the units too.' );
+		$this->assertStringNotContainsString( 'data-ad-status', $head . $footer, 'No ad is ever hidden.' );
+	}
+
+	/**
+	 * No In-article or Multiplex ad without its ID or the publisher ID, on pages, on lists of posts,
+	 * on a password-protected post, or on a page without ads; no In-article ad on a post with
+	 * nothing after its second paragraph.
+	 */
+	public function test_adsense_units_only_where_they_belong(): void {
+		$long  = $this->paragraphs( 'One.', 'Two.', 'Three.' );
+		$check = function ( int $id, string $why ): void {
+			$GLOBALS['wp_scripts'] = new WP_Scripts();
+			$this->go_to( get_permalink( $id ) );
+			the_post();
+			$this->assertStringNotContainsString( 'adsbygoogle', apply_filters( 'the_content', get_post_field( 'post_content', $id ) ), $why );
+		};
+		$units = array(
+			'in_article' => '3203298627',
+			'multiplex'  => '2403531897',
+		);
+
+		update_option( 'tala_ads', self::ALL );
+		$check( $this->post( array( 'post_content' => $long ) ), 'Not without the units\' IDs.' );
+
+		update_option( 'tala_ads', $units );
+		$check( $this->post( array( 'post_content' => $long ) ), 'Not without the publisher ID.' );
+
+		update_option( 'tala_ads', array_merge( self::ALL, $units ) );
+		$check(
+			$this->post(
+				array(
+					'post_type'    => 'page',
+					'post_content' => $long,
+				)
+			),
+			'Not on pages.'
+		);
+		$check(
+			$this->post(
+				array(
+					'post_password' => 'secret',
+					'post_content'  => $long,
+				)
+			),
+			'Not before the password is entered.'
+		);
+		$GLOBALS['wp_scripts'] = new WP_Scripts();
+		$this->go_to( home_url( '/' ) );
+		the_post();
+		$this->assertStringNotContainsString( 'adsbygoogle', apply_filters( 'the_content', 'Text' ), 'Not on the home page list.' );
+
+		update_option( 'tala_ads', array_merge( self::ALL, array( 'in_article' => '3203298627' ) ) );
+		$check( $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.' ) ) ), 'No In-article ad when nothing follows the second paragraph.' );
+	}
+
+	/**
+	 * With a Universal tag, the place for Innity's in-read ad: once, after the post's text and the
+	 * box.
 	 */
 	public function test_innity_in_read(): void {
 		update_option( 'tala_ads', array_merge( self::ALL, array( 'innity_desktop' => '103008' ) ) );
@@ -623,9 +738,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		the_post();
 
 		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
-		$this->assertMatchesRegularExpression( '#<p[^>]*>Four\.</p>\s*<span id="innity-in-post" class="innity-in-post" data-innity-slot="in-read" style="display:block"></span>\s*<p[^>]*>Five\.</p>#', $content, 'A span with the id and class Innity\'s in-read ads look for.' );
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Seven\.</p>\s*<div class="tala-ads-innity"[^>]*><div[^>]*></div></div><span id="innity-in-post" class="innity-in-post" data-innity-slot="in-read" style="display:block"></span>$#', $content, 'A span with the id and class Innity\'s in-read ads look for, after the text and the box.' );
 		$this->assertSame( 1, substr_count( $content, 'data-innity-slot' ) );
-		$this->assertLessThan( strpos( $content, 'class="tala-ads-innity"' ), strpos( $content, 'data-innity-slot' ), 'Before the box.' );
 		$this->assertStringNotContainsString( 'data-innity-slot', apply_filters( 'the_content', 'Again' ), 'Once per page.' );
 
 		$GLOBALS['wp_scripts'] = new WP_Scripts();

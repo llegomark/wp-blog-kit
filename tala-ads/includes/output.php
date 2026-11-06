@@ -1,8 +1,9 @@
 <?php
 /**
- * What visitors get: Google Tag Manager, Google's consent message, the AdSense Auto ads code, and
- * Innity's box and Universal tags. Every script goes through WordPress's script loader, once per
- * page, so it works with any theme and nothing loads twice.
+ * What visitors get: Google Tag Manager, Google's consent message, the AdSense Auto ads code, the
+ * In-article and Multiplex ad units, and Innity's box and Universal tags, below the AdSense ads.
+ * Every script goes through WordPress's script loader, once per page, so it works with any theme
+ * and nothing loads twice. No ad is ever hidden, filled or not.
  *
  * @package TalaAds
  */
@@ -65,7 +66,8 @@ function tala_ads_enqueue(): void {
 	}
 
 	if ( tala_ads_show_ads() ) {
-		// Google places the Auto ads and decides what each place shows; nothing here hides any of them.
+		// Google places the Auto ads and decides what each place shows; nothing here hides any of them,
+		// or the site's own units.
 		// Ad frames are light pages. On a page in dark mode the browser paints a frame of a light page
 		// white until its ad arrives; declared light, the frame stays see-through, as on a light page,
 		// and an ad paints its own background.
@@ -348,12 +350,13 @@ function tala_ads_innity_attachment_image( $attributes ) {
 	return $attributes;
 }
 
-add_filter( 'the_content', 'tala_ads_innity_box', 20 );
+// After the Multiplex ad (20), so AdSense comes first below the text.
+add_filter( 'the_content', 'tala_ads_innity_box', 21 );
 
 /**
- * The Innity box (300 × 250) in the post or page the request shows, once: after its sixth
- * paragraph, where readers still are, or after its text when it has fewer. Its 250 px are kept free
- * while the ad loads, so the page doesn't jump. The box is never hidden.
+ * The Innity box (300 × 250) in the post or page the request shows, once: after its text, below the
+ * AdSense ads (the In-article ad and the Multiplex ad come first), as before the site moved to Tala
+ * Ads. Its 250 px are kept free while the ad loads, so the page doesn't jump. The box is never hidden.
  *
  * @param string $content Post content.
  * @return string
@@ -386,17 +389,17 @@ function tala_ads_innity_box( $content ) {
 		'<div class="tala-ads-innity" style="min-height:250px;margin:2em auto;text-align:center"><div id="%s" style="display:inline-block"></div></div>',
 		esc_attr( $target )
 	);
-	return tala_ads_after_paragraphs( $content, (int) apply_filters( 'tala_ads_innity_paragraphs', 6 ), $box ) ?? $content . $box;
+	return $content . $box;
 }
 
-add_filter( 'the_content', 'tala_ads_innity_in_read', 21 );
+add_filter( 'the_content', 'tala_ads_innity_in_read', 22 );
 
 /**
  * With a Universal tag set, the place for Innity's in-read ad in the post or page the request shows,
- * once: after its fourth paragraph, or after its text when it has fewer. Without it, Innity looks
- * for the article itself and puts its ad after the second paragraph. Innity's loader looks for the
- * place by its data-innity-slot attribute or its id; its in-read ads look only for a span with the
- * id or class innity-in-post.
+ * once: after its text, below the AdSense ads and the Innity box. Without it, Innity looks for the
+ * article itself and puts its ad after the second paragraph, where the In-article ad is. Innity's
+ * loader looks for the place by its data-innity-slot attribute or its id; its in-read ads look only
+ * for a span with the id or class innity-in-post.
  *
  * @param string $content Post content.
  * @return string
@@ -411,7 +414,84 @@ function tala_ads_innity_in_read( $content ) {
 	wp_register_script( 'tala-ads-innity-in-read', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
 	wp_enqueue_script( 'tala-ads-innity-in-read' );
 	$slot = '<span id="innity-in-post" class="innity-in-post" data-innity-slot="in-read" style="display:block"></span>';
-	return tala_ads_after_paragraphs( $content, (int) apply_filters( 'tala_ads_innity_in_read_paragraphs', 4 ), $slot ) ?? $content . $slot;
+	return $content . $slot;
+}
+
+/**
+ * Whether the content being filtered is the post the request shows, in the main loop, with AdSense
+ * set up and ads allowed: where the In-article and Multiplex ads go.
+ *
+ * @return bool
+ */
+function tala_ads_adsense_unit_here() {
+	return '' !== tala_ads_settings()['adsense'] && is_singular( (array) apply_filters( 'tala_ads_unit_post_types', array( 'post' ) ) )
+		&& in_the_loop() && is_main_query() && get_the_ID() === get_queried_object_id() && ! post_password_required() && tala_ads_show_ads();
+}
+
+/**
+ * Asks AdSense to fill one more of the page's own ad units: the request waits in AdSense's queue
+ * until its script, which Auto ads already load, has run.
+ *
+ * @param non-empty-string $handle The unit's script handle, which also marks it placed for this page.
+ */
+function tala_ads_push_unit( string $handle ): void {
+	wp_register_script( $handle, false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
+	wp_enqueue_script( $handle );
+	wp_add_inline_script( $handle, '(adsbygoogle=window.adsbygoogle||[]).push({});' );
+}
+
+// Before the Multiplex ad (20) and Innity (21, 22).
+add_filter( 'the_content', 'tala_ads_in_article', 19 );
+
+/**
+ * The In-article ad unit after the post's second paragraph, where Google suggests placing it, on the
+ * post the request shows (in the main loop, once), beside Auto ads, which keep their distance from
+ * it. Its space is kept free while the ad loads, about an In-article ad's height on a phone, so the
+ * text below doesn't jump. Only the article's own paragraphs count, not those in lists, quotations,
+ * tables or FAQ answers; a post with fewer than two, or nothing after its second, gets none. It is
+ * never hidden, filled or not.
+ *
+ * @param string $content Post content.
+ * @return string
+ */
+function tala_ads_in_article( $content ) {
+	$settings = tala_ads_settings();
+	if ( '' === $settings['in_article'] || wp_script_is( 'tala-ads-in-article' ) || ! tala_ads_adsense_unit_here() ) {
+		return $content;
+	}
+	$unit   = sprintf(
+		'<div class="tala-ads-in-article" style="min-height:280px;margin:2em 0"><ins class="adsbygoogle" style="display:block;text-align:center" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client="%s" data-ad-slot="%s"></ins></div>',
+		esc_attr( $settings['adsense'] ),
+		esc_attr( $settings['in_article'] )
+	);
+	$placed = tala_ads_after_paragraphs( $content, (int) apply_filters( 'tala_ads_in_article_paragraphs', 2 ), $unit );
+	if ( null === $placed ) {
+		return $content;
+	}
+	tala_ads_push_unit( 'tala-ads-in-article' );
+	return $placed;
+}
+
+add_filter( 'the_content', 'tala_ads_multiplex', 20 );
+
+/**
+ * The Multiplex ad unit right after the text of the post the request shows (in the main loop,
+ * once), where Google suggests placing it, before any Innity ad. It is never hidden, filled or not.
+ *
+ * @param string $content Post content.
+ * @return string
+ */
+function tala_ads_multiplex( $content ) {
+	$settings = tala_ads_settings();
+	if ( '' === $settings['multiplex'] || wp_script_is( 'tala-ads-multiplex' ) || ! tala_ads_adsense_unit_here() ) {
+		return $content;
+	}
+	tala_ads_push_unit( 'tala-ads-multiplex' );
+	return $content . sprintf(
+		'<div class="tala-ads-multiplex" style="margin:2em 0"><ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed" data-ad-client="%s" data-ad-slot="%s"></ins></div>',
+		esc_attr( $settings['adsense'] ),
+		esc_attr( $settings['multiplex'] )
+	);
 }
 
 /**
