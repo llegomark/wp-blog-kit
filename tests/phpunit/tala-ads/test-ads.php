@@ -601,6 +601,37 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * Text hidden from screen readers, such as a theme's giant wordmark, gets Google's
+	 * google-anno-skip class, so ad intents don't turn it into a link; nothing else changes, and
+	 * nothing happens without AdSense.
+	 */
+	public function test_hidden_text_skipped_by_ad_intents(): void {
+		$block = array(
+			'blockName'    => 'core/group',
+			'attrs'        => array(),
+			'innerBlocks'  => array(),
+			'innerHTML'    => '',
+			'innerContent' => array( '<div class="wp-block-group"><p aria-hidden="true" class="tala-wordmark">TeacherPH</p><p>TeacherPH readers</p><span aria-hidden="false">Shown</span><svg aria-hidden="true"></svg></div>' ),
+		);
+		$this->go_to( home_url( '/' ) );
+
+		update_option( 'tala_ads', array( 'gtm' => 'GTM-ABC1234' ) );
+		$this->assertStringNotContainsString( 'google-anno-skip', render_block( $block ), 'Not without AdSense.' );
+
+		update_option( 'tala_ads', self::ALL );
+		$html = render_block( $block );
+		$this->assertStringContainsString( '<p aria-hidden="true" class="tala-wordmark google-anno-skip">TeacherPH</p>', $html );
+		$this->assertStringContainsString( '<p>TeacherPH readers</p>', $html, 'Text people read stays open to ad intents.' );
+		$this->assertStringContainsString( '<span aria-hidden="false">Shown</span>', $html );
+		$this->assertStringContainsString( '<svg class="google-anno-skip" aria-hidden="true"></svg>', $html );
+		$this->assertSame( 2, substr_count( $html, 'google-anno-skip' ) );
+
+		$this->go_to( home_url( '/?p=999999' ) );
+		$this->assertTrue( is_404() );
+		$this->assertStringNotContainsString( 'google-anno-skip', render_block( $block ), 'Not where ads are off.' );
+	}
+
+	/**
 	 * The In-article and Multiplex units' IDs are kept from the ID or from the unit's code AdSense
 	 * gives; anything else is dropped.
 	 */

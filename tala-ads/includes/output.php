@@ -194,6 +194,32 @@ function tala_ads_show_ads() {
 	return (bool) apply_filters( 'tala_ads_show', $show );
 }
 
+add_filter( 'render_block', 'tala_ads_skip_hidden_text' );
+
+/**
+ * Text hidden from screen readers (aria-hidden="true") is decoration, such as a theme's giant
+ * wordmark, not something to read. AdSense's ad intents would still turn words in it into links,
+ * at the decoration's size and inside its clipping. Google's own opt-out, the google-anno-skip
+ * class, keeps ad intents out of it; everything else on the page, and every other ad, stays as
+ * Google places it. Only on pages with AdSense.
+ *
+ * @param mixed $html The block's HTML (a string, unless another filter broke it).
+ * @return mixed
+ */
+function tala_ads_skip_hidden_text( $html ) {
+	if ( ! is_string( $html ) || ! str_contains( $html, 'aria-hidden' ) || is_admin()
+		|| '' === tala_ads_settings()['adsense'] || ! tala_ads_show_ads() ) {
+		return $html;
+	}
+	$tags = new WP_HTML_Tag_Processor( $html );
+	while ( $tags->next_tag() ) {
+		if ( 'true' === $tags->get_attribute( 'aria-hidden' ) ) {
+			$tags->add_class( 'google-anno-skip' );
+		}
+	}
+	return $tags->get_updated_html();
+}
+
 /**
  * Post types whose pages get the Innity box and the place for Innity's in-read ad.
  *
