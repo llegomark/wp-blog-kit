@@ -248,11 +248,13 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 
 		$this->assertSame( 1, substr_count( $head, 'adsbygoogle.js' ), 'AdSense is loaded once.' );
 		$this->assertStringNotContainsString( 'data-ad-status', $head, 'No ad slot is ever hidden.' );
-		$this->assertMatchesRegularExpression( '#<style id=["\']tala-ads-inline-css["\']>\s*html\{overflow-x:clip\}\s*(/\*[^*]*\*/\s*)?</style>#', $head, 'Tala Ads\' only style hides nothing and touches none of Google\'s elements.' );
+		$this->assertMatchesRegularExpression( '#<style id=["\']tala-ads-inline-css["\']>\s*ins\.adsbygoogle iframe\{color-scheme:light\}html\{overflow-x:clip\}\s*(/\*[^*]*\*/\s*)?</style>#', $head, 'Tala Ads\' only style hides nothing and touches none of Google\'s elements.' );
 		$this->assertStringContainsString( 'html{overflow-x:clip}', $head, 'An unfilled place\'s empty frame off the window\'s edge gives the page no sideways scrollbar.' );
 		$this->assertMatchesRegularExpression( '#<style id=["\']tala-ads-inline-css["\']>(.*?)</style>#s', $head, 'The plugin\'s style.' );
 		preg_match( '#<style id=["\']tala-ads-inline-css["\']>(.*?)</style>#s', $head, $style );
-		$this->assertDoesNotMatchRegularExpression( '#google|adsbygoogle|aswift|ins\b|iframe#', (string) preg_replace( '#/\*.*?\*/#s', '', $style[1] ?? '' ), 'No rule touches Google\'s own elements at all: not their size, place, clipping or colors.' );
+		$rules = (string) preg_replace( '#/\*.*?\*/#s', '', $style[1] ?? '' );
+		$this->assertStringContainsString( 'ins.adsbygoogle iframe{color-scheme:light}', $rules, 'Ad frames stay see-through in dark mode instead of white boxes.' );
+		$this->assertDoesNotMatchRegularExpression( '#google|adsbygoogle|aswift|ins\b|iframe#', str_replace( 'ins.adsbygoogle iframe{color-scheme:light}', '', $rules ), 'Apart from the frames\' color scheme, no rule touches Google\'s own elements: not their size, place, clipping or visibility.' );
 		$this->assertMatchesRegularExpression( '#<script[^>]+src="https://pagead2\.googlesyndication\.com/pagead/js/adsbygoogle\.js\?client=ca-pub-1234567890123456"[^>]*>#', $head );
 		$this->assertMatchesRegularExpression( '#<script(?=[^>]*\basync\b)(?=[^>]*crossorigin="anonymous")[^>]+adsbygoogle\.js#', $head, 'Async, with crossorigin="anonymous".' );
 		$this->assertSame( 1, preg_match( '#<script[^>]+adsbygoogle\.js[^>]*>#', $head, $tag ) );

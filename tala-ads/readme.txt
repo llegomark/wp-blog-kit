@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.9.2
+Stable tag: 1.9.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ AdSense Auto ads and units, Tag Manager, Google's consent and ad blocking recove
 
 Tala Ads puts a site's ad and tracking code in one place, outside the theme, so switching themes never takes the ads with it.
 
-* **AdSense Auto ads.** Enter the publisher ID and the AdSense code goes on every page, once, at the top of the head, before the page's styles, so the browser starts loading it first. Just before it, the browser is told to connect to AdSense's servers early: the one the code comes from and the one the ads load from, which the browser would otherwise only learn of once the code has run. Nothing else of Tala Ads goes ahead of the page. Google places the Auto ads: you choose the formats (in-page, anchor, vignette, side rail) and how many in AdSense. Nothing Google places, and none of the units below, is ever hidden, filled or not. Error pages and searches that found nothing get no ads, as AdSense doesn't allow ads on pages without the site's own content. An empty frame Google leaves past the window's edge gives the page no sideways scrollbar. Tala Ads never styles Google's own elements: no size, position, clipping or color of its own.
+* **AdSense Auto ads.** Enter the publisher ID and the AdSense code goes on every page, once, at the top of the head, before the page's styles, so the browser starts loading it first. Just before it, the browser is told to connect to AdSense's servers early: the one the code comes from and the one the ads load from, which the browser would otherwise only learn of once the code has run. Nothing else of Tala Ads goes ahead of the page. Google places the Auto ads: you choose the formats (in-page, anchor, vignette, side rail) and how many in AdSense. Nothing Google places, and none of the units below, is ever hidden, filled or not. Error pages and searches that found nothing get no ads, as AdSense doesn't allow ads on pages without the site's own content. An ad frame waiting for its ad, or left empty, stays see-through in dark mode instead of showing a white box, and an empty frame Google leaves past the window's edge gives the page no sideways scrollbar. Apart from the frames' color scheme, Tala Ads never styles Google's own elements: no size, position, clipping or visibility.
 * **AdSense ad units, beside Auto ads.** Optional, from each unit's ID (or its pasted code):
   * An In-article ad after the second paragraph of each post, where Google suggests, with its space kept free while it loads so the text doesn't jump. Auto ads keep their distance from it.
   * A Multiplex ad right after the text of each post, before any Innity ad.
@@ -71,6 +71,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.9.3 =
+* Fixed: in dark mode, Google's ad frames no longer show as white boxes. The rule that declares them light pages (color-scheme), removed in 1.9.2, is back: an unfilled place's empty frame, which can lie over the text, and a frame waiting for its ad stay see-through. It sets only the frames' color scheme, nothing about their size, position or visibility.
 
 = 1.9.2 =
 * Removed: the rule that declared ad frames light (color-scheme), so in dark mode they stayed see-through instead of white while waiting for their ad. Tala Ads now has no rule on Google's own elements at all; in dark mode a frame may show white until its ad paints.
