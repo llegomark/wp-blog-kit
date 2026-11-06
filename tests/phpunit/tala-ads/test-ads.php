@@ -248,8 +248,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 
 		$this->assertSame( 1, substr_count( $head, 'adsbygoogle.js' ), 'AdSense is loaded once.' );
 		$this->assertStringNotContainsString( 'data-ad-status', $head, 'No ad slot is ever hidden.' );
-		$this->assertMatchesRegularExpression( '#<style id=["\']tala-ads-inline-css["\']>\s*ins\.adsbygoogle iframe\{color-scheme:light\}html\{overflow-x:clip\}\s*(/\*[^*]*\*/\s*)?</style>#', $head, 'Tala Ads\' only style hides nothing and touches none of Google\'s elements.' );
-		$this->assertStringContainsString( 'html{overflow-x:clip}', $head, 'An unfilled place\'s empty frame off the window\'s edge gives the page no sideways scrollbar.' );
+		$this->assertMatchesRegularExpression( '#<style id=["\']tala-ads-inline-css["\']>\s*ins\.adsbygoogle iframe\{color-scheme:light\}html,\.wp-site-blocks\{overflow-x:clip\}\s*(/\*[^*]*\*/\s*)?</style>#', $head, 'Tala Ads\' only style hides nothing and touches none of Google\'s elements.' );
+		$this->assertStringContainsString( 'html,.wp-site-blocks{overflow-x:clip}', $head, 'An unfilled place\'s empty frame off the window\'s edge gives the page no sideways scrollbar.' );
 		$this->assertMatchesRegularExpression( '#<style id=["\']tala-ads-inline-css["\']>(.*?)</style>#s', $head, 'The plugin\'s style.' );
 		preg_match( '#<style id=["\']tala-ads-inline-css["\']>(.*?)</style>#s', $head, $style );
 		$rules = (string) preg_replace( '#/\*.*?\*/#s', '', $style[1] ?? '' );

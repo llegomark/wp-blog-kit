@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.9.4
+Stable tag: 1.9.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.9.5 =
+* Fixed: a page with an unfilled Auto ads place is no longer wider than the window. 1.9.1's clip on the root element removed the scrollbar but left the page wider (2145 px in a 1890 px window on a busy page), which scripts could scroll and phones such as iPhone Safari may let a finger pan. A block theme's page wrapper, .wp-site-blocks, now clips too, so Google's empty frames are cut where they start. Google's own elements still get no rule of their own.
 
 = 1.9.4 =
 * Fixed: ad intents no longer turn decorative text into links. Text hidden from screen readers (aria-hidden="true"), such as Tala Blog's giant footer wordmark, gets google-anno-skip, Google's own class for keeping ad intents out of part of a page. On the wordmark, the link took its giant size and was cut off by the band. Everything else stays open to ad intents, and nothing of Google's is styled.

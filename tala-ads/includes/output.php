@@ -78,13 +78,16 @@ function tala_ads_enqueue(): void {
 		//
 		// An Auto ads place Google leaves unfilled keeps its empty frame, as wide as Google made it,
 		// centered on a place it shrank to nothing, so the frame can stick out past the window's edge
-		// and give the page a sideways scrollbar. The page clips at the window's edge instead (on the
-		// root element, so it works with any theme; body's overflow-x:clip doesn't reach the window in
-		// Chrome): only empty space off the screen is cut. Google's own elements are never sized, moved
-		// or clipped by a rule of their own.
+		// and give the page a sideways scrollbar. The page clips at the window's edge instead: on the
+		// root element, which removes the scrollbar in any theme (body's overflow-x:clip doesn't reach
+		// the window in Chrome), and on a block theme's page wrapper, .wp-site-blocks, which cuts the
+		// empty frames where they start, so the page is no wider than the window and phones can't pan
+		// sideways either (the root rule alone leaves the page wider, and iPhone Safari may let a
+		// finger pan it). Only empty space off the screen is cut. Google's own elements are never
+		// sized, moved or clipped by a rule of their own.
 		wp_register_style( 'tala-ads', false, array(), TALA_ADS_VERSION );
 		wp_enqueue_style( 'tala-ads' );
-		wp_add_inline_style( 'tala-ads', 'ins.adsbygoogle iframe{color-scheme:light}html{overflow-x:clip}' );
+		wp_add_inline_style( 'tala-ads', 'ins.adsbygoogle iframe{color-scheme:light}html,.wp-site-blocks{overflow-x:clip}' );
 		wp_enqueue_script(
 			'tala-ads-adsense',
 			'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . $settings['adsense'],
