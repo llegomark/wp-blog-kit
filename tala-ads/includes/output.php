@@ -71,9 +71,16 @@ function tala_ads_enqueue(): void {
 		// Ad frames are light pages. On a page in dark mode the browser paints a frame of a light page
 		// white until its ad arrives; declared light, the frame stays see-through, as on a light page,
 		// and an ad paints its own background.
+		//
+		// An Auto ads place Google leaves unfilled keeps its empty frame, as wide as Google made it,
+		// centered on a place it shrank to nothing, so the frame can stick out past the window's edge
+		// and give the page a sideways scrollbar. The page clips at the window's edge instead (on the
+		// root element, so it works with any theme; body's overflow-x:clip doesn't reach the window in
+		// Chrome): only empty space off the screen is cut. Google's own elements are never sized, moved
+		// or clipped by a rule of their own.
 		wp_register_style( 'tala-ads', false, array(), TALA_ADS_VERSION );
 		wp_enqueue_style( 'tala-ads' );
-		wp_add_inline_style( 'tala-ads', 'ins.adsbygoogle iframe{color-scheme:light}' );
+		wp_add_inline_style( 'tala-ads', 'ins.adsbygoogle iframe{color-scheme:light}html{overflow-x:clip}' );
 		wp_enqueue_script(
 			'tala-ads-adsense',
 			'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' . $settings['adsense'],
