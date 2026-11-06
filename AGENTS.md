@@ -64,8 +64,9 @@ typography presets, and the plugin's blocks in the editor. Then, on the local si
 - Use the text domains `tala-seo`, `tala-ads`, `tala-guard` and `tala-blog`, and the prefixes `tala_seo_`,
   `tala_ads_`, `tala_guard_` and `tala_blog_`.
 - AdSense rules come first (the maintainer's decision, 2026-11-06): Tala Ads never sizes, moves,
-  clips or hides Google's own ad elements (`.google-auto-placed`, the `ins.adsbygoogle` Google places,
-  their frames, anchors, vignettes, side rails), never overrides Google's inline styles, and never
+  clips, colors or hides Google's own ad elements (`.google-auto-placed`, the `ins.adsbygoogle` Google
+  places, their frames, anchors, vignettes, side rails): no CSS rule targets them at all. It never
+  overrides Google's inline styles, and never
   hides an ad, filled or not. Layout fixes go on the site's own elements. The plugin's own units may
   keep space free in their own wrapper. Nothing may go against AdSense's program policies.
 - Tala Ads' settings hold IDs, never code: each field is cut down to the ID's shape on save and
