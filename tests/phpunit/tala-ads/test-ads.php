@@ -632,6 +632,46 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * The site header, and the site title, tagline and logo wherever they are, get google-anno-skip,
+	 * so ad intents keep out of the site's name and menu; a footer template part and the article's
+	 * text don't.
+	 */
+	public function test_site_identity_skipped_by_ad_intents(): void {
+		$this->go_to( home_url( '/' ) );
+		update_option( 'tala_ads', self::ALL );
+		update_option( 'blogname', 'TeacherPH' );
+
+		$title = render_block(
+			array(
+				'blockName'    => 'core/site-title',
+				'attrs'        => array(),
+				'innerBlocks'  => array(),
+				'innerHTML'    => '',
+				'innerContent' => array(),
+			)
+		);
+		$this->assertMatchesRegularExpression( '#^<[a-z0-9]+ class="[^"]*\bgoogle-anno-skip\b#', $title, 'The site title.' );
+		$this->assertStringContainsString( 'TeacherPH', $title );
+
+		$paragraph = render_block(
+			array(
+				'blockName'    => 'core/paragraph',
+				'attrs'        => array(),
+				'innerBlocks'  => array(),
+				'innerHTML'    => '<p>TeacherPH readers</p>',
+				'innerContent' => array( '<p>TeacherPH readers</p>' ),
+			)
+		);
+		$this->assertStringNotContainsString( 'google-anno-skip', $paragraph, 'The article\'s text stays open to ad intents.' );
+
+		$this->assertStringStartsWith( '<header class="site-header google-anno-skip">', tala_ads_skip_ad_intents( '<header class="site-header"><p>Menu</p></header>', array( 'blockName' => 'core/template-part' ) ), 'The site header, root and all.' );
+		$this->assertStringNotContainsString( 'google-anno-skip', tala_ads_skip_ad_intents( '<footer class="site-footer"><p>Links</p></footer>', array( 'blockName' => 'core/template-part' ) ), 'Not the footer as a whole.' );
+
+		update_option( 'tala_ads', array( 'gtm' => 'GTM-ABC1234' ) );
+		$this->assertStringNotContainsString( 'google-anno-skip', tala_ads_skip_ad_intents( '<header><p>Menu</p></header>', array( 'blockName' => 'core/template-part' ) ), 'Not without AdSense.' );
+	}
+
+	/**
 	 * The In-article and Multiplex units' IDs are kept from the ID or from the unit's code AdSense
 	 * gives; anything else is dropped.
 	 */

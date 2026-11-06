@@ -197,21 +197,36 @@ function tala_ads_show_ads() {
 	return (bool) apply_filters( 'tala_ads_show', $show );
 }
 
-add_filter( 'render_block', 'tala_ads_skip_hidden_text' );
+add_filter( 'render_block', 'tala_ads_skip_ad_intents', 10, 2 );
 
 /**
- * Text hidden from screen readers (aria-hidden="true") is decoration, such as a theme's giant
- * wordmark, not something to read. AdSense's ad intents would still turn words in it into links,
- * at the decoration's size and inside its clipping. Google's own opt-out, the google-anno-skip
- * class, keeps ad intents out of it; everything else on the page, and every other ad, stays as
- * Google places it. Only on pages with AdSense.
+ * Parts of the page that ad intents keep out of, through Google's own opt-out, the google-anno-skip
+ * class (AdSense → ad intents: "exclude specific areas"). AdSense's ad intents turn words on the page
+ * into links, and they also landed on the site's name and decoration, where a link breaks the layout
+ * and reads as the site's own: the site header (its root, so the logo, name, menu and search inside
+ * it), the site title, tagline and logo wherever they appear, and text hidden from screen readers
+ * (aria-hidden="true"), such as a theme's giant wordmark. The article's text, and every other ad,
+ * stay as Google places them. Only on pages with AdSense.
  *
- * @param mixed $html The block's HTML (a string, unless another filter broke it).
+ * @param mixed $html  The block's HTML (a string, unless another filter broke it).
+ * @param mixed $block The block (an array, unless another filter broke it).
  * @return mixed
  */
-function tala_ads_skip_hidden_text( $html ) {
-	if ( ! is_string( $html ) || ! str_contains( $html, 'aria-hidden' ) || is_admin()
-		|| '' === tala_ads_settings()['adsense'] || ! tala_ads_show_ads() ) {
+function tala_ads_skip_ad_intents( $html, $block = array() ) {
+	if ( ! is_string( $html ) || '' === $html || is_admin() || '' === tala_ads_settings()['adsense'] || ! tala_ads_show_ads() ) {
+		return $html;
+	}
+	$name = is_array( $block ) && is_string( $block['blockName'] ?? null ) ? $block['blockName'] : '';
+	$tags = new WP_HTML_Tag_Processor( $html );
+	if ( in_array( $name, array( 'core/site-title', 'core/site-tagline', 'core/site-logo' ), true )
+		|| ( 'core/template-part' === $name && $tags->next_tag() && 'HEADER' === $tags->get_tag() ) ) {
+		$root = new WP_HTML_Tag_Processor( $html );
+		if ( $root->next_tag() ) {
+			$root->add_class( 'google-anno-skip' );
+		}
+		$html = $root->get_updated_html();
+	}
+	if ( ! str_contains( $html, 'aria-hidden' ) ) {
 		return $html;
 	}
 	$tags = new WP_HTML_Tag_Processor( $html );

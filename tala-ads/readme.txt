@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.9.5
+Stable tag: 1.9.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ AdSense Auto ads and units, Tag Manager, Google's consent and ad blocking recove
 
 Tala Ads puts a site's ad and tracking code in one place, outside the theme, so switching themes never takes the ads with it.
 
-* **AdSense Auto ads.** Enter the publisher ID and the AdSense code goes on every page, once, at the top of the head, before the page's styles, so the browser starts loading it first. Just before it, the browser is told to connect to AdSense's servers early: the one the code comes from and the one the ads load from, which the browser would otherwise only learn of once the code has run. Nothing else of Tala Ads goes ahead of the page. Google places the Auto ads: you choose the formats (in-page, anchor, vignette, side rail) and how many in AdSense. Nothing Google places, and none of the units below, is ever hidden, filled or not. Error pages and searches that found nothing get no ads, as AdSense doesn't allow ads on pages without the site's own content. An ad frame waiting for its ad, or left empty, stays see-through in dark mode instead of showing a white box, and an empty frame Google leaves past the window's edge gives the page no sideways scrollbar. Apart from the frames' color scheme, Tala Ads never styles Google's own elements: no size, position, clipping or visibility. Text hidden from screen readers (aria-hidden="true"), such as a theme's decorative wordmark, gets Google's google-anno-skip class, so ad intents don't turn it into a link.
+* **AdSense Auto ads.** Enter the publisher ID and the AdSense code goes on every page, once, at the top of the head, before the page's styles, so the browser starts loading it first. Just before it, the browser is told to connect to AdSense's servers early: the one the code comes from and the one the ads load from, which the browser would otherwise only learn of once the code has run. Nothing else of Tala Ads goes ahead of the page. Google places the Auto ads: you choose the formats (in-page, anchor, vignette, side rail) and how many in AdSense. Nothing Google places, and none of the units below, is ever hidden, filled or not. Error pages and searches that found nothing get no ads, as AdSense doesn't allow ads on pages without the site's own content. An ad frame waiting for its ad, or left empty, stays see-through in dark mode instead of showing a white box, and an empty frame Google leaves past the window's edge gives the page no sideways scrollbar. Apart from the frames' color scheme, Tala Ads never styles Google's own elements: no size, position, clipping or visibility. The site header, the site title, tagline and logo wherever they appear, and text hidden from screen readers (aria-hidden="true"), such as a theme's decorative wordmark, get Google's google-anno-skip class, so ad intents don't turn them into links.
 * **AdSense ad units, beside Auto ads.** Optional, from each unit's ID (or its pasted code):
   * An In-article ad after the second paragraph of each post, where Google suggests, with its space kept free while it loads so the text doesn't jump. Auto ads keep their distance from it.
   * A Multiplex ad right after the text of each post, before any Innity ad.
@@ -71,6 +71,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.9.6 =
+* Fixed: ad intents no longer turn the site's name into a link. The site header (the logo, site name, menu and search inside it) and the Site Title, Site Tagline and Site Logo blocks wherever they appear, such as the footer's copyright line, get google-anno-skip, Google's own class for keeping ad intents out of part of a page. In the header, the link pushed the name onto two lines inside a big pill. The article's text stays open to ad intents.
 
 = 1.9.5 =
 * Fixed: a page with an unfilled Auto ads place is no longer wider than the window. 1.9.1's clip on the root element removed the scrollbar but left the page wider (2145 px in a 1890 px window on a busy page), which scripts could scroll and phones such as iPhone Safari may let a finger pan. A block theme's page wrapper, .wp-site-blocks, now clips too, so Google's empty frames are cut where they start. Google's own elements still get no rule of their own.
