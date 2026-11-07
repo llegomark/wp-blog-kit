@@ -30,10 +30,12 @@
 		"fix": "phpcbf",
 		"analyse": "phpstan analyse --memory-limit=1G",
 		"plugin-check": "dev/plugin-check.sh",
+		"theme-check": "dev/theme-check.sh",
 		"check": [
 			"@lint",
 			"@analyse",
-			"@plugin-check"
+			"@plugin-check",
+			"@theme-check"
 		],
 		"test:install": "tests/bin/install-wp-tests.sh",
 		"test:multisite": "WP_MULTISITE=1 phpunit --group ms-required",
@@ -48,7 +50,8 @@
 		"fix": "Apply automatic WordPress Coding Standards fixes.",
 		"analyse": "Static analysis with PHPStan and the WordPress extension (phpstan.neon.dist).",
 		"plugin-check": "Run WordPress Plugin Check on tala-seo, tala-ads and tala-guard against the local site.",
-		"check": "Run every check: coding standards, static analysis and Plugin Check.",
+		"theme-check": "Run WordPress.org Theme Check on tala-blog against the local site.",
+		"check": "Run every check: coding standards, static analysis, Plugin Check and Theme Check.",
 		"test:install": "Download WordPress for the tests (.cache/wordpress) and create the empty test database.",
 		"test:multisite": "The tests that need a network (@group ms-required), on a multisite test install.",
 		"test": "PHPUnit integration tests on WordPress's test framework (phpunit.xml.dist), then the multisite ones."

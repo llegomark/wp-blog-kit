@@ -21,7 +21,7 @@ Everything must follow official WordPress practice, as checked by WordPress's ow
 ## After changing code: all of these must pass
 
 ```bash
-composer fix && composer check    # WPCS, PHPStan level 8, Plugin Check (exits 1 on any finding)
+composer fix && composer check    # WPCS, PHPStan level 8, Plugin Check, Theme Check (exits 1 on any finding)
 npm run lint                      # Stylelint, ESLint, theme.json/block.json schemas, patterns, block markup, plugin readme
 composer test                     # PHPUnit integration tests on WordPress's test framework
 npm run test:e2e                  # browser tests on the local site: pages, menu, layout, logo, axe, editor
@@ -65,7 +65,8 @@ typography presets, and the plugin's blocks in the editor. Then, on the local si
 - Fix lint findings in the code. Only switch a rule off in `stylelint.config.mjs` or `eslint.config.mjs`,
   with a comment saying why, when it can't apply here; never with disable comments in `assets/theme.css`,
   which is inlined into every page.
-- Keep `Update URI: false` in the theme and plugin headers. The plugins are private.
+- Keep `Update URI: false` in the theme and plugin headers. The plugins are private. It is the one finding
+  the check scripts ignore: Plugin Check's `plugin_updater_detected` and Theme Check's "Update URI: is found".
 - Use the text domains `tala-seo`, `tala-ads`, `tala-guard` and `tala-blog`, and the prefixes `tala_seo_`,
   `tala_ads_`, `tala_guard_` and `tala_blog_`.
 - AdSense rules come first (the maintainer's decision, 2026-11-06): Tala Ads never sizes, moves,
@@ -90,6 +91,10 @@ typography presets, and the plugin's blocks in the editor. Then, on the local si
   the new version as a GitHub release (the zip, its SHA-256, a build attestation, the changelog entry
   as notes). Never move or reuse a release tag: a released version is fixed; release a new one. Add an upgrade notice (under 300 characters) when
   updating needs the site owner to do something or know something.
+- Install on a live site only a verified release: the zip from the GitHub release, checked against its
+  SHA-256 and build attestation (`gh attestation verify --repo llegomark/wp-blog-kit`), with the same files
+  as `./build.sh`'s `dist/`. Never a local build. The servers' install, cache and check steps are in the
+  maintainer's private server guide, not in this repository.
 - The plugin readmes follow WordPress.org's readme standard, checked by `npm run lint:readme`.
   Contributors are WordPress.org usernames (`edventuredev`); there is no donate link, by decision.
 

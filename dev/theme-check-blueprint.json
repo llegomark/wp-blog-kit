@@ -1,0 +1,6 @@
+{
+	"$schema": "https://playground.wordpress.net/blueprint-schema.json",
+	"steps": [
+		{ "step": "installPlugin", "pluginData": { "resource": "wordpress.org/plugins", "slug": "theme-check" }, "options": { "activate": true } }
+	]
+}

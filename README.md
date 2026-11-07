@@ -109,7 +109,7 @@ dev/site.sh                   # local site in ~/Sites/blogkit, theme and plugin 
 dev/serve.sh                  # http://127.0.0.1:8080 (admin login: ~/.local/state/wp-blog-kit/blogkit.credentials)
 ```
 
-`dev/site.sh --reset` starts the site over. Query Monitor and Plugin Check are installed on it.
+`dev/site.sh --reset` starts the site over. Query Monitor, Plugin Check and Theme Check are installed on it.
 
 `dev/unit-test-site.sh` builds a second site for [WordPress's Theme Unit Test](https://make.wordpress.org/themes/handbook/review/theme-unit-test/) in `~/Sites/themeunit`: Tala Blog alone (no Tala SEO, as a theme must work by itself), WordPress's test content (`themeunittestdata.wordpress.xml` and the 64 block test posts, pinned and checksummed), and the settings the handbook asks for (a long title and tagline, 5 posts per page, comments threaded 3 deep and paged by 5, month-and-name addresses, a short and a long menu). `dev/unit-test-site.sh --serve` serves it at http://127.0.0.1:8081, and `node dev/unit-test-check.mjs` then checks every page of it on a phone and a desktop: HTTP status, PHP notices, JavaScript errors, nothing wider than the screen, a level-one heading, and axe in light and dark mode (on what the theme draws; the test posts' content is inaccessible on purpose in places). How things look is still the handbook's checklist, by eye.
 
@@ -121,6 +121,7 @@ dev/serve.sh                  # http://127.0.0.1:8080 (admin login: ~/.local/sta
 | `composer fix` | the automatic coding-standards fixes |
 | `composer analyse` | PHPStan level 8 with the WordPress extension (`phpstan.neon.dist`), against WordPress 7.1's functions and classes |
 | `composer plugin-check` | WordPress Plugin Check, including experimental checks, on every plugin against the local site; exits 1 on any finding |
+| `composer theme-check` | WordPress.org Theme Check, the theme review team's tool, on Tala Blog against the local site; exits 1 on anything above INFO |
 | `composer check` | all of the above |
 | `npm run lint:css` | Stylelint with WordPress's CSS coding standards (`@wordpress/stylelint-config`, `stylelint.config.mjs`); `lint:css:fix` fixes what it can |
 | `npm run lint:js` | ESLint with WordPress's JavaScript coding standards (`@wordpress/eslint-plugin`, `eslint.config.mjs`), text domains included; `lint:js:fix` fixes what it can |
@@ -140,13 +141,13 @@ The browser tests need the local site (`dev/site.sh`); they start `dev/serve.sh`
 
 A change in behavior comes with a test that fails without it.
 
-Without a local PHP, `dev/phpcs.sh` and `dev/plugin-check.sh` run the same checks in PHP compiled to WebAssembly and WordPress Playground. The PHPCS downloads are verified against the release key.
+Without a local PHP, `dev/phpcs.sh`, `dev/plugin-check.sh` and `dev/theme-check.sh` run the same checks in PHP compiled to WebAssembly and WordPress Playground. The PHPCS downloads are verified against the release key.
 
-GitHub runs the same checks on every push to `main` and every pull request (`.github/workflows/checks.yml`): coding standards and PHPStan on PHP 8.5, Stylelint, ESLint, the theme validator and the readme validator on Node 24, the PHPUnit tests and the browser tests (with a MySQL 8.4 database), and Plugin Check through [WordPress/plugin-check-action](https://github.com/WordPress/plugin-check-action) against the latest WordPress. Every Monday it also checks the plugin against WordPress trunk, the release in development; a finding there is an early warning and doesn't fail the build. The actions are pinned to commit SHAs, and Dependabot proposes updates. Theme Check isn't part of CI; run `wp theme-check run tala-blog` on the local site.
+GitHub runs the same checks on every push to `main` and every pull request (`.github/workflows/checks.yml`): coding standards and PHPStan on PHP 8.5, Stylelint, ESLint, the theme validator and the readme validator on Node 24, the PHPUnit tests and the browser tests (with a MySQL 8.4 database), and Plugin Check through [WordPress/plugin-check-action](https://github.com/WordPress/plugin-check-action) against the latest WordPress. Every Monday it also checks the plugin against WordPress trunk, the release in development; a finding there is an early warning and doesn't fail the build. The actions are pinned to commit SHAs, and Dependabot proposes updates. Theme Check isn't part of CI; `composer check` runs it (`dev/theme-check.sh`).
 
 `composer.json` loads the WordPress 7.1 stubs as `7.1.2 as 6.9.4`: the WP-CLI stubs still accept only WordPress 6 stubs in their latest release, though their next one won't (php-stubs/wp-cli-stubs#25). Drop the alias once that release is out.
 
-The one deliberate exception is Plugin Check's `plugin_updater_detected`. It flags the `Update URI: false` header, which keeps this private plugin from ever being "updated" by an unrelated wordpress.org plugin with the same name.
+The one deliberate exception is the `Update URI: false` header, which keeps these private plugins and theme from ever being "updated" by an unrelated wordpress.org one with the same name. Plugin Check flags it as `plugin_updater_detected` and Theme Check as "Update URI: is found"; `dev/plugin-check.sh` and `dev/theme-check.sh` ignore only that.
 
 ### AI agents
 
@@ -159,7 +160,7 @@ The one deliberate exception is Plugin Check's `plugin_updater_detected`. It fla
 - The publish check holds in the editor, over REST, in Quick Edit and WP-CLI saves, and for scheduling.
 - The WP-CLI commands `audit` and `import` (including `--dry-run`) work; Yoast titles built from `%%variables%%` are skipped.
 - Lighthouse on a mobile article page (Tala Blog 2.0.0, no ads, gzip as on the servers): Performance 96, Accessibility 100, Best Practices 100, SEO 100.
-- `composer check` passes: WPCS without findings, PHPStan level 8 without errors, Plugin Check 2.1 without findings.
+- `composer check` passes: WPCS without findings, PHPStan level 8 without errors, Plugin Check 2.1 without findings, Theme Check 20260901 without findings.
 
 **Not used on purpose:**
 - a build step: the editor scripts are plain JavaScript using the `wp.*` globals (Node is only for the linters)

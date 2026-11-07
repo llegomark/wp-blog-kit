@@ -229,9 +229,12 @@ test.describe( 'Turnstile on the comment form', () => {
 			document.documentElement.style.colorScheme = 'light dark';
 		} );
 		await expect.poll( () => renderedThemes( page ) ).toEqual( [ 'auto', 'dark', 'light', 'auto' ] );
-		// A change that leaves the scheme as it was doesn't render the widget again.
-		await page.evaluate( () => document.body.classList.add( 'unrelated-change' ) );
-		await page.waitForTimeout( 200 );
+		// A change that leaves the scheme as it was doesn't render the widget again. The observer runs
+		// in a microtask and renders synchronously, so once the next task starts, any render is done.
+		await page.evaluate( () => {
+			document.body.classList.add( 'unrelated-change' );
+			return new Promise( ( resolve ) => setTimeout( resolve, 0 ) );
+		} );
 		expect( await renderedThemes( page ) ).toHaveLength( 4 );
 		expect( await page.evaluate( () => window.stubRemoved ) ).toEqual( [ 'w1', 'w2', 'w3' ] );
 	} );
