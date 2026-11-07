@@ -938,7 +938,11 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertMatchesRegularExpression( '#\.tala-ads-google-search \.gsc-table-cell-thumbnail\s*\{\s*display:\s*none#', $head, 'Results without Google\'s thumbnails.' );
 		$this->assertStringNotContainsString( 'noindex', $head, 'The page itself may be indexed.' );
 
-		$this->assertMatchesRegularExpression( '#<script(?=[^>]*\sdefer\b)[^>]*/assets/google-search\.js\?ver=#', get_echo( 'wp_print_footer_scripts' ), 'The hint for Google\'s box.' );
+		$footer = get_echo( 'wp_print_footer_scripts' );
+		$this->assertMatchesRegularExpression( '#<script(?=[^>]*\sdefer\b)[^>]*/tala-ads/js/google-search\.js\?ver=#', $footer, 'The hint for Google\'s box.' );
+		// EasyList's generic `-ads/assets/$script` blocks every script under tala-ads/assets/ for
+		// readers with an ad blocker, so the hint, which is no ad, lives elsewhere.
+		$this->assertDoesNotMatchRegularExpression( '#<script[^>]*-ads/assets/#', $head . $footer, 'No script where ad blockers block it.' );
 		$this->assertSame( '', do_blocks( '<!-- wp:search {"label":"Search"} /-->' ), 'Outside the page\'s content, a Search block is left out: Google\'s is the one.' );
 		the_post();
 		$content = apply_filters( 'the_content', get_post_field( 'post_content', $page ) );

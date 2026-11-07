@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.9.6
+Stable tag: 1.9.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.9.7 =
+* Fixed: readers with an ad blocker get the hint in Google's search box again. EasyList blocks every script under a path with "-ads/assets/", which caught the hint's script in the plugin's assets folder; it now loads from js/google-search.js. Google's search box itself was never blocked.
 
 = 1.9.6 =
 * Fixed: ad intents no longer turn the site's name into a link. The site header (the logo, site name, menu and search inside it) and the Site Title, Site Tagline and Site Logo blocks wherever they appear, such as the footer's copyright line, get google-anno-skip, Google's own class for keeping ad intents out of part of a page. In the header, the link pushed the name onto two lines inside a big pill. The article's text stays open to ad intents.

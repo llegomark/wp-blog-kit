@@ -67,9 +67,11 @@ function tala_ads_search_script(): void {
 	}
 	wp_enqueue_style( 'tala-ads-google-search', plugins_url( 'assets/google-search.css', TALA_ADS_FILE ), array(), TALA_ADS_VERSION );
 	wp_style_add_data( 'tala-ads-google-search', 'path', dirname( __DIR__ ) . '/assets/google-search.css' );
+	// Not in assets/: EasyList blocks every script under a "-ads/assets/" path, so readers with an
+	// ad blocker would lose the hint. It is no ad; ad blockers have no reason to stop it.
 	wp_enqueue_script(
 		'tala-ads-search-hint',
-		plugins_url( 'assets/google-search.js', TALA_ADS_FILE ),
+		plugins_url( 'js/google-search.js', TALA_ADS_FILE ),
 		array(),
 		TALA_ADS_VERSION,
 		array(
@@ -91,7 +93,7 @@ function tala_ads_search_script(): void {
 
 /**
  * Google's search box and results, which read the search from ?q=. Google's box has no hint of its
- * own; assets/google-search.js gives it this one once Google has drawn it.
+ * own; js/google-search.js gives it this one once Google has drawn it.
  *
  * @param string $hint What the empty box says: the Search block's placeholder, or a default.
  * @return string

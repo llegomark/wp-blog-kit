@@ -54,6 +54,11 @@ typography presets, and the plugin's blocks in the editor. Then, on the local si
   patterns that are empty without it) and each plugin with any theme (nothing that relies on Tala
   Blog's markup or wording). Ad and tracking code lives in Tala Ads, never in the theme.
   `tests/e2e/standalone.spec.mjs` checks both.
+- A page must work for readers with an ad blocker. Blockers match paths, not only ad servers:
+  EasyList's generic `-ads/assets/$script` blocks every script under `tala-ads/assets/`, so Tala
+  Ads' scripts that are no ad (the search hint) live in `tala-ads/js/`. Keep ad and tracking code in
+  its own scripts, and never let a feature depend on one. Check a new script's path against EasyList
+  and EasyPrivacy. Never try to get ads or tracking past a blocker.
 - No build step, no web fonts except Inter (self-hosted in the theme; maintainer's decision,
   2026-11-02), no jQuery. Keep the theme's CSS inlined (`assets/theme.css`). Node and npm are for the
   linters only; nothing they install ships in the theme or plugin.
