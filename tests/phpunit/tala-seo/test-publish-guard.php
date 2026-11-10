@@ -67,6 +67,103 @@ class Test_Tala_SEO_Publish_Guard extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * Outside the block editor, a refused publish leaves the post where it was: one waiting for review
+	 * stays in the queue and a private one stays private; only a new post becomes a draft.
+	 */
+	public function test_a_refused_publish_keeps_the_status(): void {
+		$cases = array(
+			'pending' => 'Kept as pending review.',
+			'private' => 'Kept private.',
+			'draft'   => 'Kept as a draft.',
+		);
+		foreach ( $cases as $status => $says ) {
+			$post = self::factory()->post->create( array( 'post_status' => $status ) );
+			delete_transient( 'tala_seo_notice_' . $this->admin );
+			wp_update_post(
+				array(
+					'ID'          => $post,
+					'post_status' => 'publish',
+				)
+			);
+			$this->assertSame( $status, get_post_status( $post ) );
+			$notice = (string) get_transient( 'tala_seo_notice_' . $this->admin );
+			$this->assertStringStartsWith( $says, $notice );
+			$this->assertStringContainsString( 'Add a meta description', $notice );
+		}
+
+		$trashed = self::factory()->post->create( array( 'post_status' => 'trash' ) );
+		wp_update_post(
+			array(
+				'ID'          => $trashed,
+				'post_status' => 'publish',
+			)
+		);
+		$this->assertSame( 'draft', get_post_status( $trashed ), 'Out of the trash, but not live.' );
+	}
+
+	/**
+	 * WordPress dates a post the moment it is asked to publish it. A refused publish gives a draft
+	 * or a post waiting for review its open date back, so it is dated when it does go live, not when
+	 * the refused try was made. A date the author set is kept.
+	 */
+	public function test_a_refused_publish_keeps_the_date_open(): void {
+		global $wpdb;
+		$open = '0000-00-00 00:00:00';
+		foreach ( array( 'draft', 'pending' ) as $status ) {
+			$post = self::factory()->post->create( array( 'post_status' => $status ) );
+			$this->assertSame( $open, get_post( $post )->post_date_gmt );
+			wp_update_post(
+				array(
+					'ID'          => $post,
+					'post_status' => 'publish',
+				)
+			);
+			$this->assertSame( $status, get_post_status( $post ) );
+			$this->assertSame( $open, get_post( $post )->post_date_gmt, "A $status post's date stays open." );
+		}
+
+		// Days later the post is ready: it goes out with that day's date, not the refused try's.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- a local date in the past, as if the try was days ago.
+		$wpdb->update( $wpdb->posts, array( 'post_date' => '2026-01-01 08:00:00' ), array( 'ID' => $post ) );
+		clean_post_cache( $post );
+		set_post_thumbnail( $post, self::$image_id );
+		update_post_meta( $post, TALA_SEO_DESCRIPTION, 'A description.' );
+		wp_update_post(
+			array(
+				'ID'          => $post,
+				'post_status' => 'publish',
+			)
+		);
+		$this->assertSame( 'publish', get_post_status( $post ) );
+		$this->assertSame( current_time( 'Y-m-d' ), substr( get_post( $post )->post_date, 0, 10 ) );
+
+		$new = wp_insert_post(
+			array(
+				'post_title'  => 'A new post',
+				'post_status' => 'publish',
+			)
+		);
+		$this->assertSame( 'draft', get_post_status( $new ) );
+		$this->assertSame( $open, get_post( $new )->post_date_gmt, 'A new post\'s date is open too.' );
+
+		$dated = self::factory()->post->create(
+			array(
+				'post_status'   => 'draft',
+				'post_date'     => '2026-01-05 08:00:00',
+				'post_date_gmt' => '2026-01-05 08:00:00',
+			)
+		);
+		wp_update_post(
+			array(
+				'ID'          => $dated,
+				'post_status' => 'publish',
+			)
+		);
+		$this->assertSame( 'draft', get_post_status( $dated ) );
+		$this->assertSame( '2026-01-05 08:00:00', get_post( $dated )->post_date_gmt, 'A date the author set is kept.' );
+	}
+
+	/**
 	 * Pages need a description only.
 	 */
 	public function test_pages_need_a_description_only(): void {
@@ -142,6 +239,126 @@ class Test_Tala_SEO_Publish_Guard extends Tala_SEO_Test_Case {
 
 		$autosave = $this->rest( 'POST', $route . '/autosaves', array( 'meta' => array( TALA_SEO_DESCRIPTION => '' ) ) );
 		$this->assertContains( $autosave->get_status(), array( 200, 201 ) );
+	}
+
+	/**
+	 * A live post that never had a description (an old post, or one whose description another SEO
+	 * plugin holds) still saves its other fields. The block editor sends every meta field when one
+	 * changes, the empty description included, so only a description the save changes counts.
+	 */
+	public function test_rest_meta_saves_of_live_posts_without_a_description(): void {
+		$post = $this->publish_post();
+		delete_post_meta( $post, TALA_SEO_DESCRIPTION );
+		$route = '/wp/v2/posts/' . $post;
+
+		$response = $this->rest(
+			'POST',
+			$route,
+			array(
+				'meta' => array(
+					TALA_SEO_DESCRIPTION => '',
+					TALA_SEO_TITLE       => '',
+					TALA_SEO_NOINDEX     => true,
+				),
+			)
+		);
+		$this->assertSame( 200, $response->get_status(), (string) wp_json_encode( $response->get_data() ) );
+		$this->assertSame( '1', get_post_meta( $post, TALA_SEO_NOINDEX, true ), 'The field that changed is saved.' );
+
+		$response = $this->rest( 'POST', $route, array( 'meta' => array( TALA_SEO_DESCRIPTION => 123 ) ) );
+		$this->assertSame( 400, $response->get_status(), 'A description that isn\'t text is a change, and no description.' );
+		$this->assertSame( 'tala_seo_not_ready', $response->get_data()['code'] );
+
+		$response = $this->rest( 'POST', $route, array( 'meta' => array( TALA_SEO_DESCRIPTION => 'Now it has one.' ) ) );
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'Now it has one.', get_post_meta( $post, TALA_SEO_DESCRIPTION, true ) );
+
+		$migrated = $this->publish_post();
+		delete_post_meta( $migrated, TALA_SEO_DESCRIPTION );
+		update_post_meta( $migrated, '_yoast_wpseo_metadesc', 'Written in another plugin.' );
+		$response = $this->rest(
+			'POST',
+			'/wp/v2/posts/' . $migrated,
+			array(
+				'meta' => array(
+					TALA_SEO_DESCRIPTION => '',
+					TALA_SEO_NOINDEX     => true,
+				),
+			)
+		);
+		$this->assertSame( 200, $response->get_status(), 'The other plugin\'s description still counts.' );
+	}
+
+	/**
+	 * The same for the featured image: sent along unchanged, it doesn't stop the save of a live post
+	 * that has none.
+	 */
+	public function test_rest_saves_of_live_posts_without_a_featured_image(): void {
+		$post = $this->publish_post();
+		delete_post_thumbnail( $post );
+		$route = '/wp/v2/posts/' . $post;
+
+		$response = $this->rest(
+			'POST',
+			$route,
+			array(
+				'title'          => 'Edited',
+				'featured_media' => 0,
+			)
+		);
+		$this->assertSame( 200, $response->get_status(), (string) wp_json_encode( $response->get_data() ) );
+		$this->assertSame( 'Edited', get_post( $post )->post_title );
+
+		set_post_thumbnail( $post, self::$image_id );
+		$response = $this->rest( 'POST', $route, array( 'featured_media' => 0 ) );
+		$this->assertSame( 400, $response->get_status(), 'Taking the image away from a live post is still refused.' );
+		$this->assertSame( array( 'featured_image' ), $response->get_data()['data']['problems'] );
+	}
+
+	/**
+	 * A scheduled post counts as live: it stays editable, can't lose what it needs, and a draft can't
+	 * be scheduled without it.
+	 */
+	public function test_scheduled_posts_count_as_live(): void {
+		$soon = gmdate( 'Y-m-d H:i:s', time() + DAY_IN_SECONDS );
+		$post = self::factory()->post->create(
+			array(
+				'post_status'   => 'future',
+				'post_date'     => get_date_from_gmt( $soon ),
+				'post_date_gmt' => $soon,
+				'_thumbnail_id' => self::$image_id,
+				'meta_input'    => array( TALA_SEO_DESCRIPTION => 'A test description.' ),
+			)
+		);
+		$this->assertSame( 'future', get_post_status( $post ) );
+		$route = '/wp/v2/posts/' . $post;
+
+		$this->assertSame( 200, $this->rest( 'POST', $route, array( 'title' => 'Edited while scheduled' ) )->get_status() );
+		$response = $this->rest( 'POST', $route, array( 'meta' => array( TALA_SEO_DESCRIPTION => '' ) ) );
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertStringStartsWith( 'This post is live, so it still needs this:', $response->get_data()['message'] );
+
+		$draft    = self::factory()->post->create( array( 'post_status' => 'draft' ) );
+		$response = $this->rest(
+			'POST',
+			'/wp/v2/posts/' . $draft,
+			array(
+				'status'   => 'future',
+				'date_gmt' => str_replace( ' ', 'T', $soon ),
+			)
+		);
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertStringStartsWith( 'To publish:', $response->get_data()['message'] );
+		$this->assertSame( 'draft', get_post_status( $draft ) );
+
+		$unready = self::factory()->post->create(
+			array(
+				'post_status'   => 'future',
+				'post_date'     => get_date_from_gmt( $soon ),
+				'post_date_gmt' => $soon,
+			)
+		);
+		$this->assertSame( 'draft', get_post_status( $unready ), 'Nor outside the block editor.' );
 	}
 
 	/**

@@ -512,6 +512,27 @@ function tala_seo_sanitize_redirect( $value ) {
 }
 
 /**
+ * Whether a user may set where a post points: its "Redirect to" address, which sends visitors
+ * away, and its canonical address, which hands its place in search to another page. Only someone
+ * who could change them on the published post: who may edit this post and published posts of its
+ * type (authors on their own posts; editors and administrators). A contributor's draft is published
+ * by someone else, who may never look at these fields, so a contributor can't fill them.
+ *
+ * @param int    $user_id   User ID.
+ * @param int    $post_id   Post ID, or 0 for a post that isn't saved yet.
+ * @param string $post_type The post type of a post that isn't saved yet.
+ * @return bool
+ */
+function tala_seo_can_set_target( $user_id, $post_id, $post_type = '' ) {
+	$type = get_post_type_object( $post_id ? (string) get_post_type( $post_id ) : $post_type );
+	if ( ! $type || ! $user_id ) {
+		return false;
+	}
+	$may_edit = $post_id ? user_can( $user_id, 'edit_post', $post_id ) : user_can( $user_id, $type->cap->create_posts );
+	return $may_edit && user_can( $user_id, $type->cap->edit_published_posts );
+}
+
+/**
  * The address a post sends its visitors to (its redirect field), or ''.
  *
  * @param int $post_id Post ID.

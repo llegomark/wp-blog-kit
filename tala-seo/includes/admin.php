@@ -49,6 +49,8 @@ function tala_seo_editor_assets(): void {
 		'separator'       => tala_seo_settings()['separator'],
 		'defaultCategory' => (int) get_option( 'default_category' ),
 		'sitePublic'      => (bool) get_option( 'blog_public' ),
+		// Whether this user may fill the redirect and canonical fields (the server checks it again).
+		'canSetTarget'    => tala_seo_can_set_target( get_current_user_id(), (int) ( get_post()->ID ?? 0 ), $screen->post_type ),
 	);
 	// Hex escapes for < > & so no value (the site name) can end the script element or start markup.
 	wp_add_inline_script( 'tala-seo-editor', 'window.talaSeo = ' . wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP ) . ';', 'before' );

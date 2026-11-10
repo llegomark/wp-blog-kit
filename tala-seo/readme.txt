@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.19.0
+Stable tag: 1.20.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,7 +15,7 @@ Lean SEO for blogs: meta descriptions, canonicals, JSON-LD, breadcrumbs and a pu
 Tala SEO covers what a blog needs to follow Google Search Central's guidelines, without upsells or licenses.
 
 * **Publish check.** A post can't be published or scheduled without a meta description, a featured image, and alternative text on that image (pages need a description). Enforced on the server, so it holds for the block editor, Quick Edit, the REST API and WP-CLI. Already-published posts stay editable.
-* **SEO panel** in the block editor: search result preview, SEO title and meta description with length meters, primary category, "minor edit" switch (keeps the updated date for typo fixes), hide from search engines, canonical URL, redirect, and a checklist when you press Publish.
+* **SEO panel** in the block editor: search result preview, SEO title and meta description with length meters, primary category, "minor edit" switch (keeps the updated date for typo fixes), hide from search engines, canonical URL and redirect (both for people who can publish the post), and a checklist when you press Publish.
 * **Length meters** measure titles and descriptions in pixels, the way Google cuts them (a "W" takes more room than an "i"). The preview shortens them where Google would.
 * **SEO column** in the Posts, Pages, Categories and Tags lists: what each item has and still needs at a glance. Every status pairs a symbol with a word, so it never depends on color.
 * **Primary category:** choose which category leads the breadcrumbs (and the address, when the permalink contains %category%) for posts filed under several.
@@ -93,7 +93,7 @@ No: a redirect tells Google the PDF is gone, and the article doesn't take its pl
 
 `wp tala-seo pdf-canonicals --variable=example_pdf_canonical > /etc/nginx/maps/example-pdf-canonicals.conf`
 
-Include that file in nginx's `http` block, and in the site's PDF location add `add_header Link $example_pdf_canonical always;`. Run the command again when PDFs are added (a daily job is enough) and reload nginx.
+Include that file in nginx's `http` block, and in the site's PDF location add `add_header Link $example_pdf_canonical always;`. Run the command again when PDFs are added (a daily job is enough) and reload nginx. The map's first lines name the `map_hash_bucket_size` its longest path needs; set it in the `http` block, or pass the server's size as `--bucket-size` to leave longer paths out. Paths nginx would refuse are left out and reported as warnings, and the job should still run `nginx -t` before it reloads.
 
 == Screenshots ==
 
@@ -104,6 +104,14 @@ Include that file in nginx's `http` block, and in the site's PDF location add `a
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.20.0 =
+* Security: a post's redirect and canonical URL can be set only by people who can publish it: whoever may edit the post and published posts of its type (authors on their own posts, editors, administrators). Until now anyone who could edit a post could fill them, so a contributor's draft could carry a redirect to another site that went live when an editor published it. The SEO panel no longer shows the two fields to people who can't set them, the server refuses them by every route (the editor, the REST API, custom fields, XML-RPC), and saving the other fields works as before. On update, redirects and canonical URLs are removed once from posts that aren't published yet and whose author can't publish.
+* New: the checklist in the SEO panel and on Publish names the address a post redirects to and the address it gives search engines as the original, so whoever publishes a post sees both.
+* Fixed: a published post without a meta description (an old post, or one whose description another SEO plugin holds) saves its other SEO fields again. The editor sends every field when one changes, and the empty description was taken for a change: "This post is live, so it still needs this". Only a description or a featured image the save changes counts now.
+* Fixed: outside the block editor (Quick Edit, bulk edit, WP-CLI), a publish that is refused leaves the post as it was: one waiting for review stays pending and a private one stays private, where both became drafts. A draft or pending post also keeps its open date, so it is dated when it does go live, not when the refused try was made.
+* Fixed: `wp tala-seo pdf-canonicals` no longer writes a map nginx refuses. Paths that differ only in letter case, which nginx reads as one, are written once when they share an article and left out when they don't, and each path left out is reported as a warning. The map says which `map_hash_bucket_size` its longest path needs, and `--bucket-size` leaves out paths too long for the server's.
+* Fixed: the Event, Course and Breadcrumbs blocks' script and styles carry the plugin's version in their address. They stayed at 1.0.0 while the files changed, so browsers and caches could keep an old copy after an update.
 
 = 1.19.0 =
 * New: Users → Profile → Other profiles: addresses of pages about the author elsewhere, one per line (their author page on another site, GitHub, Gravatar and the like). The author markup lists them as sameAs with the social profiles.
@@ -253,6 +261,9 @@ Include that file in nginx's `http` block, and in the site's PDF location add `a
 * First release.
 
 == Upgrade Notice ==
+
+= 1.20.0 =
+Security: only people who can publish may set a post's redirect or canonical URL. Updating removes both, once, from unpublished posts whose author can't publish; an editor can set them again in the SEO panel.
 
 = 1.18.1 =
 Fixes sitemap pages that failed on sites with long articles: each page now lists at most 500 addresses.

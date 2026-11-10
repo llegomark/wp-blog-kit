@@ -151,24 +151,108 @@ function tala_seo_pdf_parent( $path, $base ) {
 }
 
 /**
- * The PDF map as an nginx map block: $variable is the Link header naming the file's article as its
- * canonical page, and empty for other files (nginx then sends no Link header).
+ * The longest path nginx can hold in a map with this map_hash_bucket_size, in bytes. nginx rounds
+ * the size up to a whole number of its 64-byte lines; an entry is the path, two bytes for its
+ * length, rounded up to 8, and a pointer, and the bucket ends with one more pointer (ngx_hash.c).
  *
- * @param array<string, string> $canonicals Path => article URL.
- * @param string                $variable   The nginx variable's name, without "$".
- * @return string
+ * @param int $bucket_size nginx's map_hash_bucket_size.
+ * @return int
  */
-function tala_seo_pdf_canonicals_nginx( $canonicals, $variable ) {
-	$lines = array();
+function tala_seo_nginx_map_key_limit( $bucket_size ) {
+	return (int) ( ceil( max( 1, $bucket_size ) / 64 ) * 64 ) - 18;
+}
+
+/**
+ * The map_hash_bucket_size nginx needs for a map whose longest path has this many bytes: 64, or
+ * the next doubling that fits it.
+ *
+ * @param int $longest The longest path's length in bytes.
+ * @return int
+ */
+function tala_seo_nginx_map_bucket_size( $longest ) {
+	$size = 64;
+	while ( tala_seo_nginx_map_key_limit( $size ) < $longest ) {
+		$size *= 2;
+	}
+	return $size;
+}
+
+/**
+ * The PDF map with only what nginx accepts, and what was left out with the reason. One line nginx
+ * refuses makes it refuse its whole configuration, for every site on the server:
+ *
+ * - a quote, a backslash, a "$" (an nginx variable) or a control character can't be written safely
+ *   in nginx's quoted strings (WordPress's own file names and permalinks have none);
+ * - nginx reads a map's paths without regard to letter case, and refuses a map that has the same
+ *   one twice. WordPress lets "Report.pdf" and "report.pdf" sit in one folder. With the same
+ *   article, one line serves both; with different articles neither is written, as nginx couldn't
+ *   tell which file a request asks for;
+ * - with the server's map_hash_bucket_size given, a path too long for it.
+ *
+ * @param array<string, string> $canonicals  Path => article URL.
+ * @param int                   $bucket_size nginx's map_hash_bucket_size, or 0 when it isn't known.
+ * @return array{map: array<string, string>, skipped: array<string, string>} Skipped: path => why.
+ */
+function tala_seo_pdf_canonicals_for_nginx( $canonicals, $bucket_size = 0 ) {
+	$limit   = $bucket_size > 0 ? tala_seo_nginx_map_key_limit( $bucket_size ) : 0;
+	$map     = array();
+	$skipped = array();
+	$same    = array(); // The path in lower case => the paths that are it.
+
 	foreach ( $canonicals as $path => $url ) {
-		// A quote, a backslash, a "$" (an nginx variable) or a control character can't be written
-		// safely in nginx's quoted strings; WordPress's own file names and permalinks have none.
+		$path = (string) $path;
 		if ( preg_match( '/["\'\\\\$\x00-\x1f\x7f]/', $path . $url ) ) {
+			$skipped[ $path ] = 'it has a character nginx can\'t quote safely';
+		} elseif ( $limit && strlen( $path ) > $limit ) {
+			$skipped[ $path ] = sprintf( 'its %d bytes are more than the %d that map_hash_bucket_size %d holds', strlen( $path ), $limit, $bucket_size );
+		} else {
+			$map[ $path ]                  = $url;
+			$same[ strtolower( $path ) ][] = $path;
+		}
+	}
+
+	foreach ( $same as $paths ) {
+		if ( count( $paths ) < 2 ) {
 			continue;
 		}
+		$one_article = 1 === count( array_unique( array_map( static fn( string $path ): string => $map[ $path ], $paths ) ) );
+		foreach ( $paths as $index => $path ) {
+			if ( $one_article && 0 === $index ) {
+				continue;
+			}
+			$skipped[ $path ] = $one_article
+				? sprintf( 'nginx ignores letter case, so the line for %s serves it too', $paths[0] )
+				: sprintf( 'it differs only in letter case from %s, which belongs to another article, and nginx can\'t tell them apart', $paths[ 0 === $index ? 1 : 0 ] );
+			unset( $map[ $path ] );
+		}
+	}
+	ksort( $skipped, SORT_STRING );
+	return array(
+		'map'     => $map,
+		'skipped' => $skipped,
+	);
+}
+
+/**
+ * The PDF map as an nginx map block: $variable is the Link header naming the file's article as its
+ * canonical page, and empty for other files (nginx then sends no Link header). Only what nginx
+ * accepts is written (tala_seo_pdf_canonicals_for_nginx()), and the map says which
+ * map_hash_bucket_size its longest path needs.
+ *
+ * @param array<string, string> $canonicals  Path => article URL.
+ * @param string                $variable    The nginx variable's name, without "$".
+ * @param int                   $bucket_size nginx's map_hash_bucket_size, or 0 when it isn't known.
+ * @return string
+ */
+function tala_seo_pdf_canonicals_nginx( $canonicals, $variable, $bucket_size = 0 ) {
+	$lines   = array();
+	$longest = 0;
+	foreach ( tala_seo_pdf_canonicals_for_nginx( $canonicals, $bucket_size )['map'] as $path => $url ) {
 		$lines[] = sprintf( "    \"%s\" '<%s>; rel=\"canonical\"';", $path, $url );
+		$longest = max( $longest, strlen( (string) $path ) );
 	}
 	return '# The canonical article of each PDF, from `wp tala-seo pdf-canonicals` (' . count( $lines ) . " PDFs).\n"
 		. "# Use it in the site's PDF location: add_header Link \$$variable always;\n"
+		. ( $lines ? sprintf( "# The longest path has %d bytes: nginx's http block needs \"map_hash_bucket_size %d;\" or more.\n", $longest, tala_seo_nginx_map_bucket_size( $longest ) ) : '' )
 		. "map \$uri \$$variable {\n    default \"\";\n" . implode( "\n", $lines ) . ( $lines ? "\n" : '' ) . "}\n";
 }

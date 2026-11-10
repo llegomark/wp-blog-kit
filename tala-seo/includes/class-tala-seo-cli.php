@@ -784,9 +784,20 @@ class Tala_SEO_CLI {
 	 * default: tala_seo_pdf_canonical
 	 * ---
 	 *
+	 * [--bucket-size=<bytes>]
+	 * : The server's map_hash_bucket_size (nginx's http block). nginx refuses a map with a path too
+	 * long for it, so with the size given such paths are left out. Without it every path is written,
+	 * and the map's first lines say which size its longest path needs.
+	 *
+	 * nginx refuses its whole configuration over one line it can't take, so the map leaves out,
+	 * and reports as warnings (on STDERR, not in the map): paths with a character nginx can't quote,
+	 * and paths that differ only in letter case, which nginx reads as the same one (kept once when
+	 * they share an article). Still, have the job that installs the map run `nginx -t` first.
+	 *
 	 * ## EXAMPLES
 	 *
 	 *     wp tala-seo pdf-canonicals --variable=example_pdf_canonical > /etc/nginx/maps/example-pdf-canonicals.conf
+	 *     wp tala-seo pdf-canonicals --variable=example_pdf_canonical --bucket-size=128
 	 *     wp tala-seo pdf-canonicals --format=table
 	 *
 	 * @subcommand pdf-canonicals
@@ -800,9 +811,16 @@ class Tala_SEO_CLI {
 		if ( ! preg_match( '/^[a-z_][a-z0-9_]*$/i', $variable ) ) {
 			WP_CLI::error( 'The variable name may have only letters, digits and underscores, and may not start with a digit.' );
 		}
+		$bucket = (string) ( $assoc_args['bucket-size'] ?? '0' );
+		if ( ! ctype_digit( $bucket ) ) {
+			WP_CLI::error( 'The bucket size is a number of bytes, such as 128.' );
+		}
 		$canonicals = tala_seo_pdf_canonicals();
 		if ( 'nginx' === $format ) {
-			WP_CLI::line( rtrim( tala_seo_pdf_canonicals_nginx( $canonicals, $variable ) ) );
+			foreach ( tala_seo_pdf_canonicals_for_nginx( $canonicals, (int) $bucket )['skipped'] as $path => $why ) {
+				WP_CLI::warning( sprintf( 'Left out %s: %s.', $path, $why ) );
+			}
+			WP_CLI::line( rtrim( tala_seo_pdf_canonicals_nginx( $canonicals, $variable, (int) $bucket ) ) );
 			return;
 		}
 		$rows = array();

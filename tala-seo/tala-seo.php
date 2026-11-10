@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Tala SEO
  * Description:       Lean SEO for blogs: titles, meta descriptions, canonicals, Open Graph, JSON-LD structured data (articles, YouTube videos, events, courses, FAQ and how-to), visible breadcrumbs, sitemap and robots.txt tuning, and a publish check that blocks posts without a meta description or featured image.
- * Version:           1.19.0
+ * Version:           1.20.0
  * Requires at least: 7.0
  * Requires PHP:      8.5
  * Author:            Edventure
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const TALA_SEO_VERSION = '1.19.0';
+const TALA_SEO_VERSION = '1.20.0';
 const TALA_SEO_FILE    = __FILE__;
 
 // Post meta keys. The leading underscore hides them from the Custom Fields box.
@@ -61,6 +61,7 @@ require __DIR__ . '/includes/sitemap.php';
 require __DIR__ . '/includes/publish-guard.php';
 require __DIR__ . '/includes/users.php';
 require __DIR__ . '/includes/redirects.php';
+require __DIR__ . '/includes/upgrade.php';
 
 if ( is_admin() ) {
 	require __DIR__ . '/includes/admin.php';
@@ -110,6 +111,13 @@ function tala_seo_register_meta(): void {
 		return user_can( $user_id, 'edit_post', $post_id );
 	};
 
+	// The redirect and the canonical point the post elsewhere, so they are for people who publish
+	// (tala_seo_can_set_target()). WordPress asks this for every way in: the REST API, custom fields
+	// and XML-RPC.
+	$can_point = static function ( $allowed, $meta_key, $post_id, $user_id ) {
+		return tala_seo_can_set_target( (int) $user_id, (int) $post_id );
+	};
+
 	foreach ( tala_seo_post_types() as $type ) {
 		register_post_meta(
 			$type,
@@ -144,7 +152,7 @@ function tala_seo_register_meta(): void {
 				'default'           => '',
 				'show_in_rest'      => true,
 				'sanitize_callback' => 'tala_seo_sanitize_url',
-				'auth_callback'     => $can_edit,
+				'auth_callback'     => $can_point,
 			)
 		);
 		register_post_meta(
@@ -169,7 +177,7 @@ function tala_seo_register_meta(): void {
 				'default'           => '',
 				'show_in_rest'      => true,
 				'sanitize_callback' => 'tala_seo_sanitize_redirect',
-				'auth_callback'     => $can_edit,
+				'auth_callback'     => $can_point,
 			)
 		);
 		register_post_meta(
@@ -224,6 +232,23 @@ function tala_seo_register_meta(): void {
 	// The link-preview crop (og:image): 1.91:1, the shape Facebook, LinkedIn, X and messaging apps
 	// show. Featured images of at least 1200 × 675 get it along with Google's three.
 	add_image_size( 'tala-seo-share', 1200, 630, true );
+}
+
+add_filter( 'block_type_metadata', 'tala_seo_block_version' );
+
+/**
+ * The plugin's blocks carry the plugin's version, which WordPress puts in the address of their
+ * styles (their editor scripts take it in index.asset.php): a version kept in each block.json
+ * would have to be raised by hand whenever a block's files change, and stays behind when it isn't.
+ *
+ * @param mixed $metadata The block's block.json (an array, unless another filter broke it).
+ * @return mixed
+ */
+function tala_seo_block_version( $metadata ) {
+	if ( is_array( $metadata ) && is_string( $metadata['name'] ?? null ) && str_starts_with( $metadata['name'], 'tala-seo/' ) ) {
+		$metadata['version'] = TALA_SEO_VERSION;
+	}
+	return $metadata;
 }
 
 register_activation_hook( __FILE__, 'tala_seo_activate' );

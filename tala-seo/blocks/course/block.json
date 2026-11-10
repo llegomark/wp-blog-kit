@@ -2,7 +2,6 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "tala-seo/course",
-	"version": "1.0.0",
 	"title": "Course",
 	"category": "widgets",
 	"icon": "welcome-learn-more",

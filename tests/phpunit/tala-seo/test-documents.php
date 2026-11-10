@@ -145,6 +145,7 @@ class Test_Tala_SEO_Documents extends Tala_SEO_Test_Case {
 		$this->assertSame(
 			"# The canonical article of each PDF, from `wp tala-seo pdf-canonicals` (2 PDFs).\n"
 			. "# Use it in the site's PDF location: add_header Link \$site_pdf_canonical always;\n"
+			. "# The longest path has 35 bytes: nginx's http block needs \"map_hash_bucket_size 64;\" or more.\n"
 			. "map \$uri \$site_pdf_canonical {\n"
 			. "    default \"\";\n"
 			. "    \"/wp-content/uploads/2021/10/a.pdf\" '<https://example.org/a/>; rel=\"canonical\"';\n"
@@ -153,6 +154,87 @@ class Test_Tala_SEO_Documents extends Tala_SEO_Test_Case {
 			$map
 		);
 		$this->assertStringEndsWith( "map \$uri \$x {\n    default \"\";\n}\n", tala_seo_pdf_canonicals_nginx( array(), 'x' ) );
+	}
+
+	/**
+	 * The map holds no path twice: nginx reads a map's paths without regard to letter case and
+	 * refuses one that repeats a path, which would stop the server's configuration from loading.
+	 * Paths that differ only in case are written once when they share an article, and left out when
+	 * they don't (nginx couldn't tell which file is asked for); either way the command says so.
+	 */
+	public function test_nginx_map_has_no_path_twice(): void {
+		$safe = tala_seo_pdf_canonicals_for_nginx(
+			array(
+				'/wp-content/uploads/2021/10/Report.pdf' => 'https://example.org/first/',
+				'/wp-content/uploads/2021/10/report.pdf' => 'https://example.org/second/',
+				'/wp-content/uploads/2021/10/Same.pdf'   => 'https://example.org/same/',
+				'/wp-content/uploads/2021/10/same.PDF'   => 'https://example.org/same/',
+				'/wp-content/uploads/2021/10/alone.pdf'  => 'https://example.org/alone/',
+				'/wp-content/uploads/2021/10/b$c.pdf'    => 'https://example.org/b/',
+			)
+		);
+		$this->assertSame(
+			array(
+				'/wp-content/uploads/2021/10/Same.pdf'  => 'https://example.org/same/',
+				'/wp-content/uploads/2021/10/alone.pdf' => 'https://example.org/alone/',
+			),
+			$safe['map']
+		);
+		$this->assertSame(
+			array(
+				'/wp-content/uploads/2021/10/Report.pdf',
+				'/wp-content/uploads/2021/10/b$c.pdf',
+				'/wp-content/uploads/2021/10/report.pdf',
+				'/wp-content/uploads/2021/10/same.PDF',
+			),
+			array_keys( $safe['skipped'] )
+		);
+		$this->assertStringContainsString( 'another article', $safe['skipped']['/wp-content/uploads/2021/10/Report.pdf'] );
+		$this->assertStringContainsString( 'another article', $safe['skipped']['/wp-content/uploads/2021/10/report.pdf'] );
+		$this->assertStringContainsString( '/wp-content/uploads/2021/10/Same.pdf', $safe['skipped']['/wp-content/uploads/2021/10/same.PDF'], 'Names the line that covers it.' );
+
+		$map = tala_seo_pdf_canonicals_nginx(
+			array(
+				'/wp-content/uploads/2021/10/Report.pdf' => 'https://example.org/first/',
+				'/wp-content/uploads/2021/10/report.pdf' => 'https://example.org/second/',
+				'/wp-content/uploads/2021/10/alone.pdf'  => 'https://example.org/alone/',
+			),
+			'x'
+		);
+		$this->assertStringNotContainsStringIgnoringCase( 'report.pdf', $map );
+		$this->assertStringContainsString( '(1 PDFs)', $map );
+	}
+
+	/**
+	 * The map fits the server: nginx also refuses a map with a path too long for its
+	 * map_hash_bucket_size. The map says which size its longest path needs, and with the server's
+	 * size given, longer paths are left out.
+	 */
+	public function test_nginx_map_fits_the_bucket_size(): void {
+		$this->assertSame( 46, tala_seo_nginx_map_key_limit( 64 ) );
+		$this->assertSame( 110, tala_seo_nginx_map_key_limit( 100 ), 'nginx rounds the size up to its 64-byte lines.' );
+		$this->assertSame( 494, tala_seo_nginx_map_key_limit( 512 ) );
+		$this->assertSame( 64, tala_seo_nginx_map_bucket_size( 46 ) );
+		$this->assertSame( 128, tala_seo_nginx_map_bucket_size( 47 ) );
+		$this->assertSame( 256, tala_seo_nginx_map_bucket_size( 204 ) );
+
+		$short = '/wp-content/uploads/2021/10/a.pdf';
+		$long  = '/wp-content/uploads/2021/10/' . str_repeat( 'n', 28 ) . '.pdf'; // 60 bytes.
+		$both  = array(
+			$short => 'https://example.org/a/',
+			$long  => 'https://example.org/long/',
+		);
+		$this->assertSame( 60, strlen( $long ) );
+
+		$this->assertSame( $both, tala_seo_pdf_canonicals_for_nginx( $both )['map'], 'Without the server\'s size, every path is kept.' );
+		$this->assertStringContainsString( "# The longest path has 60 bytes: nginx's http block needs \"map_hash_bucket_size 128;\" or more.\n", tala_seo_pdf_canonicals_nginx( $both, 'x' ) );
+
+		$fitted = tala_seo_pdf_canonicals_for_nginx( $both, 64 );
+		$this->assertSame( array( $short => 'https://example.org/a/' ), $fitted['map'] );
+		$this->assertSame( array( $long ), array_keys( $fitted['skipped'] ) );
+		$this->assertStringContainsString( '60 bytes', $fitted['skipped'][ $long ] );
+		$this->assertStringNotContainsString( $long, tala_seo_pdf_canonicals_nginx( $both, 'x', 64 ) );
+		$this->assertSame( $both, tala_seo_pdf_canonicals_for_nginx( $both, 128 )['map'] );
 	}
 
 	/**
@@ -179,7 +261,33 @@ class Test_Tala_SEO_Documents extends Tala_SEO_Test_Case {
 			WP_CLI::$tables[0]['items']
 		);
 
-		$this->expectException( RuntimeException::class );
-		( new Tala_SEO_CLI() )->pdf_canonicals( array(), array( 'variable' => 'site-pdf' ) );
+		// What the map leaves out is reported as warnings (on STDERR, so a map written to a file
+		// holds the map only), and stays in the table.
+		$upper = $this->pdf( 'Guide.pdf' );
+		$lower = $this->pdf( 'guide.pdf' );
+		$this->article( "<p><a href=\"$upper\">Guide</a></p>" );
+		$this->article( "<p><a href=\"$lower\">Guide</a></p>" );
+		WP_CLI::reset();
+		( new Tala_SEO_CLI() )->pdf_canonicals( array(), array( 'bucket-size' => '512' ) );
+		$lines    = implode( "\n", array_column( array_filter( WP_CLI::$messages, static fn( $message ) => 'line' === $message[0] ), 1 ) );
+		$warnings = array_column( array_filter( WP_CLI::$messages, static fn( $message ) => 'warning' === $message[0] ), 1 );
+		$this->assertStringNotContainsStringIgnoringCase( 'guide.pdf', $lines );
+		$this->assertStringContainsString( 'module.pdf', $lines );
+		$this->assertCount( 2, $warnings );
+		$this->assertStringContainsString( '/wp-content/uploads/2021/10/Guide.pdf', $warnings[0] );
+		$this->assertStringContainsString( '/wp-content/uploads/2021/10/guide.pdf', $warnings[1] );
+
+		WP_CLI::reset();
+		( new Tala_SEO_CLI() )->pdf_canonicals( array(), array( 'format' => 'table' ) );
+		$this->assertCount( 3, WP_CLI::$tables[0]['items'], 'The table lists every PDF.' );
+
+		foreach ( array( array( 'variable' => 'site-pdf' ), array( 'bucket-size' => 'big' ) ) as $options ) {
+			try {
+				( new Tala_SEO_CLI() )->pdf_canonicals( array(), $options );
+				$this->fail( 'Should have been turned down: ' . wp_json_encode( $options ) );
+			} catch ( RuntimeException $error ) {
+				$this->assertNotSame( '', $error->getMessage() );
+			}
+		}
 	}
 }

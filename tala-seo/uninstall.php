@@ -2,7 +2,7 @@
 /**
  * Runs when Tala SEO is deleted from Plugins (not on deactivation).
  *
- * Removes the plugin's settings, the one-save "minor edit" flags, the remembered old addresses
+ * Removes the plugin's settings, the note of its version, the one-save "minor edit" flags, the remembered old addresses
  * of pages, terms and author pages (they only serve the plugin's redirects), the "share crop tried" markers and
  * the video titles fetched from YouTube.
  * The image crops stay: they are ordinary files of the media library. Keeps what editors wrote (SEO
@@ -17,6 +17,7 @@
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 delete_option( 'tala_seo' );
+delete_option( 'tala_seo_version' );
 delete_post_meta_by_key( '_tala_seo_minor_edit' );
 delete_post_meta_by_key( '_tala_seo_old_path' );
 delete_post_meta_by_key( '_tala_seo_share_crop_tried' );

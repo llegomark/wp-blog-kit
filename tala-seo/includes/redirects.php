@@ -348,7 +348,7 @@ function tala_seo_redirect_post(): void {
 		return;
 	}
 	// wp_redirect(), not wp_safe_redirect(): the target may be on another site on purpose, and only
-	// people who may edit the post can set it.
+	// people who may edit the post once it is published can set it (tala_seo_can_set_target()).
 	wp_redirect( $target, 301, 'Tala SEO' ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- see above.
 	exit;
 }

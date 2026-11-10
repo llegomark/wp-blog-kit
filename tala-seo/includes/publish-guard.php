@@ -113,8 +113,12 @@ function tala_seo_rest_check( $prepared, $request ) {
 		}
 		return $prepared;
 	}
-	$id       = (int) ( $prepared->ID ?? 0 );
-	$type     = $id ? get_post_type( $id ) : ( $prepared->post_type ?? '' );
+	$id     = (int) ( $prepared->ID ?? 0 );
+	$type   = $id ? get_post_type( $id ) : ( $prepared->post_type ?? '' );
+	$denied = tala_seo_rest_check_targets( $request, $id, (string) $type );
+	if ( $denied ) {
+		return $denied;
+	}
 	$current  = $id ? get_post_status( $id ) : 'draft';
 	$target   = $prepared->post_status ?? $current;
 	$was_live = in_array( $current, array( 'publish', 'future' ), true );
@@ -130,7 +134,13 @@ function tala_seo_rest_check( $prepared, $request ) {
 
 	$touches_description = array_key_exists( TALA_SEO_DESCRIPTION, $meta );
 	$touches_image       = $request->has_param( 'featured_media' );
-	// A live post is only stopped when this save breaks something, so old posts stay editable.
+	// A live post is only stopped when this save breaks something, so old posts stay editable. What
+	// a save sends along unchanged breaks nothing: the block editor sends every meta field when one
+	// of them changes, so an old post without a description could otherwise save none of them.
+	if ( $was_live ) {
+		$touches_description = $touches_description && tala_seo_changes_description( $id, $meta[ TALA_SEO_DESCRIPTION ] );
+		$touches_image       = $touches_image && (int) get_post_thumbnail_id( $id ) !== (int) $request['featured_media'];
+	}
 	if ( $was_live && ! $touches_description && ! $touches_image ) {
 		return $prepared;
 	}
@@ -173,11 +183,61 @@ function tala_seo_rest_check( $prepared, $request ) {
 	);
 }
 
+/**
+ * The redirect and canonical fields in a REST save by someone who may not set them
+ * (tala_seo_can_set_target()). A save that changes one is refused here, before anything is written:
+ * WordPress itself would save the post first and refuse the field afterwards. One sent along as it
+ * is, as the block editor sends every meta field whenever one changes, is taken out of the request,
+ * so the rest is saved; left in, WordPress would refuse a field that has no stored value yet.
+ *
+ * @param WP_REST_Request $request   Request.
+ * @param int             $post_id   Post ID, or 0 for a new post.
+ * @param string          $post_type Post type.
+ * @return WP_Error|null
+ */
+function tala_seo_rest_check_targets( $request, $post_id, $post_type ) {
+	$meta = $request->get_param( 'meta' );
+	if ( ! is_array( $meta ) || tala_seo_can_set_target( get_current_user_id(), $post_id, $post_type ) ) {
+		return null;
+	}
+	foreach ( array( TALA_SEO_REDIRECT, TALA_SEO_CANONICAL ) as $key ) {
+		if ( ! array_key_exists( $key, $meta ) ) {
+			continue;
+		}
+		$value  = $meta[ $key ] ?? '';
+		$stored = $post_id ? (string) get_post_meta( $post_id, $key, true ) : '';
+		if ( ! is_string( $value ) || ( $value !== $stored && tala_seo_sanitize_url( $value ) !== $stored ) ) {
+			return new WP_Error(
+				'tala_seo_cannot_set_target',
+				__( 'Only people who can publish may set or change a redirect or a canonical URL. Ask an editor to add it.', 'tala-seo' ),
+				array( 'status' => rest_authorization_required_code() )
+			);
+		}
+		unset( $meta[ $key ] );
+	}
+	$request->set_param( 'meta', $meta );
+	return null;
+}
+
+/**
+ * Whether a description sent with a save differs from the post's own. One that isn't text always
+ * does: it is no description, whatever the post has.
+ *
+ * @param int   $post_id Post ID.
+ * @param mixed $value   The description as sent.
+ * @return bool
+ */
+function tala_seo_changes_description( $post_id, $value ) {
+	$stored = (string) get_post_meta( $post_id, TALA_SEO_DESCRIPTION, true );
+	return ! is_string( $value ) || ( $value !== $stored && tala_seo_sanitize_line( $value ) !== $stored );
+}
+
 add_filter( 'wp_insert_post_data', 'tala_seo_guard_insert', 20, 2 );
 
 /**
- * Every other way of saving (Quick Edit, WP-CLI, plugins): keep the post as a draft and say why.
- * Also keeps the modified date for minor edits.
+ * Every other way of saving (Quick Edit, WP-CLI, plugins): the post isn't published and keeps the
+ * status it had (a new one becomes a draft), and the person saving is told why. Also keeps the
+ * modified date for minor edits.
  *
  * @param array<string, mixed> $data    Sanitized post data.
  * @param array<string, mixed> $postarr Raw post data.
@@ -214,15 +274,47 @@ function tala_seo_guard_insert( $data, $postarr ) {
 		return $data;
 	}
 
-	$data['post_status'] = 'draft';
-	/* translators: %s: list of things to fix. */
-	$message = sprintf( __( 'Kept as a draft. %s', 'tala-seo' ), implode( ' ', $problems ) );
+	// The post stays where it was: one waiting for review keeps its place in the queue, and a private
+	// one stays private. A new post, or one taken out of the trash, becomes a draft.
+	$stored              = $id ? (string) get_post_status( $id ) : '';
+	$data['post_status'] = in_array( $stored, array( '', 'auto-draft', 'trash', 'inherit', 'new' ), true ) ? 'draft' : $stored;
+
+	// WordPress dated the post when it was asked to publish it, before this filter ran. A draft or a
+	// post waiting for review has an open date, set when it goes live; kept, the date of this try
+	// would become its publish date whenever it is published later. A date the author gave stays
+	// (the same test WordPress makes: no GMT date was passed in).
+	$date_given = (string) ( $postarr['post_date_gmt'] ?? '' );
+	if ( in_array( $date_given, array( '', '0000-00-00 00:00:00' ), true )
+		&& in_array( $data['post_status'], get_post_stati( array( 'date_floating' => true ) ), true ) ) {
+		$data['post_date_gmt'] = '0000-00-00 00:00:00';
+	}
+
+	$message = sprintf( tala_seo_guard_kept_as( $data['post_status'] ), implode( ' ', $problems ) );
 	if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		WP_CLI::warning( $message );
 	} elseif ( get_current_user_id() ) {
 		set_transient( 'tala_seo_notice_' . get_current_user_id(), $message, 120 );
 	}
 	return $data;
+}
+
+/**
+ * What a refused publish says about the status the post keeps, with %s for the things to fix.
+ *
+ * @param string $status The status the post keeps.
+ * @return string
+ */
+function tala_seo_guard_kept_as( $status ) {
+	return match ( $status ) {
+		/* translators: %s: list of things to fix. */
+		'draft'   => __( 'Kept as a draft. %s', 'tala-seo' ),
+		/* translators: %s: list of things to fix. */
+		'pending' => __( 'Kept as pending review. %s', 'tala-seo' ),
+		/* translators: %s: list of things to fix. */
+		'private' => __( 'Kept private. %s', 'tala-seo' ),
+		/* translators: %s: list of things to fix. */
+		default   => __( 'Not published. %s', 'tala-seo' ),
+	};
 }
 
 /**
@@ -240,7 +332,7 @@ function tala_seo_reset_minor_edit( $post ): void {
 add_action( 'admin_notices', 'tala_seo_guard_notice' );
 
 /**
- * Shows why a Quick Edit "Publish" was kept as a draft.
+ * Shows why a Quick Edit "Publish" wasn't published.
  */
 function tala_seo_guard_notice(): void {
 	$key     = 'tala_seo_notice_' . get_current_user_id();

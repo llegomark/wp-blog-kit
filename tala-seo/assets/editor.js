@@ -191,6 +191,22 @@
 	}
 
 	/**
+	 * An address in a form that is the same for the same page: no scheme, no "www.", no trailing
+	 * slash, host in lower case.
+	 *
+	 * @param {string} link Address.
+	 * @return {string} The address to compare.
+	 */
+	function sameAddress( link ) {
+		try {
+			const url = new URL( link );
+			return url.host.toLowerCase().replace( /^www\./, '' ) + url.pathname.replace( /\/+$/, '' ) + url.search;
+		} catch {
+			return String( link );
+		}
+	}
+
+	/**
 	 * Requirements (enforced on publish) and Google recommendations (advice only).
 	 *
 	 * @param {Object} s The editor state from useSeo().
@@ -209,10 +225,28 @@
 				label: __( 'The whole site is hidden from search engines (Settings → Reading)', 'tala-seo' ),
 			} );
 		}
-		if ( String( s.meta[ KEYS.redirect ] || '' ).trim() ) {
+		// Where the post points, with the address: whoever publishes a post someone else wrote sees it
+		// here, in the checklist shown on Publish, without opening the fields.
+		const redirect = String( s.meta[ KEYS.redirect ] || '' ).trim();
+		if ( redirect ) {
 			advice.push( {
 				ok: false,
-				label: __( 'This post redirects to another address, so visitors won\'t see it', 'tala-seo' ),
+				label: sprintf(
+					/* translators: %s: address. */
+					__( 'This post redirects to %s, so visitors won\'t see it', 'tala-seo' ),
+					redirect,
+				),
+			} );
+		}
+		const canonical = String( s.meta[ KEYS.canonical ] || '' ).trim();
+		if ( canonical && sameAddress( canonical ) !== sameAddress( s.link ) ) {
+			advice.push( {
+				ok: false,
+				label: sprintf(
+					/* translators: %s: address. */
+					__( 'Search engines are told the original is at %s (canonical URL), not here', 'tala-seo' ),
+					canonical,
+				),
 			} );
 		}
 		if ( needed.indexOf( 'description' ) !== -1 ) {
@@ -548,7 +582,9 @@
 					s.set( KEYS.noindex, value );
 				},
 			} ),
-			el( TextControl, {
+			// Both point the post elsewhere, so they are for people who publish; the server refuses
+			// them from anyone else.
+			cfg.canSetTarget && el( TextControl, {
 				__nextHasNoMarginBottom: true,
 				__next40pxDefaultSize: true,
 				type: 'url',
@@ -560,7 +596,7 @@
 					s.set( KEYS.canonical, value );
 				},
 			} ),
-			el( TextControl, {
+			cfg.canSetTarget && el( TextControl, {
 				__nextHasNoMarginBottom: true,
 				__next40pxDefaultSize: true,
 				type: 'url',
