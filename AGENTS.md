@@ -22,7 +22,7 @@ Everything must follow official WordPress practice, as checked by WordPress's ow
 
 ```bash
 composer fix && composer check    # WPCS, PHPStan level 8, Plugin Check, Theme Check (exits 1 on any finding)
-npm run lint                      # Stylelint, ESLint, theme.json/block.json schemas, patterns, block markup, plugin readme
+npm run lint                      # Stylelint, ESLint, theme.json/block.json schemas, patterns, block markup, plugin readme, versions
 composer test                     # PHPUnit integration tests on WordPress's test framework
 npm run test:e2e                  # browser tests on the local site: pages, menu, layout, logo, axe, editor
 ```
@@ -31,8 +31,10 @@ A change in behaviour comes with a test in `tests/phpunit/` or `tests/e2e/` that
 (check that it does). The tests cover the pages, the JSON-LD (BlogPosting, BreadcrumbList,
 ProfilePage, WebSite and Organization on the home page only, VideoObject, Event, Course and its
 ItemList, FAQPage, HowTo),
-the publish check, the editor's validation of the templates, the theme's landmarks and colour and
-typography presets, and the plugin's blocks in the editor. Then, on the local site (http://127.0.0.1:8080):
+the publish check, who may set a redirect or canonical, the editor's validation of the templates,
+the theme's landmarks and colour and typography presets, the plugin's blocks in the editor, Tala Ads
+in the browser with every ad service stood in for (`tests/e2e/ads.spec.mjs`: a change to its layout
+rules, units or scripts gets a test there), and Tala Guard's check in the comment form. Then, on the local site (http://127.0.0.1:8080):
 - `wp-content/debug.log` stays clean
 - for visible changes: Lighthouse on a mobile article page (Accessibility, Best Practices, SEO)
 - for theme changes: WordPress's Theme Unit Test on `dev/unit-test-site.sh` (the theme alone, without
@@ -86,8 +88,9 @@ typography presets, and the plugin's blocks in the editor. Then, on the local si
   server, accepted only for `success`, the `comment` action and the site's own hostnames, and the check
   fails closed. The secret key is never printed back or sent anywhere but Siteverify. Don't proxy or
   cache Turnstile's script, and don't check comments that don't come through the public form.
-- When you change the plugin or theme version, bump `Version:`, `Stable tag:` (in readme.txt)
-  and the changelog, then run `./build.sh`. Once the push passes the checks, `release.yml` publishes
+- When you change the plugin or theme version, bump `Version:`, the plugin's version constant
+  (`TALA_SEO_VERSION` and the like), `Stable tag:` (in readme.txt) and the changelog
+  (`npm run lint:versions` checks that they agree), then run `./build.sh`. Once the push passes the checks, `release.yml` publishes
   the new version as a GitHub release (the zip, its SHA-256, a build attestation, the changelog entry
   as notes). Never move or reuse a release tag: a released version is fixed; release a new one. Add an upgrade notice (under 300 characters) when
   updating needs the site owner to do something or know something.
@@ -116,6 +119,12 @@ commits to throwaway branches to read the secrets, then published malicious rele
   uses its own token, and deploys run from the maintainer's machine. Keep it that way.
 - Secret scanning with push protection is on; Dependabot keeps the pins and tools current, with a
   14-day cooldown on new releases.
+
+## Specs and plans
+
+Design specs, implementation plans and audit notes stay out of this repository (it is public):
+they name the sites the kit runs on, and a plan for a security fix describes the gap before the fix
+is released. Keep them in a private folder; `docs/superpowers/` and `plans/` are in `.gitignore`.
 
 ## Commits
 
