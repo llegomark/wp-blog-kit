@@ -3,3 +3,7 @@ dist/
 vendor/
 node_modules/
 .cache/
+
+# Design specs and implementation plans are kept outside this public repository.
+docs/superpowers/
+plans/
