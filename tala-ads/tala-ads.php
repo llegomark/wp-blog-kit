@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Tala Ads
  * Description:       Google AdSense Auto ads with optional In-article and Multiplex units, Google Tag Manager and Google's consent and ad blocking recovery messages on every page, each loaded once and set up with IDs, plus Google search in place of WordPress's search and optional Innity ads (a box and Universal tags, below the AdSense ads). Works with any theme.
- * Version:           1.9.7
+ * Version:           1.9.8
  * Requires at least: 7.0
  * Requires PHP:      8.5
  * Author:            Edventure
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-const TALA_ADS_VERSION = '1.9.7';
+const TALA_ADS_VERSION = '1.9.8';
 const TALA_ADS_FILE    = __FILE__;
 
 require __DIR__ . '/includes/settings.php';

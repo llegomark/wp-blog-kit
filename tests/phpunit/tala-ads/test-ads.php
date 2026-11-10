@@ -436,7 +436,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		the_post();
 
 		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
-		$this->assertMatchesRegularExpression( '#<p[^>]*>Seven\.</p>\s*<div class="tala-ads-innity" style="min-height:250px;[^"]*text-align:center"><div id="div-ad-innity-103011/0" style="display:inline-block"></div></div>$#', $content, 'After the text, not in it.' );
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Seven\.</p>\s*<div class="tala-ads-innity" style="min-height:250px;[^"]*text-align:center"><div id="div-ad-innity-103011/0" style="display:inline-block;vertical-align:top"></div></div>$#', $content, 'After the text, not in it.' );
 		$this->assertSame( 1, substr_count( $content, 'tala-ads-innity' ) );
 		$this->assertStringNotContainsString( 'tala-ads-innity', apply_filters( 'the_content', 'Again' ), 'One box per page.' );
 
@@ -751,6 +751,47 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * A theme or plugin that shows the post's excerpt before its text has WordPress cut one from the
+	 * text, which runs the content's filters once more. The units belong to the article, not to that
+	 * pass, where their markup is stripped: each still comes once, in the text.
+	 */
+	public function test_units_survive_an_automatic_excerpt(): void {
+		update_option(
+			'tala_ads',
+			array_merge(
+				self::ALL,
+				array(
+					'in_article'     => '3203298627',
+					'multiplex'      => '2403531897',
+					'innity_desktop' => '103008',
+				)
+			)
+		);
+		$id = $this->post(
+			array(
+				'post_content' => $this->paragraphs( 'One.', 'Two.', 'Three.' ),
+				'post_excerpt' => '',
+			)
+		);
+		// No excerpt written for it, and no meta description for Tala SEO to offer as one: WordPress
+		// cuts the excerpt from the text, as on a site with Tala Ads alone.
+		delete_post_meta( $id, TALA_SEO_DESCRIPTION );
+		$this->go_to( get_permalink( $id ) );
+		the_post();
+
+		$excerpt = get_the_excerpt();
+		$this->assertStringContainsString( 'One.', $excerpt );
+		$this->assertStringNotContainsString( 'adsbygoogle', $excerpt );
+
+		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
+		$this->assertSame( 1, substr_count( $content, 'class="tala-ads-in-article"' ), 'The In-article unit.' );
+		$this->assertSame( 1, substr_count( $content, 'class="tala-ads-multiplex"' ), 'The Multiplex unit.' );
+		$this->assertSame( 1, substr_count( $content, 'class="tala-ads-innity"' ), 'The Innity box.' );
+		$this->assertSame( 1, substr_count( $content, 'data-innity-slot="in-read"' ), 'The place for Innity\'s in-read ad.' );
+		$this->assertSame( 2, substr_count( get_echo( 'wp_print_footer_scripts' ), '(adsbygoogle=window.adsbygoogle||[]).push({});' ), 'One request for each unit on the page.' );
+	}
+
+	/**
 	 * No In-article or Multiplex ad without its ID or the publisher ID, on pages, on lists of posts,
 	 * on a password-protected post, or on a page without ads; no In-article ad on a post with
 	 * nothing after its second paragraph.
@@ -970,6 +1011,34 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->go_to( get_permalink( $page ) );
 		the_post();
 		$this->assertMatchesRegularExpression( '#Search the site\.</p>\s*<div class="tala-ads-google-search" data-hint="Type here to search"><div class="gcse-search" data-queryParameterName="q"></div></div>#', apply_filters( 'the_content', get_post_field( 'post_content', $page ) ) );
+	}
+
+	/**
+	 * The same on the results page: an excerpt cut from its text before the text is shown doesn't
+	 * take Google's search box with it, with or without a Search block in the page.
+	 */
+	public function test_results_page_survives_an_automatic_excerpt(): void {
+		$with_block = '<!-- wp:paragraph --><p>Did you find it?</p><!-- /wp:paragraph -->' . "\n\n" . '<!-- wp:search {"label":"Search"} /-->';
+		foreach ( array( $with_block, '<!-- wp:paragraph --><p>Search the site.</p><!-- /wp:paragraph -->' ) as $text ) {
+			$page = $this->search_page( $text );
+			// No excerpt written for it, and no meta description for Tala SEO to offer as one.
+			wp_update_post(
+				array(
+					'ID'           => $page,
+					'post_excerpt' => '',
+				)
+			);
+			delete_post_meta( $page, TALA_SEO_DESCRIPTION );
+			// A new page load: nothing placed yet.
+			unset( $GLOBALS['wp_actions']['tala_ads_search_placed'] );
+			$this->go_to( get_permalink( $page ) );
+			the_post();
+			$excerpt = get_the_excerpt();
+			$this->assertNotSame( '', $excerpt );
+			$this->assertStringNotContainsString( 'gcse-search', $excerpt );
+			$content = apply_filters( 'the_content', get_post_field( 'post_content', $page ) );
+			$this->assertSame( 1, substr_count( $content, '<div class="gcse-search" data-queryParameterName="q"></div>' ) );
+		}
 	}
 
 	/**

@@ -344,6 +344,18 @@ function tala_ads_innity_universal(): void {
 }
 
 /**
+ * Whether the content is being filtered only to cut an automatic excerpt from it. WordPress runs
+ * the_content for that too (wp_trim_excerpt()), also for the post the request shows, in the main
+ * loop, when a theme or plugin shows its excerpt before its text. Nothing is placed in that pass:
+ * the excerpt strips the markup, and the place would be used up before the article is shown.
+ *
+ * @return bool
+ */
+function tala_ads_cutting_excerpt() {
+	return doing_filter( 'get_the_excerpt' );
+}
+
+/**
  * Whether the content being filtered is the post or page the request shows, in the main loop, with
  * Innity set up and ads allowed.
  *
@@ -351,7 +363,8 @@ function tala_ads_innity_universal(): void {
  */
 function tala_ads_innity_here() {
 	return '' !== tala_ads_settings()['innity_key'] && is_singular( tala_ads_post_types() ) && in_the_loop()
-		&& is_main_query() && get_the_ID() === get_queried_object_id() && ! post_password_required() && tala_ads_innity_allowed();
+		&& is_main_query() && get_the_ID() === get_queried_object_id() && ! tala_ads_cutting_excerpt()
+		&& ! post_password_required() && tala_ads_innity_allowed();
 }
 
 /**
@@ -440,8 +453,11 @@ function tala_ads_innity_box( $content ) {
 		)
 	);
 	tala_ads_innity_loader();
+	// The ad's holder sits at the top of its line (vertical-align:top): on the text's baseline, the
+	// line would add the room letters take below it, about 10 px under a 250 px ad, and the box
+	// would outgrow the space kept for it when the ad arrives.
 	$box = sprintf(
-		'<div class="tala-ads-innity" style="min-height:250px;margin:2em auto;text-align:center"><div id="%s" style="display:inline-block"></div></div>',
+		'<div class="tala-ads-innity" style="min-height:250px;margin:2em auto;text-align:center"><div id="%s" style="display:inline-block;vertical-align:top"></div></div>',
 		esc_attr( $target )
 	);
 	return $content . $box;
@@ -480,7 +496,8 @@ function tala_ads_innity_in_read( $content ) {
  */
 function tala_ads_adsense_unit_here() {
 	return '' !== tala_ads_settings()['adsense'] && is_singular( (array) apply_filters( 'tala_ads_unit_post_types', array( 'post' ) ) )
-		&& in_the_loop() && is_main_query() && get_the_ID() === get_queried_object_id() && ! post_password_required() && tala_ads_show_ads();
+		&& in_the_loop() && is_main_query() && get_the_ID() === get_queried_object_id() && ! tala_ads_cutting_excerpt()
+		&& ! post_password_required() && tala_ads_show_ads();
 }
 
 /**

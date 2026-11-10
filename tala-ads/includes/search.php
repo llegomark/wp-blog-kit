@@ -108,14 +108,14 @@ function tala_ads_search_markup( $hint = '' ) {
 
 /**
  * Whether the content being shown is the results page's own, in the main loop, with Google's
- * results not placed yet.
+ * results not placed yet. Not while an automatic excerpt is cut from it (tala_ads_cutting_excerpt()).
  *
  * @return bool
  */
 function tala_ads_search_place_here() {
 	$page = tala_ads_search_page();
 	return $page && is_page( $page ) && in_the_loop() && is_main_query() && get_the_ID() === $page
-		&& doing_filter( 'the_content' ) && ! did_action( 'tala_ads_search_placed' );
+		&& doing_filter( 'the_content' ) && ! tala_ads_cutting_excerpt() && ! did_action( 'tala_ads_search_placed' );
 }
 
 add_filter( 'render_block_core/search', 'tala_ads_search_block', 10, 2 );

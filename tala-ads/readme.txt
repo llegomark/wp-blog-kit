@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.9.7
+Stable tag: 1.9.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,10 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.9.8 =
+* Fixed: with a theme or plugin that shows a post's excerpt before its text, the In-article and Multiplex units, the Innity box, the place for Innity's in-read ad and Google's search box on the results page appear in the text again. WordPress cuts an automatic excerpt from the text by running the text's filters once more, and that pass took the units, which come once per page, and stripped them. Nothing is placed while an excerpt is being cut.
+* Fixed: the Innity box stays at the 250 px kept for it when its ad arrives. The line the ad sat on added about 10 px below it, which moved the text after the box.
 
 = 1.9.7 =
 * Fixed: readers with an ad blocker get the hint in Google's search box again. EasyList blocks every script under a path with "-ads/assets/", which caught the hint's script in the plugin's assets folder; it now loads from js/google-search.js. Google's search box itself was never blocked.
