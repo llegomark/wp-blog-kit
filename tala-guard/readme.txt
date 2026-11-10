@@ -4,7 +4,7 @@ Tags: comments, spam, anti-spam, turnstile, captcha
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,10 @@ Yes, with Cloudflare's test keys (developers.cloudflare.com/turnstile/troublesho
 2. Settings → Discussion: the Turnstile keys, with the secret key saved and not shown.
 
 == Changelog ==
+
+= 1.1.2 =
+* Fixed: with the site key in wp-config.php (`TALA_GUARD_SITE_KEY`) and the secret key saved in Settings → Discussion, saving that screen no longer forgets the secret key and turns the check off. The site key field is shown but not sent, and the save took that for an emptied site key.
+* Fixed: deleting the plugin from a network removes the keys on every site, not only on the site it was deleted from.
 
 = 1.1.1 =
 * Fixed: when the browser can't load Turnstile's script from Cloudflare (no connection, a blocked address), a comment that was sent no longer waits on "Checking that a person is writing" for good. The form says the check couldn't load, and sending the comment again loads the script again. A script that hasn't arrived after ten seconds ends the wait the same way, and the comment still goes if it is sent again and the script then arrives.

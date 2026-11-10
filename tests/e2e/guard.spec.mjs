@@ -10,7 +10,7 @@
  * afterwards.
  */
 import { test, expect } from '@playwright/test';
-import { wp, demoPages, axeViolations } from './utils.mjs';
+import { wp, demoPages, axeViolations, logIn } from './utils.mjs';
 
 const pages = demoPages();
 const SITE_KEY = '1x00000000000000000000AA';
@@ -288,6 +288,26 @@ test.describe( 'Turnstile on the comment form', () => {
 		const ids = commentsWith( text );
 		expect( ids ).toHaveLength( 1 );
 		wp( 'comment', 'delete', ...ids, '--force' );
+	} );
+
+	test( 'with the site key in wp-config.php, saving Settings → Discussion keeps the stored secret', async ( { page } ) => {
+		setKeys( PASSES );
+		wp( 'config', 'set', 'TALA_GUARD_SITE_KEY', SITE_KEY, '--type=constant' );
+		try {
+			await logIn( page );
+			await page.goto( '/wp-admin/options-discussion.php' );
+			await expect( page.locator( '#tala-guard-site-key' ), 'The site key is shown, but can\'t be changed here' ).toBeDisabled();
+			await expect( page.locator( '#tala-guard-site-key' ) ).toHaveValue( SITE_KEY );
+			await expect( page.locator( '#tala-guard-secret-key' ), 'The secret is never shown' ).toHaveValue( '' );
+
+			await Promise.all( [ page.waitForURL( /settings-updated=true/ ), page.locator( '#submit' ).click() ] );
+			const stored = JSON.parse( wp( 'option', 'get', 'tala_guard', '--format=json' ) );
+			expect( stored.secret_key, 'A save that left the secret field empty keeps the secret' ).toBe( PASSES );
+			await expect( page.getByText( 'The check is off.' ) ).toHaveCount( 0 );
+			await expect( page.getByText( 'These are Cloudflare\'s test keys' ) ).toBeVisible();
+		} finally {
+			wp( 'config', 'delete', 'TALA_GUARD_SITE_KEY', '--type=constant' );
+		}
 	} );
 
 	test( 'the widget follows the page\'s colour scheme, as Tala Blog\'s Light/Dark switch sets it', async ( { page } ) => {

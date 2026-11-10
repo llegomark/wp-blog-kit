@@ -229,6 +229,63 @@ class Test_Tala_Guard extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * With the site key in wp-config.php, the form has no site key field to send (it is shown
+	 * disabled). That is no emptied site key: the stored secret stays, a new one replaces it, and the
+	 * stored site key is kept for the day the constant goes.
+	 */
+	public function test_a_site_key_in_wp_config_keeps_the_saved_secret(): void {
+		$saved = array(
+			'site_key'   => self::SITE_KEY,
+			'secret_key' => self::SECRET_KEY,
+		);
+		$this->assertSame( $saved, tala_guard_keys_to_save( array( 'secret_key' => '' ), $saved, true ), 'The secret field left empty.' );
+		$this->assertSame( $saved, tala_guard_keys_to_save( array(), $saved, true ), 'Both keys in wp-config.php: the form sends neither.' );
+		$this->assertSame(
+			array(
+				'site_key'   => self::SITE_KEY,
+				'secret_key' => '0x4AAAAAAANewSecretKeyNewSecretKey00',
+			),
+			tala_guard_keys_to_save( array( 'secret_key' => '0x4AAAAAAANewSecretKeyNewSecretKey00' ), $saved, true ),
+			'A new secret replaces the stored one.'
+		);
+		$this->assertSame(
+			array(
+				'site_key'   => '',
+				'secret_key' => self::SECRET_KEY,
+			),
+			tala_guard_keys_to_save(
+				array( 'secret_key' => self::SECRET_KEY ),
+				array(),
+				true
+			),
+			'A first secret is stored though no site key ever was: the one in wp-config.php is in use.'
+		);
+		$this->assertSame(
+			array(
+				'site_key'   => '',
+				'secret_key' => '',
+			),
+			tala_guard_keys_to_save( array( 'secret_key' => '' ), $saved, false ),
+			'Without the constant, a save without a site key still turns the check off and forgets the secret.'
+		);
+		$this->assertSame(
+			array(
+				'site_key'   => '',
+				'secret_key' => self::SECRET_KEY,
+			),
+			tala_guard_keys_to_save(
+				array(),
+				array(
+					'site_key'   => '"><script>',
+					'secret_key' => self::SECRET_KEY,
+				),
+				true
+			),
+			'A damaged stored site key isn\'t carried along.'
+		);
+	}
+
+	/**
 	 * The settings form never shows the secret key.
 	 */
 	public function test_secret_is_never_shown(): void {
@@ -453,5 +510,55 @@ class Test_Tala_Guard extends Tala_SEO_Test_Case {
 		);
 		$this->assertIsInt( $id );
 		$this->assertSame( array(), $this->requests );
+	}
+
+	/**
+	 * Deleting Tala Guard from Plugins removes the Turnstile keys, and nothing else.
+	 */
+	public function test_uninstall_removes_the_settings(): void {
+		update_option(
+			'tala_guard',
+			array(
+				'site_key'   => self::SITE_KEY,
+				'secret_key' => self::SECRET_KEY,
+			)
+		);
+		$this->uninstall( 'tala-guard' );
+		$this->assertNull( get_option( 'tala_guard', null ) );
+		$this->assertNotSame( '', (string) get_option( 'blogname' ), 'WordPress\'s own settings stay.' );
+	}
+
+	/**
+	 * On a network, the settings of every site go, not only those of the site the plugin was deleted
+	 * from, and the request is left on the site it started on.
+	 *
+	 * @group ms-required
+	 */
+	public function test_uninstall_cleans_every_site_of_a_network(): void {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Runs on a network: composer test:multisite.' );
+		}
+		$here  = get_current_blog_id();
+		$other = self::factory()->blog->create();
+		foreach ( array( $here, $other ) as $site ) {
+			switch_to_blog( $site );
+			update_option(
+				'tala_guard',
+				array(
+					'site_key'   => self::SITE_KEY,
+					'secret_key' => self::SECRET_KEY,
+				)
+			);
+			restore_current_blog();
+		}
+
+		$this->uninstall( 'tala-guard' );
+
+		$this->assertSame( $here, get_current_blog_id(), 'Back on the site it started on.' );
+		foreach ( array( $here, $other ) as $site ) {
+			switch_to_blog( $site );
+			$this->assertNull( get_option( 'tala_guard', null ), "Site $site" );
+			restore_current_blog();
+		}
 	}
 }

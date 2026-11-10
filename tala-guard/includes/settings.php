@@ -69,26 +69,19 @@ function tala_guard_test_keys() {
 }
 
 /**
- * What the settings form saves: the cleaned keys. A secret key field left empty, or filled with
- * something that isn't a key, keeps the saved secret (the form never shows it); an empty site key
- * turns the check off and forgets the secret too.
+ * What the settings form saves: the cleaned keys (tala_guard_keys_to_save()), and a message for a
+ * value that wasn't one.
  *
  * @param mixed $input Submitted values.
  * @return array{site_key:string,secret_key:string}
  */
 function tala_guard_save_settings( $input ) {
-	$input  = is_array( $input ) ? $input : array();
-	$saved  = get_option( 'tala_guard', array() );
-	$saved  = is_array( $saved ) ? $saved : array();
-	$site   = tala_guard_sanitize_site_key( $input['site_key'] ?? '' );
-	$typed  = is_string( $input['secret_key'] ?? null ) ? trim( $input['secret_key'] ) : '';
-	$secret = tala_guard_sanitize_secret_key( $typed );
-	if ( '' === $secret ) {
-		$secret = tala_guard_sanitize_secret_key( $saved['secret_key'] ?? '' );
-	}
+	$input = is_array( $input ) ? $input : array();
+	$saved = get_option( 'tala_guard', array() );
+	$typed = is_string( $input['secret_key'] ?? null ) ? trim( $input['secret_key'] ) : '';
 
 	if ( function_exists( 'add_settings_error' ) ) {
-		if ( is_string( $input['site_key'] ?? null ) && '' !== trim( $input['site_key'] ) && '' === $site ) {
+		if ( is_string( $input['site_key'] ?? null ) && '' !== trim( $input['site_key'] ) && '' === tala_guard_sanitize_site_key( $input['site_key'] ) ) {
 			tala_guard_settings_error( 'tala_guard_site_key', __( 'The Turnstile site key wasn\'t saved: copy it from the widget\'s page under Turnstile in Cloudflare\'s dashboard. It starts with 0x.', 'tala-guard' ) );
 		}
 		if ( '' !== $typed && tala_guard_sanitize_secret_key( $typed ) !== $typed ) {
@@ -96,9 +89,32 @@ function tala_guard_save_settings( $input ) {
 		}
 	}
 
+	return tala_guard_keys_to_save( $input, is_array( $saved ) ? $saved : array(), defined( 'TALA_GUARD_SITE_KEY' ) );
+}
+
+/**
+ * The keys to store, from what the form sent and what is stored. A secret key field left empty, or
+ * filled with something that isn't a key, keeps the stored secret (the form never shows it). An
+ * emptied site key turns the check off and forgets the secret too.
+ *
+ * With the site key set in wp-config.php the form has no site key field (it is shown disabled, and
+ * browsers don't send a disabled field), so nothing was emptied: the stored site key stays as it
+ * is, for the day the constant goes, and the secret follows the rule above.
+ *
+ * @param array<mixed> $input          Submitted values.
+ * @param array<mixed> $saved          The stored option.
+ * @param bool         $site_key_fixed Whether wp-config.php sets the site key.
+ * @return array{site_key:string,secret_key:string}
+ */
+function tala_guard_keys_to_save( array $input, array $saved, bool $site_key_fixed ) {
+	$site   = tala_guard_sanitize_site_key( $site_key_fixed ? ( $saved['site_key'] ?? '' ) : ( $input['site_key'] ?? '' ) );
+	$secret = tala_guard_sanitize_secret_key( is_string( $input['secret_key'] ?? null ) ? trim( $input['secret_key'] ) : '' );
+	if ( '' === $secret ) {
+		$secret = tala_guard_sanitize_secret_key( $saved['secret_key'] ?? '' );
+	}
 	return array(
 		'site_key'   => $site,
-		'secret_key' => '' === $site ? '' : $secret,
+		'secret_key' => '' === $site && ! $site_key_fixed ? '' : $secret,
 	);
 }
 
