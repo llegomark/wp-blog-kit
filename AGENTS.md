@@ -6,14 +6,17 @@ Everything must follow official WordPress practice, as checked by WordPress's ow
 
 ## Before changing code
 
-1. **Read the WordPress agent skill for the task.** `wp-plugin-development` is installed in
-   `.agents/skills/`. For other work, add the matching skill from WordPress/agent-skills first:
+1. **Read the WordPress agent skill for the task.** These are installed in `.agents/skills/`
+   (recorded in `skills-lock.json`):
+   - plugins: `wp-plugin-development`
    - theme.json, templates and patterns: `wp-block-themes`, `wp-patterns`
    - blocks: `wp-block-development`
    - speed: `wp-performance`
    - static analysis: `wp-phpstan`
+   - a security review: `security-audit`
 
-   Install one with `npx skills add WordPress/agent-skills --skill <name> --yes`.
+   For other work, add the matching skill from WordPress/agent-skills first, with
+   `npx skills add WordPress/agent-skills --skill <name> --yes`.
 2. Install the tools once: `composer install` and `npm ci` (Node 24 or newer; it also sets up the
    pre-commit hook).
 3. Start the local site: `dev/serve.sh`. The site is created with `dev/site.sh`; see the README.
@@ -24,7 +27,7 @@ Everything must follow official WordPress practice, as checked by WordPress's ow
 composer fix && composer check    # WPCS, PHPStan level 8, Plugin Check, Theme Check (exits 1 on any finding)
 npm run lint                      # Stylelint, ESLint, theme.json/block.json schemas, patterns, block markup, plugin readme, versions
 composer test                     # PHPUnit integration tests on WordPress's test framework
-npm run test:e2e                  # browser tests on the local site: pages, menu, layout, logo, axe, editor
+npm run test:e2e                  # browser tests on the local site: pages, menu, layout, logo, axe, editor, WP-CLI; fails on kit lines in debug.log
 ```
 
 A change in behaviour comes with a test in `tests/phpunit/` or `tests/e2e/` that fails without it
@@ -32,10 +35,14 @@ A change in behaviour comes with a test in `tests/phpunit/` or `tests/e2e/` that
 ProfilePage, WebSite and Organization on the home page only, VideoObject, Event, Course and its
 ItemList, FAQPage, HowTo),
 the publish check, who may set a redirect or canonical, the editor's validation of the templates,
-the theme's landmarks and colour and typography presets, the plugin's blocks in the editor, Tala Ads
+the theme's landmarks and colour and typography presets, the plugin's blocks in the editor, the SEO
+panel and the checklist on Publish (`tests/e2e/seo-panel.spec.mjs`: a change to what the panel shows
+gets a test there), the plugin's commands under the real WP-CLI, every public filter and action (a
+new one gets a test and a line in the readme), the uninstall files, Tala Ads
 in the browser with every ad service stood in for (`tests/e2e/ads.spec.mjs`: a change to its layout
-rules, units or scripts gets a test there), and Tala Guard's check in the comment form. Then, on the local site (http://127.0.0.1:8080):
-- `wp-content/debug.log` stays clean
+rules, units or scripts gets a test there), and Tala Guard's check in the comment form.
+`npm run test:e2e` fails when the local site's `wp-content/debug.log` gained a line that names the
+kit during the run; a run of one spec checks it too. Then, on the local site (http://127.0.0.1:8080):
 - for visible changes: Lighthouse on a mobile article page (Accessibility, Best Practices, SEO)
 - for theme changes: WordPress's Theme Unit Test on `dev/unit-test-site.sh` (the theme alone, without
   Tala SEO): `node dev/unit-test-check.mjs` must pass, then the handbook's checklist by eye
@@ -110,11 +117,12 @@ commits to throwaway branches to read the secrets, then published malicious rele
   workflows); main can't be deleted or force-pushed; release tags can't be moved or deleted.
 - Releases are immutable once published, with a build attestation; the deploy compares the zip
   with a local build before installing it.
-- Actions: only GitHub's own actions and the allowlisted owners (`shivammathur/setup-php`,
-  `WordPress/plugin-check-action`, `nick-fields/retry`) may run, every `uses:` must pin a full
+- Actions: only GitHub's own actions and the allowlisted ones (`shivammathur/setup-php`,
+  `WordPress/plugin-check-action`) may run, every `uses:` must pin a full
   commit SHA (GitHub refuses the run otherwise), the default token is read-only, workflows can't
   approve pull requests, and a pull request from any outside contributor runs only after approval.
-  Adding an action to a workflow means adding its owner to the allowlist in Settings → Actions.
+  Adding an action to a workflow means adding it to the allowlist in Settings → Actions, and
+  taking one out of the workflows means taking it off the list.
 - The repository holds no secrets, deploy keys or webhooks, and needs none: the release workflow
   uses its own token, and deploys run from the maintainer's machine. Keep it that way.
 - Secret scanning with push protection is on; Dependabot keeps the pins and tools current, with a
@@ -131,7 +139,9 @@ is released. Keep them in a private folder; `docs/superpowers/` and `plans/` are
 The pre-commit hook checks the staged files (`lint-staged.config.mjs`). GitHub re-runs WPCS, PHPStan,
 Stylelint, ESLint, the theme validator, the PHPUnit and browser tests, and Plugin Check on every push
 and pull request (`.github/workflows/checks.yml`). Pushing doesn't replace running the checks first; it catches what
-slipped through. If a run fails, fix it in a new commit.
+slipped through. If a run fails, fix it in a new commit. The Monday run also runs PHPUnit on
+WordPress's nightly build: when that job is red, the next WordPress release breaks something;
+reproduce it with `WP_VERSION=nightly WP_CORE_DIR=$PWD/.cache/wordpress-nightly composer test`.
 
 
 Commit to `main` only after `composer check` passes. Commits are signed by the maintainer's key.

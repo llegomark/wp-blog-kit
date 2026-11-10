@@ -6,13 +6,13 @@ A minimal, fast blog setup for WordPress with the block editor (Gutenberg). No p
 |---|---|
 | `tala-blog/` | Block theme in a "drafting paper" look: dark ink on warm paper, one cobalt accent, Inter (self-hosted, preloaded), every section a full-width band on a centered rail with hairline rules, and a Light/Dark switch in the header (it follows the device until the reader chooses). A header with the site logo, the menu (a side sheet on narrow screens) and search; a cobalt footer with the site's menu as columns, a Footer note part and the site title as an outlined wordmark; article lists as ruled rows without thumbnails; articles with a title band (breadcrumbs, dates, reading time), "On this page" contents, topic chips, "Read next" and an author box; an empty Call to action part filled per site in the Site Editor; dated comments; print styles. Semantic HTML with named landmarks; Gravity Forms and PDF Embedder follow the switch. Translation-ready and accessible (WCAG 2.2 AA checks pass in light and dark). |
 | `tala-seo/` | SEO plugin. Titles, meta descriptions, canonicals, robots rules, Open Graph, JSON-LD, sitemap and robots.txt tuning, redirects for moved pages, categories and author pages, and a publish check. |
-| `tala-ads/` | Ads plugin. AdSense Auto ads, Google Tag Manager and Google's consent and ad blocking recovery messages (with Google's error protection code), each loaded once and set up with IDs; Google search in place of WordPress's search; and an optional Innity box after articles with its height reserved. |
+| `tala-ads/` | Ads plugin. AdSense Auto ads with optional In-article and Multiplex units, Google Tag Manager and Google's consent and ad blocking recovery messages (with Google's error protection code), each loaded once and set up with IDs; Google search in place of WordPress's search; and optional Innity ads (a box after articles with its height reserved, and Universal tags). |
 | `tala-guard/` | Comment spam plugin. Cloudflare Turnstile in the comment form, confirmed with Cloudflare's Siteverify on the server before WordPress saves a comment. |
 | `dev/` | Demo content and a WordPress Playground blueprint for local testing (not deployed). |
 | `.wordpress-org/` | The plugins' screenshots (Tala SEO's at the top, Tala Ads' in `tala-ads/`, Tala Guard's in `tala-guard/`), as WordPress.org keeps them in a plugin's SVN `assets/` folder (not in the zips). `node dev/screenshots.mjs` takes them again on the local site. |
 | `build.sh` | Packages all four as zips in `dist/`. |
 
-Each works on its own: the theme without the plugins, and each plugin with any theme that follows WordPress's standards (the browser tests run Tala SEO with Twenty Twenty-Five and Tala Blog without Tala SEO). Together, the theme places Tala SEO's Breadcrumbs block in its templates. All three need WordPress 7.0 or newer and PHP 8.5 or newer. They follow the current WordPress and PHP releases and carry no code for older versions.
+Each works on its own: the theme without the plugins, and each plugin with any theme that follows WordPress's standards (the browser tests run Tala SEO with Twenty Twenty-Five and Tala Blog without Tala SEO). Together, the theme places Tala SEO's Breadcrumbs block in its templates. All four need WordPress 7.0 or newer and PHP 8.5 or newer. They follow the current WordPress and PHP releases and carry no code for older versions.
 
 ## What Tala SEO does
 
@@ -37,7 +37,7 @@ Each works on its own: the theme without the plugins, and each plugin with any t
   - courses: the **Course** block shows a course's description, provider (the site by default), level, format, time, instructor and cost as a card and describes it as a Course for Google's course list (English searches): a post with one course is its detail page, a category or other list whose posts are all courses (three or more) gets the ItemList that makes it their summary page, and a post with several courses lists them by their cards' anchors. The level, format, time, instructor and cost were Google's Course info result, retired in June 2025; they stay as schema.org for other search engines and AI assistants.
   - FAQ and How-to: Group blocks from the inserter, built from core blocks (Details for each question, a numbered list for the steps), described as FAQPage and HowTo. Google no longer shows these as rich results (HowTo since 2023, FAQ since May 2026); the markup is still valid schema.org for other search engines and AI assistants, and it only repeats what the page shows.
   - SearchAction is left out on purpose: Google retired the sitelinks search box.
-- **Sitemap:** WordPress's own `/wp-sitemap.xml` (where Yoast SEO's and Rank Math's sitemap addresses now lead), with accurate `lastmod`, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, hidden author pages or post formats. Like WordPress, it exists only while search engines may index the site.
+- **Sitemap:** WordPress's own `/wp-sitemap.xml` (where Yoast SEO's and Rank Math's sitemap addresses now lead), with accurate `lastmod`, without noindexed or redirected posts, posts whose canonical URL names another address, hidden or empty categories and tags, small tag pages, hidden author pages or post formats. Like WordPress, it exists only while search engines may index the site.
 - **robots.txt:** points to the sitemap and blocks nothing else. AI crawlers are welcome.
 - **Redirects:** when a page, category or tag gets a new address (slug or parent), or an author a new slug, the old address answers with a 301 to the new one, children and paginated archives included. WordPress does this for posts only. A post can also redirect on purpose (SEO panel → Redirect to).
 - **Permalinks:** a one-click switch from plain URLs (`?p=123`) to post-name URLs in the setup checklist, and a warning on Settings → Permalinks before a change gives every published post a new address. Nothing changes without the admin pressing the button.
@@ -50,16 +50,24 @@ Each works on its own: the theme without the plugins, and each plugin with any t
   - `wp tala-seo describe` writes the missing meta descriptions once, from each post's opening paragraphs (a whole sentence that fits; an introduction three or more posts share is passed over).
   - `wp tala-seo pdf-canonicals` lists each PDF with the article that presents it, as an nginx map for a `Link: <article>; rel="canonical"` header on the file, so search engines can show the article in the PDF's place (redirecting the PDF would drop it from search). Paths nginx would refuse (the same path twice but for letter case, or one too long for `--bucket-size`) are left out and reported.
   - Post meta keys for agents: `_tala_seo_description`, `_tala_seo_title`, `_tala_seo_noindex`, `_tala_seo_canonical`, `_tala_seo_redirect`, `_tala_seo_primary_category`, `_tala_seo_video_dates` (YouTube video ID => `YYYY-MM-DD`).
+- **Filters:**
+  - `tala_seo_post_types` (posts and pages by default): the post types with the SEO fields, the SEO panel, their SEO title and description in the head, the redirect and the SEO column. Article markup and the publish requirements stay with posts and pages.
+  - `tala_seo_publish_requirements`: what a post type needs before it can be published (`description`, `featured_image`, `featured_image_alt`).
+  - `tala_seo_schema_nodes`: the page's structured data nodes, right before they are printed.
+  - `tala_seo_term_taxonomies`: the taxonomies whose terms get SEO fields (public ones with an admin screen by default).
+  - `tala_seo_thin_taxonomies`: the taxonomies whose pages need the minimum number of posts to be indexed (tags by default).
+  - `tala_seo_head_comment`: return false to leave out the comments around the plugin's head tags.
 
 ## What Tala Ads does
 
 - **AdSense Auto ads:** the publisher ID puts the AdSense code on every page, once; Google places the ads, and the formats and their number are chosen in AdSense. Error pages and searches that found nothing get no ads, as AdSense's policies ask.
+- **AdSense ad units, beside Auto ads:** optional, from each unit's ID: an In-article ad after the second paragraph of each post, with its space kept free while it loads, and a Multiplex ad right after the post's text. Neither is ever hidden, filled or not.
 - **Google Tag Manager:** the container ID puts the code high in the head and the no-JavaScript fallback right after `<body>` (through `wp_body_open()`).
 - **Google's consent and ad blocking recovery messages**, as set up under Privacy & messaging in AdSense, behind one switch, and Google's **error protection** code for the recovery message on pages with ads.
 - **Google search:** with a Programmable Search Engine ID and a results page, WordPress's searches go to that page (`?q=…`), where its Search block shows Google's search box and results in the theme's look (its theme.json colors in light and dark mode, font, links, field and button; inlined, only on that page); results for a search get noindex.
-- **Innity:** an optional 300 × 250 box after the text of posts and pages, with its height reserved so the page doesn't move. Innity's universal tags (full-screen phone formats) aren't offered.
+- **Innity:** each part optional and always below the AdSense ads: a 300 × 250 box after the text of posts and pages, with its height reserved so the page doesn't move, and Universal tags, one for wide screens and one for phones (the phones' tag brings full-screen formats; leave it empty to keep them off). Innity stays off searches and Google's results page, waits for Google's consent data when Google's messages are on, and its in-image ads stay off the site's images.
 - **IDs, not code:** each ID field keeps just the ID, even when the whole code is pasted, so those fields can't put a script on the site. The one piece of code, Google's error protection, is kept only in Google's shape, for the site's publisher ID, naming only Google's servers, and only people who may add scripts (`unfiltered_html`) can change it. Settings → Ads also says whether `ads.txt` lists the publisher ID.
-- Filters: `tala_ads_show` (return false to keep ads off a page) and `tala_ads_post_types` (where the Innity box goes; posts and pages by default).
+- Hooks: the filters `tala_ads_show` (return false to keep ads off a page), `tala_ads_post_types` (where the Innity box and in-read place go; posts and pages by default), `tala_ads_unit_post_types` (where the In-article and Multiplex ads go; posts by default), `tala_ads_in_article_paragraphs` (how many paragraphs come before the In-article ad; 2) and `tala_ads_innity_in_image` (return true to allow Innity's in-image ads), and the `tala_ads_search_placed` action (Google's search box was put on the results page).
 
 ## What Tala Guard does
 
@@ -81,12 +89,14 @@ Releases are made by `.github/workflows/release.yml`: when a push to `main` rais
 
 ## Using it on a new site
 
+Install the release zips, not a local build (`./build.sh` is for comparing with a release and for development). Download each zip and its `.sha256` from the [releases](https://github.com/llegomark/wp-blog-kit/releases), check them, then install:
+
 ```bash
-./build.sh                                   # makes dist/*.zip
-wp plugin install dist/tala-seo-1.0.0.zip --activate
-wp plugin install dist/tala-ads-1.0.0.zip --activate   # if the site shows ads
-wp plugin install dist/tala-guard-1.0.0.zip --activate # if the site takes comments
-wp theme install dist/tala-blog-1.0.0.zip --activate
+sha256sum -c tala-seo-<version>.zip.sha256   # and the others; then the attestation, as under Download
+wp plugin install tala-seo-<version>.zip --activate
+wp plugin install tala-ads-<version>.zip --activate   # if the site shows ads
+wp plugin install tala-guard-<version>.zip --activate # if the site takes comments
+wp theme install tala-blog-<version>.zip --activate
 wp media regenerate --only-missing --yes     # only on sites with existing images: creates the share and Google crops
 ```
 
@@ -130,8 +140,8 @@ dev/serve.sh                  # http://127.0.0.1:8080 (admin login: ~/.local/sta
 | `npm run lint:versions` | `bin/validate-versions.mjs`: each product's `Version:` header, its version constant (the `?ver=` of its scripts and styles) and `Stable tag` agree, and its readme has a changelog entry for that version, so a release can't ship with one of them left behind |
 | `npm run lint` | the five above, plus `composer lint` |
 | `composer test` | PHPUnit integration tests (`tests/phpunit/`) on WordPress's own test framework: Tala SEO's head tags, structured data (videos, events, courses, FAQ and how-to included), sitemap, redirects, publish check, admin forms, import and share images, Tala Ads' settings and scripts (each loaded once, none on error pages, the error protection code's checks, Google search's redirect and results page, the Innity box once with its height reserved), and Tala Blog's block filters, patterns, template parts, footer columns and wordmark, reading time, Inter's font faces and preloads, and colors (contrast in light and dark mode) |
-| `npm run test:e2e` | browser tests (`tests/e2e/`, Playwright) on the local site: every kind of page, the phone menu frame by frame, layout shifts, the logo, axe in light and dark mode on phone and desktop, the Light/Dark switch (applied before paint, kept across pages, hidden without JavaScript), the article's header, footer and navigation and the comments as articles, the block editor's validation of the theme, classic content (aligned images, captions, galleries, embeds, tables, quotes, long words, password forms), Tala SEO's FAQ, How-to, Event and Course blocks and video dates in the editor and on the page, its SEO panel for a contributor and for whoever publishes, Tala Ads with every ad service stood in for (no sideways scrolling with an empty Auto ads place, the units' reserved space, ad frames in dark mode, pages and search with an ad blocker), and Tala Guard's Turnstile check (also when Cloudflare's script can't load) |
-| `npm run test:tooling` | Node's test runner on the release tools (`tests/tooling/`): `bin/validate-versions.mjs` turns down each kind of version mismatch |
+| `npm run test:e2e` | browser tests (`tests/e2e/`, Playwright) on the local site: every kind of page, the phone menu frame by frame, layout shifts, the logo, axe in light and dark mode on phone and desktop, the Light/Dark switch (applied before paint, kept across pages, hidden without JavaScript), the article's header, footer and navigation and the comments as articles, the block editor's validation of the theme, classic content (aligned images, captions, galleries, embeds, tables, quotes, long words, password forms), Tala SEO's FAQ, How-to, Event and Course blocks and video dates in the editor and on the page, its SEO panel for a contributor and for whoever publishes, its SEO panel while writing (length meters, the search preview, what is needed to publish and what Google recommends, the primary category, the switches) and the checklist on Publish, its commands and the publish check under the real WP-CLI, a sitemap page left without addresses, Tala Ads with every ad service stood in for (no sideways scrolling with an empty Auto ads place, the units' reserved space, ad frames in dark mode, pages and search with an ad blocker), and Tala Guard's Turnstile check (also when Cloudflare's script can't load, and with the site key in wp-config.php). The run fails when the site's `wp-content/debug.log` gained a line that names the kit (`tests/e2e/global-setup.mjs`) |
+| `npm run test:tooling` | Node's test runner on the tools (`tests/tooling/`): `bin/validate-versions.mjs` turns down each kind of version mismatch, and the browser tests' reader of `debug.log` reports only the run's own lines that name the kit |
 
 A pre-commit hook (husky and lint-staged, set up by `npm ci`) runs the linters on the staged files of each commit.
 
@@ -139,13 +149,13 @@ A pre-commit hook (husky and lint-staged, set up by `npm ci`) runs the linters o
 
 The PHPUnit tests run on WordPress's test framework (`wp-phpunit`, PHPUnit 9.6, the version WordPress itself runs its tests on). Each test runs in a database transaction against a real WordPress with Tala SEO active and Tala Blog as the theme. `composer test` downloads WordPress into `.cache/wordpress` and creates the test database `wp_tests_blogkit` the first time; it uses MariaDB through its Unix socket as your user, as `dev/setup-arch.sh` sets up, and the `WP_TESTS_DB_*` variables in `tests/phpunit/wp-tests-config.php` select another server. The test database is emptied on every run: never point it at a site.
 
-The browser tests need the local site (`dev/site.sh`); they start `dev/serve.sh` if it isn't running, and use the Google Chrome installed on the machine. They change settings (a menu, a logo) with WP-CLI and put them back.
+The browser tests need the local site (`dev/site.sh`); they start `dev/serve.sh` if it isn't running, and use the Google Chrome installed on the machine. They change settings (a menu, a logo) with WP-CLI and put them back; one sets a constant in the site's `wp-config.php` and removes it again.
 
 A change in behavior comes with a test that fails without it.
 
 Without a local PHP, `dev/phpcs.sh`, `dev/plugin-check.sh` and `dev/theme-check.sh` run the same checks in PHP compiled to WebAssembly and WordPress Playground. The PHPCS downloads are verified against the release key.
 
-GitHub runs the same checks on every push to `main` and every pull request (`.github/workflows/checks.yml`): coding standards and PHPStan on PHP 8.5, Stylelint, ESLint, the theme validator and the readme validator on Node 24, the PHPUnit tests and the browser tests (with a MySQL 8.4 database), and Plugin Check through [WordPress/plugin-check-action](https://github.com/WordPress/plugin-check-action) against the latest WordPress. Every Monday it also checks the plugin against WordPress trunk, the release in development; a finding there is an early warning and doesn't fail the build. The actions are pinned to commit SHAs, and Dependabot proposes updates. Theme Check isn't part of CI; `composer check` runs it (`dev/theme-check.sh`).
+GitHub runs the same checks on every push to `main` and every pull request (`.github/workflows/checks.yml`): coding standards and PHPStan on PHP 8.5, Stylelint, ESLint, the theme validator and the readme validator on Node 24, the PHPUnit tests and the browser tests (with a MySQL 8.4 database), and Plugin Check through [WordPress/plugin-check-action](https://github.com/WordPress/plugin-check-action) against the latest WordPress. It also looks ahead at WordPress's next release: Plugin Check runs against WordPress trunk on every run, where a finding is an early warning and doesn't fail the build, and every Monday (and on a manual run) the PHPUnit tests run on WordPress's nightly build (`WP_VERSION=nightly composer test` does the same locally, with `WP_CORE_DIR` set to a folder of its own). That job fails like any other, which is the warning, but it never runs on a push or pull request, so it can't hold up a release. The actions are pinned to commit SHAs, and Dependabot proposes updates. Theme Check isn't part of CI; `composer check` runs it (`dev/theme-check.sh`).
 
 `composer.json` loads the WordPress 7.1 stubs as `7.1.2 as 6.9.4`: the WP-CLI stubs still accept only WordPress 6 stubs in their latest release, though their next one won't (php-stubs/wp-cli-stubs#25). Drop the alias once that release is out.
 
@@ -157,10 +167,11 @@ The one deliberate exception is the `Update URI: false` header, which keeps thes
 
 ### Test results (November 2026: WordPress 7.1, PHP 8.5.12)
 
-- `composer test`: 260 PHPUnit tests pass (one, the network-only admin test, runs in the multisite pass). `npm run test:e2e`: 194 browser tests pass, axe included.
+- `composer test`: 280 PHPUnit tests pass (four, the author photo per site and each plugin's uninstall on a network, run in the multisite pass). `npm run test:e2e`: 210 browser tests pass, axe included.
 - Every page type renders without PHP notices, and every theme template passes the block editor's validator.
-- The publish check holds in the editor, over REST, in Quick Edit and WP-CLI saves, and for scheduling.
-- The WP-CLI commands `audit` and `import` (including `--dry-run`) work; Yoast titles built from `%%variables%%` are skipped.
+- The publish check holds in the editor, over REST, in Quick Edit and WP-CLI saves (also under the real WP-CLI on the local site), and for scheduling.
+- The WP-CLI commands `audit`, `import`, `describe` (both including `--dry-run`) and `pdf-canonicals` work; Yoast titles built from `%%variables%%` are skipped.
+- The PHPUnit tests also pass on WordPress's nightly build (7.2 beta).
 - Lighthouse on a mobile article page (Tala Blog 2.0.0, no ads, gzip as on the servers): Performance 96, Accessibility 100, Best Practices 100, SEO 100.
 - `composer check` passes: WPCS without findings, PHPStan level 8 without errors, Plugin Check 2.1 without findings, Theme Check 20260901 without findings.
 
