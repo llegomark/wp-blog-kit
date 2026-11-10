@@ -14,15 +14,19 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    # Mondays 01:00 UTC (09:00 Manila): test against WordPress's next release even when nothing changed.
+    # Mondays 01:00 UTC (09:00 Manila), even when nothing changed: everything again, and the two
+    # looks ahead at WordPress's next release (Plugin Check on trunk, PHPUnit on the nightly build).
     - cron: '0 1 * * 1'
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# A newer run replaces an older one of the same kind. The event is part of the group: the weekly
+# run is on main too, and without it would cancel a push's run that is still going, the one the
+# release waits for.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -128,6 +132,51 @@ jobs:
 
       # Downloads WordPress into .cache/wordpress, creates the test database, then runs PHPUnit.
       - name: PHPUnit integration tests
+        run: composer test
+
+  # WordPress's next release, from its nightly build: on the day it ships, the jobs above switch to it
+  # with no commit to blame. This one says so beforehand. It runs only on the weekly and manual
+  # runs, so it never holds up a push, a pull request or a release, and it fails like any other job:
+  # a red weekly run is the warning.
+  phpunit-next:
+    name: PHPUnit (WordPress nightly)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      database:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root --password=root"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    env:
+      WP_TESTS_DB_HOST: 127.0.0.1:3306
+      WP_TESTS_DB_USER: root
+      WP_TESTS_DB_PASSWORD: root
+      WP_VERSION: nightly
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP 8.5 (the version the servers run)
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.5'
+          coverage: none
+          extensions: mysqli, gd, exif, intl, zip
+          tools: composer:v2, wp-cli
+
+      - name: Install the tools from composer.lock
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      # tests/bin/install-wp-tests.sh downloads the nightly build for WP_VERSION=nightly.
+      - name: PHPUnit integration tests on the nightly build
         run: composer test
 
   e2e:

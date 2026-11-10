@@ -541,7 +541,7 @@ HTML;
 		$this->assertSame( 1, substr_count( $eyebrow[1], '<a ' ), 'The first category only' );
 		$this->assertStringContainsString( '>Assessment</a>', $eyebrow[1] );
 		$this->assertMatchesRegularExpression( '#<h1 class="(?=[^"]*\bwp-block-post-title\b)(?=[^"]*\btala-display\b)[^"]*">Seating plans</h1>#', $band );
-		$this->assertMatchesRegularExpression( '#class="[^"]*\btala-lead\b[^"]*"><p class="wp-block-post-excerpt__excerpt">A plan for every room. </p>#', $band );
+		$this->assertMatchesRegularExpression( '#class="[^"]*\btala-lead\b[^"]*"><p class="wp-block-post-excerpt__excerpt">A plan for every room\. ?</p>#', $band ); // WordPress 7.1 leaves a space after the excerpt, 7.2 doesn't.
 		$this->assertMatchesRegularExpression( '#>By <a href="' . preg_quote( get_author_posts_url( $author ), '#' ) . '" rel="author"[^>]*>Ana Reyes</a><#', $band );
 		$byline = new WP_Block( parse_blocks( '<!-- wp:post-author-name {"className":"tala-byline"} /-->' )[0], array( 'postId' => $post ) );
 		$this->assertSame( '<span>Ana Reyes</span>', tala_blog_byline( '<span>Ana Reyes</span>', $byline->parsed_block, $byline ), 'Markup of another shape (another plugin\'s) is left as it is' );

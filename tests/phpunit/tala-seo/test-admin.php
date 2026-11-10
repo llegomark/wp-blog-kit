@@ -290,7 +290,8 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 	 */
 	public function test_permalinks_screen_notices(): void {
 		$this->set_permalink_structure( '' );
-		$this->assertStringContainsString( 'Choose &quot;Post name&quot;', $this->notices( 'options-permalink' ) );
+		// WordPress 7.2 prints the quotation marks as they are, 7.1 as entities.
+		$this->assertStringContainsString( 'Choose "Post name"', html_entity_decode( $this->notices( 'options-permalink' ) ) );
 
 		$this->set_permalink_structure( '/%postname%/' );
 		$this->publish_post();

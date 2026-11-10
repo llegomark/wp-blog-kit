@@ -3,6 +3,8 @@
 #
 #   1. A copy of WordPress for the tests in .cache/wordpress (WP_CORE_DIR), checked against
 #      WordPress.org's checksums. Delete the folder to get the latest release.
+#      WP_VERSION=nightly takes the nightly build of the release in development instead (a build
+#      has no checksums to check against); give it a folder of its own with WP_CORE_DIR.
 #   2. An empty test database (WP_TESTS_DB_NAME, default wp_tests_blogkit). The tests empty and fill
 #      it on every run, so it must never be a site's real database.
 #
@@ -17,11 +19,21 @@ DB=${WP_TESTS_DB_NAME:-wp_tests_blogkit}
 DB_USER=${WP_TESTS_DB_USER:-$USER}
 DB_HOST=${WP_TESTS_DB_HOST:-localhost}
 
+VERSION=${WP_VERSION:-latest}
+case "$VERSION" in
+  latest|nightly) ;;
+  *) echo "WP_VERSION is 'latest' (the default) or 'nightly'." >&2; exit 1 ;;
+esac
+
 if [ ! -f "$CORE/wp-settings.php" ]; then
   mkdir -p "$CORE"
-  # The .zip, not WP-CLI's default .tar.gz (see dev/site.sh).
-  wp core download https://wordpress.org/latest.zip --path="$CORE" --quiet
-  wp core verify-checksums --path="$CORE" --quiet
+  if [ "$VERSION" = nightly ]; then
+    wp core download https://wordpress.org/nightly-builds/wordpress-latest.zip --path="$CORE" --quiet
+  else
+    # The .zip, not WP-CLI's default .tar.gz (see dev/site.sh).
+    wp core download https://wordpress.org/latest.zip --path="$CORE" --quiet
+    wp core verify-checksums --path="$CORE" --quiet
+  fi
   echo "WordPress $(sed -n "s/^\$wp_version = '\(.*\)';/\1/p" "$CORE/wp-includes/version.php") for the tests: $CORE"
 fi
 

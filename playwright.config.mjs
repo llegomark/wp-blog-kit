@@ -19,6 +19,8 @@ export default defineConfig( {
 	retries: process.env.CI ? 1 : 0,
 	reporter: process.env.CI ? [ [ 'github' ], [ 'list' ] ] : 'list',
 	outputDir: '.cache/playwright',
+	// Fails the run when the site's debug.log gained a line that names the kit.
+	globalSetup: './tests/e2e/global-setup.mjs',
 	use: {
 		baseURL,
 		channel: 'chrome',
