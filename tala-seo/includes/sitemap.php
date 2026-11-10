@@ -168,28 +168,94 @@ function tala_seo_indexable_terms_clause( $clauses, $taxonomies, $args ) {
 add_filter( 'wp_sitemaps_posts_query_args', 'tala_seo_sitemap_skip_noindex' );
 
 /**
- * Leaves out of the sitemap the posts marked "hide from search engines", and the ones that redirect
- * elsewhere (their address is no longer a page of their own). The exclusion itself is added by
- * tala_seo_sitemap_where().
+ * Leaves out of the sitemap the posts marked "hide from search engines", the ones that redirect
+ * elsewhere (their address is no longer a page of their own) and the ones whose canonical URL names
+ * another address. The first two are left out by the query (tala_seo_sitemap_where()), the last
+ * from its results (tala_seo_sitemap_skip_canonical_elsewhere()).
  *
  * @param array<string, mixed> $args WP_Query arguments.
  * @return array<string, mixed>
  */
 function tala_seo_sitemap_skip_noindex( $args ) {
 	$args['tala_seo_sitemap'] = true;
-	// With %category% in the address, every URL reads the post's primary category from its meta:
-	// load the meta of the whole page in one query instead of one per post.
-	if ( str_contains( (string) get_option( 'permalink_structure' ), '%category%' ) ) {
-		$args['update_post_meta_cache'] = true;
-	}
 	return $args;
+}
+
+add_filter( 'the_posts', 'tala_seo_sitemap_skip_canonical_elsewhere', 10, 2 );
+
+/**
+ * For the sitemap's post queries: takes out the posts whose canonical URL names another address
+ * (tala_seo_canonical_elsewhere()). Such a page tells search engines the original is elsewhere, and
+ * a sitemap that lists it says the opposite.
+ *
+ * This is decided on the page of posts the query found, not in the query: whether an address is
+ * the post's own takes the post's permalink. The meta of the whole page is loaded in one query
+ * (the canonical, and the primary category that a permalink with %category% reads for every
+ * post). A sitemap page can hold fewer addresses than its limit for it, or none
+ * (tala_seo_sitemap_render_empty_page()).
+ *
+ * @param mixed    $posts Posts found (WP_Post[], unless another filter broke it).
+ * @param WP_Query $query Query.
+ * @return mixed
+ */
+function tala_seo_sitemap_skip_canonical_elsewhere( $posts, $query ) {
+	if ( ! is_array( $posts ) || ! $posts || ! $query->get( 'tala_seo_sitemap' ) ) {
+		return $posts;
+	}
+	update_meta_cache( 'post', wp_list_pluck( $posts, 'ID' ) );
+	return array_values(
+		array_filter( $posts, static fn( $post ): bool => ! ( $post instanceof WP_Post && tala_seo_canonical_elsewhere( $post ) ) )
+	);
 }
 
 // Sitemaps are plain XML, without WordPress's XSLT stylesheet. The stylesheet only draws a table for
 // people who open a sitemap in a browser (search engines ignore it), and browsers are removing XSLT:
 // Chrome warns on every page that uses it. Without it, a browser shows the XML itself.
-add_filter( 'wp_sitemaps_stylesheet_url', '__return_empty_string' );
-add_filter( 'wp_sitemaps_stylesheet_index_url', '__return_empty_string' );
+// WordPress 7.2 leaves the stylesheet out itself and retired these two filters (using one there
+// logs a deprecation notice), so they are for 7.0 and 7.1. Delete this once the plugin requires 7.2.
+if ( version_compare( wp_get_wp_version(), '7.2-alpha', '<' ) ) {
+	add_filter( 'wp_sitemaps_stylesheet_url', '__return_empty_string' );
+	add_filter( 'wp_sitemaps_stylesheet_index_url', '__return_empty_string' );
+	// Right after WordPress's own sitemap handler (10).
+	add_action( 'template_redirect', 'tala_seo_sitemap_render_empty_page', 11 );
+}
+
+/**
+ * Serves a sitemap page that was left without addresses as an empty sitemap, as WordPress 7.2
+ * does. Before 7.2 WordPress answers 404 for it, though its index lists the page: the number of
+ * pages is counted before tala_seo_sitemap_skip_canonical_elsewhere() takes posts out, so the last
+ * page of a type, or its only one, can end up empty, and search engines report a listed page that
+ * answers 404 as a broken sitemap. For 7.0 and 7.1; delete this once the plugin requires 7.2.
+ */
+function tala_seo_sitemap_render_empty_page(): void {
+	if ( ! tala_seo_sitemap_page_emptied() ) {
+		return;
+	}
+	global $wp_query;
+	$wp_query->is_404 = false;
+	status_header( 200 );
+	wp_sitemaps_get_server()->renderer->render_sitemap( array() );
+	exit;
+}
+
+/**
+ * Whether the request is for a page of a posts sitemap that its index lists, and WordPress
+ * answered 404 because the page holds no address.
+ *
+ * @return bool
+ */
+function tala_seo_sitemap_page_emptied() {
+	if ( 'posts' !== get_query_var( 'sitemap' ) || ! is_404() ) {
+		return false;
+	}
+	$server   = wp_sitemaps_get_server();
+	$provider = $server->registry->get_provider( 'posts' );
+	$subtype  = sanitize_text_field( (string) get_query_var( 'sitemap-subtype' ) );
+	if ( ! $provider || ! $server->sitemaps_enabled() || ! array_key_exists( $subtype, $provider->get_object_subtypes() ) ) {
+		return false;
+	}
+	return max( 1, absint( get_query_var( 'paged' ) ) ) <= $provider->get_max_num_pages( $subtype );
+}
 
 add_filter( 'wp_sitemaps_max_urls', 'tala_seo_sitemap_max_urls' );
 

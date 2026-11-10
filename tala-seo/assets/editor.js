@@ -192,7 +192,8 @@
 
 	/**
 	 * An address in a form that is the same for the same page: no scheme, no "www.", no trailing
-	 * slash, host in lower case.
+	 * slash, host in lower case, and the path's escapes read as the letters they stand for (as
+	 * tala_seo_address_key() compares them in PHP).
 	 *
 	 * @param {string} link Address.
 	 * @return {string} The address to compare.
@@ -200,7 +201,13 @@
 	function sameAddress( link ) {
 		try {
 			const url = new URL( link );
-			return url.host.toLowerCase().replace( /^www\./, '' ) + url.pathname.replace( /\/+$/, '' ) + url.search;
+			let path = url.pathname;
+			try {
+				path = decodeURIComponent( path );
+			} catch {
+				// An escape that stands for no letter: compared as it is written.
+			}
+			return url.host.toLowerCase().replace( /^www\./, '' ) + path.replace( /\/+$/, '' ) + url.search;
 		} catch {
 			return String( link );
 		}

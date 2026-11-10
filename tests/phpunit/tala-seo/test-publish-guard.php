@@ -67,6 +67,37 @@ class Test_Tala_SEO_Publish_Guard extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * A featured image can also come with the post's meta (meta_input), as WP-CLI's --meta_input and
+	 * other plugins pass it: WordPress stores it as the featured image either way. The one named as
+	 * the post's own field wins, as it does in WordPress.
+	 */
+	public function test_a_featured_image_given_as_meta_counts(): void {
+		$post = self::factory()->post->create(
+			array(
+				'post_status' => 'publish',
+				'meta_input'  => array(
+					TALA_SEO_DESCRIPTION => 'A description.',
+					'_thumbnail_id'      => (string) self::$image_id,
+				),
+			)
+		);
+		$this->assertSame( 'publish', get_post_status( $post ) );
+		$this->assertSame( self::$image_id, (int) get_post_thumbnail_id( $post ) );
+
+		$removed = self::factory()->post->create(
+			array(
+				'post_status'   => 'publish',
+				'_thumbnail_id' => -1, // WordPress removes the featured image for -1.
+				'meta_input'    => array(
+					TALA_SEO_DESCRIPTION => 'A description.',
+					'_thumbnail_id'      => (string) self::$image_id,
+				),
+			)
+		);
+		$this->assertSame( 'draft', get_post_status( $removed ), 'The post\'s own field is applied last.' );
+	}
+
+	/**
 	 * Outside the block editor, a refused publish leaves the post where it was: one waiting for review
 	 * stays in the queue and a private one stays private; only a new post becomes a draft.
 	 */

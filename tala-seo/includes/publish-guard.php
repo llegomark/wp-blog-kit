@@ -268,8 +268,11 @@ function tala_seo_guard_insert( $data, $postarr ) {
 
 	$given       = $postarr['meta_input'][ TALA_SEO_DESCRIPTION ] ?? null;
 	$description = null === $given ? ( $id ? tala_seo_post_description( $id ) : '' ) : tala_seo_scalar( $given );
-	$thumbnail   = (int) ( $postarr['_thumbnail_id'] ?? ( $id ? get_post_thumbnail_id( $id ) : 0 ) );
-	$problems    = tala_seo_publish_problems( $data['post_type'], $description, $thumbnail );
+	// The featured image this save sets: the post's own field, which WordPress applies last (-1
+	// removes the image), or the same key among the meta (WP-CLI's --meta_input, other plugins).
+	$image     = $postarr['_thumbnail_id'] ?? $postarr['meta_input']['_thumbnail_id'] ?? null;
+	$thumbnail = null === $image ? ( $id ? (int) get_post_thumbnail_id( $id ) : 0 ) : max( 0, (int) tala_seo_scalar( $image ) );
+	$problems  = tala_seo_publish_problems( $data['post_type'], $description, $thumbnail );
 	if ( ! $problems ) {
 		return $data;
 	}

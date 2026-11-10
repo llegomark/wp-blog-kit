@@ -2,7 +2,7 @@
  * Helpers for the browser tests: WP-CLI on the local site, the demo content's addresses, logging
  * in, and axe.
  */
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename } from 'node:path';
@@ -35,6 +35,18 @@ export function wp( ...args ) {
 		// WP-CLI's own PHP deprecation notices go to stderr.
 		stdio: [ 'ignore', 'pipe', 'ignore' ],
 	} ).trim();
+}
+
+/**
+ * Runs WP-CLI on the local site and returns everything it said, for tests of what a command prints:
+ * warnings and errors go to its standard error, where wp() doesn't look.
+ *
+ * @param {...string} args WP-CLI arguments.
+ * @return {{status: number|null, stdout: string, stderr: string}} Exit status and output.
+ */
+export function wpRun( ...args ) {
+	const { status, stdout, stderr } = spawnSync( 'wp', [ `--path=${ SITE }`, ...args ], { encoding: 'utf8' } );
+	return { status, stdout: stdout.trim(), stderr };
 }
 
 /**

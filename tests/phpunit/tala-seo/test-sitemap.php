@@ -77,6 +77,98 @@ class Test_Tala_SEO_Sitemap extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * A post whose canonical URL names another address tells search engines the original is there;
+	 * the sitemap doesn't say the opposite by listing it. One whose canonical is its own address,
+	 * however it was typed, stays.
+	 */
+	public function test_posts_with_a_canonical_elsewhere_are_left_out(): void {
+		$kept      = $this->publish_post();
+		$elsewhere = $this->publish_post( array( 'meta_input' => array( TALA_SEO_CANONICAL => 'https://example.com/first-published-here/' ) ) );
+		$other     = $this->publish_post( array( 'meta_input' => array( TALA_SEO_CANONICAL => get_permalink( $kept ) ) ) );
+		$imported  = $this->publish_post( array( 'meta_input' => array( '_yoast_wpseo_canonical' => 'https://example.com/the-original/' ) ) );
+		$page      = $this->publish_post(
+			array(
+				'post_type'  => 'page',
+				'meta_input' => array( TALA_SEO_CANONICAL => 'https://example.com/a-page-elsewhere/' ),
+			)
+		);
+
+		$own = array();
+		foreach ( array(
+			'as it is'            => static fn( string $url ): string => $url,
+			'without the slash'   => static fn( string $url ): string => untrailingslashit( $url ),
+			'http and www'        => static fn( string $url ): string => str_replace( 'http://example.org', 'https://www.example.org', $url ),
+			'capitals in host'    => static fn( string $url ): string => str_replace( 'example.org', 'Example.ORG', $url ),
+			'from another field'  => static fn( string $url ): string => $url,
+			'escapes in capitals' => static fn( string $url ): string => (string) preg_replace_callback( '/%[0-9a-f]{2}/', static fn( array $escape ): string => strtoupper( $escape[0] ), $url ),
+			'letters as they are' => static fn( string $url ): string => rawurldecode( $url ),
+		) as $spelling => $spell ) {
+			// A slug in letters WordPress writes as escapes in the address ("%e3%82%ac…").
+			$post = $this->publish_post( array( 'post_name' => 'ガイド-' . count( $own ) ) );
+			$this->assertStringContainsString( '%e3%82%ac', (string) get_permalink( $post ) );
+			$key              = 'from another field' === $spelling ? '_yoast_wpseo_canonical' : TALA_SEO_CANONICAL;
+			$own[ $spelling ] = $post;
+			update_post_meta( $post, $key, $spell( (string) get_permalink( $post ) ) );
+		}
+
+		$urls = $this->urls( 'posts', 'post' );
+		$this->assertContains( get_permalink( $kept ), $urls );
+		$this->assertNotContains( get_permalink( $elsewhere ), $urls, 'Another site.' );
+		$this->assertNotContains( get_permalink( $other ), $urls, 'Another post of this site.' );
+		$this->assertNotContains( get_permalink( $imported ), $urls, 'Set with a previous SEO plugin.' );
+		foreach ( $own as $spelling => $post ) {
+			$this->assertContains( get_permalink( $post ), $urls, "Its own address, $spelling." );
+		}
+		$this->assertNotContains( get_permalink( $page ), $this->urls( 'posts', 'page' ), 'Pages too.' );
+	}
+
+	/**
+	 * WordPress counts a sitemap's pages before those posts are taken out, so a page can be left
+	 * without addresses while the index still lists it. WordPress 7.2 serves such a page empty;
+	 * 7.0 and 7.1 answer 404 for it, which search engines report as a broken sitemap, so there the
+	 * plugin serves it empty. A page past the last one stays a 404.
+	 */
+	public function test_a_sitemap_page_left_without_addresses_is_no_error(): void {
+		$before_7_2 = version_compare( wp_get_wp_version(), '7.2-alpha', '<' );
+		$this->assertSame( $before_7_2 ? 11 : false, has_action( 'template_redirect', 'tala_seo_sitemap_render_empty_page' ), 'Only where WordPress doesn\'t do it itself.' );
+
+		$request = static fn( string $subtype, int $page ): string => add_query_arg(
+			array(
+				'sitemap'         => 'posts',
+				'sitemap-subtype' => $subtype,
+				'paged'           => $page,
+			),
+			home_url( '/' )
+		);
+		register_post_type( 'guide', array( 'public' => true ) );
+		$this->publish_post( array( 'meta_input' => array( TALA_SEO_CANONICAL => 'https://example.com/first-published-here/' ) ) );
+		$this->assertSame( array(), $this->urls( 'posts', 'post' ), 'The only post names another address.' );
+		$this->assertSame( 1, wp_sitemaps_get_server()->registry->get_provider( 'posts' )->get_max_num_pages( 'post' ), 'The index still lists the page.' );
+
+		$this->go_to( $request( 'post', 1 ) );
+		$this->assertFalse( tala_seo_sitemap_page_emptied(), 'Nothing to do unless WordPress answered 404.' );
+		$GLOBALS['wp_query']->set_404();
+		$this->assertTrue( tala_seo_sitemap_page_emptied(), 'A listed page that was left empty.' );
+
+		foreach ( array(
+			'A page past the last one'   => $request( 'post', 2 ),
+			'A type without any post'    => $request( 'guide', 1 ),
+			'A type that has no sitemap' => $request( 'attachment', 1 ),
+			'Another sitemap'            => add_query_arg( 'sitemap', 'users', home_url( '/' ) ),
+			'No sitemap at all'          => home_url( '/?p=999999' ),
+		) as $what => $url ) {
+			$this->go_to( $url );
+			$GLOBALS['wp_query']->set_404();
+			$this->assertFalse( tala_seo_sitemap_page_emptied(), $what );
+		}
+
+		update_option( 'blog_public', '0' );
+		$this->go_to( $request( 'post', 1 ) );
+		$GLOBALS['wp_query']->set_404();
+		$this->assertFalse( tala_seo_sitemap_page_emptied(), 'A hidden site has no sitemap.' );
+	}
+
+	/**
 	 * Leaving those posts out joins no post meta into the sitemap's query, so a post's other custom
 	 * fields don't multiply its cost: one indexed lookup per post.
 	 */
@@ -94,6 +186,30 @@ class Test_Tala_SEO_Sitemap extends Tala_SEO_Test_Case {
 		$sitemap = array_values( preg_grep( '/' . preg_quote( TALA_SEO_NOINDEX, '/' ) . '/', $queries ) );
 		$this->assertCount( 1, $sitemap, 'The sitemap query still leaves out hidden posts.' );
 		$this->assertStringNotContainsString( "JOIN {$wpdb->postmeta}", $sitemap[0] );
+	}
+
+	/**
+	 * A sitemap page reads its posts' custom fields (the canonical, and the primary category that an
+	 * address with %category% takes) in one query for the whole page, not one per post.
+	 */
+	public function test_sitemap_page_loads_its_meta_in_one_query(): void {
+		global $wpdb;
+		$this->set_pretty_permalinks( '/%category%/%postname%/' );
+		$posts = array( $this->publish_post(), $this->publish_post(), $this->publish_post() );
+		$this->go_to( home_url( '/' ) );
+		self::flush_cache();
+
+		$queries = array();
+		$capture = static function ( $sql ) use ( &$queries ) {
+			$queries[] = $sql;
+			return $sql;
+		};
+		add_filter( 'query', $capture );
+		$urls = wp_list_pluck( wp_sitemaps_get_server()->registry->get_provider( 'posts' )->get_url_list( 1, 'post' ), 'loc' );
+		remove_filter( 'query', $capture );
+
+		$this->assertContains( get_permalink( $posts[2] ), $urls );
+		$this->assertCount( 1, preg_grep( "/^\s*SELECT post_id, meta_key, meta_value FROM {$wpdb->postmeta} WHERE post_id IN/", $queries ) );
 	}
 
 	/**

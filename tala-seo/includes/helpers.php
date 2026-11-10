@@ -455,7 +455,9 @@ function tala_seo_profile_lines( $text ) {
 
 /**
  * An address in a form that compares equal for the same page: no scheme, host in lower case without
- * "www.", no trailing slash. "https://www.Example.com/a/" and "http://example.com/a" match.
+ * "www.", no trailing slash, and the path's escapes read as the letters they stand for.
+ * "https://www.Example.com/a/" and "http://example.com/a" match, as do "/%e3%82%ac", "/%E3%82%AC"
+ * and "/ガ".
  *
  * @param string $url URL.
  * @return string
@@ -466,7 +468,7 @@ function tala_seo_address_key( $url ) {
 		return '';
 	}
 	$host = (string) preg_replace( '/^www\./', '', strtolower( $parts['host'] ) );
-	$path = untrailingslashit( $parts['path'] ?? '' );
+	$path = untrailingslashit( rawurldecode( $parts['path'] ?? '' ) );
 	return $host . $path . ( isset( $parts['query'] ) ? '?' . $parts['query'] : '' );
 }
 

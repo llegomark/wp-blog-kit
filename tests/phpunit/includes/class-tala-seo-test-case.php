@@ -44,6 +44,18 @@ abstract class Tala_SEO_Test_Case extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Runs a plugin's uninstall.php, as WordPress does when the plugin is deleted from Plugins.
+	 *
+	 * @param string $plugin The plugin's folder: tala-seo, tala-ads or tala-guard.
+	 */
+	protected function uninstall( string $plugin ): void {
+		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+			define( 'WP_UNINSTALL_PLUGIN', "$plugin/$plugin.php" );
+		}
+		require dirname( __DIR__, 3 ) . "/$plugin/uninstall.php";
+	}
+
+	/**
 	 * Uploads one of the demo images in dev/media, with WordPress making its crops as on upload.
 	 *
 	 * @param WP_UnitTest_Factory $factory Factory.

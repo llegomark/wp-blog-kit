@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.20.0
+Stable tag: 1.21.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -27,7 +27,7 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **Event block:** when, where, tickets and organizer, shown as a card and described as an Event the way Google's event results ask: start and end with the UTC offset (or the date alone for an all-day event), the venue's address, status (canceled, postponed, rescheduled), price and ticket page, and the featured image. One per post, as Google supports pages about a single event.
 * **Course block:** a course's description, provider (the site unless you name another), level, format (online, in person or both), time, instructor and cost with an enrollment link, shown as a card and described as a Course for Google's course list, a carousel in English searches. A post with one course is its detail page; a category (or other list of posts) whose posts are all courses, three or more, becomes their summary page; a post with several courses lists them itself. Google uses the name, description and provider; the other details were its Course info result, retired in 2025, and stay for other search engines and AI assistants.
 * **FAQ and How-to:** two Group blocks in the inserter, made of core blocks: an FAQ with a Details block (opens on click) for each question, and a how-to guide with a heading, an introduction and a numbered list of steps (a post's only how-to guide may leave the heading out: it is then named after the post). They are described as FAQPage and HowTo. Google no longer shows these as rich results; the markup is valid schema.org that other search engines and AI assistants can read, and it only repeats what the page shows. Without the plugin they are ordinary blocks.
-* **Sitemap:** WordPress's own `/wp-sitemap.xml` with accurate `lastmod`, where the sitemap addresses of Yoast SEO and Rank Math (`sitemap_index.xml`, `post-sitemap.xml` and the like) now lead, without noindexed or redirected posts, hidden or empty categories and tags, small tag pages, or hidden author pages. It exists only while search engines may index the site.
+* **Sitemap:** WordPress's own `/wp-sitemap.xml` with accurate `lastmod`, where the sitemap addresses of Yoast SEO and Rank Math (`sitemap_index.xml`, `post-sitemap.xml` and the like) now lead, without noindexed or redirected posts, posts whose canonical URL names another address, hidden or empty categories and tags, small tag pages, or hidden author pages. It exists only while search engines may index the site.
 * **robots.txt:** points to the sitemap; blocks nothing else, and AI crawlers are welcome.
 * **Redirects:** a page, category or tag whose address changes (new slug or parent), or an author whose slug changes, sends visitors and search engines from the old address to the new one (301). WordPress does this for posts only. Children and numbered pages move with their parent. A post can also send its visitors to another address on purpose (301), for example after two guides are merged.
 * **Attachment pages:** the setup checklist turns off the thin page WordPress made for every uploaded image on sites older than WordPress 6.4, in one click; their addresses then lead to the files (301), as with Yoast SEO and Rank Math.
@@ -36,6 +36,15 @@ Tala SEO covers what a blog needs to follow Google Search Central's guidelines, 
 * **Authors:** a real author photo (no Gravatar request), social profile links (TikTok and Mastodon included) and other profile addresses (an author page on another site, GitHub, Gravatar) for the author markup's sameAs, and a Fediverse handle.
 * **Settings → SEO:** the title separator (vertical bar, hyphen, dashes, colon, middle dot or bullet), site owner, official profiles (the organization's sameAs), its kind, legal name, address, telephone and email, home description (also the Organization description), default share image, the minimum number of posts for tag pages to be indexed (2 by default), Google Search Console, Bing Webmaster Tools and Meta (Facebook) verification codes, and a setup checklist.
 * **WP-CLI:** `wp tala-seo audit` lists published posts that are missing something; `wp tala-seo import` copies data from Yoast SEO, Rank Math, The SEO Framework or SEOPress; `wp tala-seo describe` writes the missing meta descriptions from each post's opening text, once, for you to edit; `wp tala-seo pdf-canonicals` maps each PDF to its article for the web server's rel="canonical" header.
+
+Developers can change what the plugin covers with filters:
+
+* `tala_seo_post_types` (posts and pages by default): the post types that get the SEO fields, the SEO panel, their SEO title and description in the head, the redirect and the SEO column. The article markup (BlogPosting) and the publish requirements stay with posts and pages; give an added type requirements with the next filter.
+* `tala_seo_publish_requirements`: what a post type needs before it can be published, any of `description`, `featured_image` and `featured_image_alt`. The second argument is the post type.
+* `tala_seo_schema_nodes`: the page's structured data, as a list of schema.org nodes, right before it is printed. Add, change or remove nodes; empty ones are dropped.
+* `tala_seo_term_taxonomies` (public taxonomies with an admin screen by default): the taxonomies whose terms get the SEO title, meta description and "hide" fields. Post formats never do.
+* `tala_seo_thin_taxonomies` (tags by default): the taxonomies whose pages need the minimum number of posts from Settings → SEO to be indexed.
+* `tala_seo_head_comment`: return false to leave out the comments around the plugin's head tags.
 
 == Installation ==
 
@@ -104,6 +113,14 @@ Include that file in nginx's `http` block, and in the site's PDF location add `a
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.21.0 =
+* Changed: a post whose canonical URL names another address leaves the sitemap. Its page tells search engines the original is elsewhere, and a sitemap that listed it said the opposite. A canonical that is the post's own address, however it was typed (http or https, with or without "www." or the closing slash, letters written as escapes or not), changes nothing; the checklist in the editor reads addresses the same way. This also holds for a canonical set with a previous SEO plugin. A sitemap page left without addresses this way is served empty, as WordPress 7.2 does, instead of answering 404.
+* Fixed: outside the block editor, a post published with its featured image passed along with its custom fields (WP-CLI's `--meta_input`, other plugins) is published. The publish check only looked at the post's own featured image field and kept such a post as a draft, though WordPress stores the image either way.
+* Fixed: deleting the plugin from a network removes its settings and internal marks on every site, not only on the site it was deleted from. What editors wrote stays, as before.
+* WordPress 7.2: the plugin no longer uses the two sitemap stylesheet filters there. WordPress 7.2 serves sitemaps without the stylesheet itself and retired the filters, and using one logged a deprecation notice on every sitemap. Sites on 7.0 and 7.1 keep sitemaps without the stylesheet, as before.
+* A sitemap page reads its posts' custom fields in one query, whatever the permalink structure.
+* For developers: the plugin's filters are listed in the readme, and each has a test.
 
 = 1.20.0 =
 * Security: a post's redirect and canonical URL can be set only by people who can publish it: whoever may edit the post and published posts of its type (authors on their own posts, editors, administrators). Until now anyone who could edit a post could fill them, so a contributor's draft could carry a redirect to another site that went live when an editor published it. The SEO panel no longer shows the two fields to people who can't set them, the server refuses them by every route (the editor, the REST API, custom fields, XML-RPC), and saving the other fields works as before. On update, redirects and canonical URLs are removed once from posts that aren't published yet and whose author can't publish.
@@ -261,6 +278,9 @@ Include that file in nginx's `http` block, and in the site's PDF location add `a
 * First release.
 
 == Upgrade Notice ==
+
+= 1.21.0 =
+A post whose canonical URL names another address is no longer listed in the sitemap. Nothing to do; posts whose canonical is their own address stay.
 
 = 1.20.0 =
 Security: only people who can publish may set a post's redirect or canonical URL. Updating removes both, once, from unpublished posts whose author can't publish; an editor can set them again in the SEO panel.

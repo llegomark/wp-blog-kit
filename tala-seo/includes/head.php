@@ -169,12 +169,37 @@ add_filter( 'get_canonical_url', 'tala_seo_custom_canonical', 10, 2 );
  * @return string
  */
 function tala_seo_custom_canonical( $url, $post ) {
-	$custom = (string) get_post_meta( $post->ID, TALA_SEO_CANONICAL, true );
+	$custom = tala_seo_post_canonical( $post->ID );
+	return '' !== $custom ? $custom : $url;
+}
+
+/**
+ * The canonical URL set for a post in the SEO panel, or with a previous SEO plugin; '' when there
+ * is none and the post's own address is its canonical.
+ *
+ * @param int $post_id Post ID.
+ * @return string
+ */
+function tala_seo_post_canonical( $post_id ) {
+	$custom = (string) get_post_meta( $post_id, TALA_SEO_CANONICAL, true );
 	if ( '' === $custom ) {
 		// Another plugin's field: checked here, as nothing checked it when it was saved.
-		$custom = tala_seo_sanitize_url( tala_seo_legacy_value( $post->ID, 'canonical' ) );
+		$custom = tala_seo_sanitize_url( tala_seo_legacy_value( $post_id, 'canonical' ) );
 	}
-	return '' !== $custom ? $custom : $url;
+	return $custom;
+}
+
+/**
+ * Whether a post's canonical URL names another address than its own, which tells search engines
+ * the original is there. The post's own address counts as its own however it was typed (http or
+ * https, with or without "www." or the closing slash).
+ *
+ * @param WP_Post $post Post.
+ * @return bool
+ */
+function tala_seo_canonical_elsewhere( $post ) {
+	$custom = tala_seo_post_canonical( $post->ID );
+	return '' !== $custom && tala_seo_address_key( $custom ) !== tala_seo_address_key( (string) get_permalink( $post ) );
 }
 
 add_filter( 'wp_robots', 'tala_seo_robots' );
