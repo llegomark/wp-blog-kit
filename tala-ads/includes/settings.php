@@ -36,8 +36,23 @@ function tala_ads_register_settings(): void {
  * @return array{adsense:string,in_article:string,multiplex:string,consent:bool,error_protection:string,gtm:string,innity_key:string,innity_zone:string,innity_desktop:string,innity_mobile:string,innity_channel:string,cse:string,search_page:int}
  */
 function tala_ads_settings() {
+	static $seen  = null;
+	static $clean = array();
+
+	// Every block of a page asks for the settings, so the cleaning runs once for each stored value,
+	// not once per call. The stored value itself is the key: it changes with update_option(), with a
+	// filter on the option and with the site of a network, so nothing has to be told to forget.
 	$saved = get_option( 'tala_ads', array() );
-	return tala_ads_sanitize_settings( is_array( $saved ) ? $saved : array() );
+	$saved = is_array( $saved ) ? $saved : array();
+	if ( $saved !== $seen ) {
+		$clean = tala_ads_sanitize_settings( $saved );
+		$seen  = $saved;
+	}
+
+	// Whether the results page is still a page isn't in the option: looked at each time.
+	$settings                = $clean;
+	$settings['search_page'] = tala_ads_sanitize_search_page( $saved['search_page'] ?? 0 );
+	return $settings;
 }
 
 /**

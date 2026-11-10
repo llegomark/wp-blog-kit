@@ -632,6 +632,76 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * A block that only wraps other blocks (a Group, Columns) is not read again for hidden text:
+	 * the blocks inside it were marked when they were rendered, and reading them once more for every
+	 * wrapper around them made a long, nested article slow. What a wrapper holds of its own is still
+	 * marked: its saved markup, and an attribute put on its first tag.
+	 */
+	public function test_wrapper_blocks_are_not_read_again_for_hidden_text(): void {
+		$hidden  = '<!-- wp:paragraph --><p aria-hidden="true">Decoration</p><!-- /wp:paragraph -->';
+		$group   = static fn( string $inner, string $attributes = '' ): string => '<!-- wp:group --><div class="wp-block-group"' . $attributes . '>' . $inner . '</div><!-- /wp:group -->';
+		$wrapper = parse_blocks( $group( $hidden ) )[0];
+		$this->assertTrue( tala_ads_only_wraps( $wrapper ), 'A Group around other blocks.' );
+		$this->assertFalse( tala_ads_only_wraps( $wrapper['innerBlocks'][0] ), 'A block with no blocks inside is read.' );
+		$this->assertFalse( tala_ads_only_wraps( parse_blocks( $group( $hidden, ' aria-hidden="true"' ) )[0] ), 'A wrapper that is hidden itself.' );
+		$this->assertFalse(
+			tala_ads_only_wraps( parse_blocks( '<!-- wp:query --><div class="wp-block-query"><!-- wp:post-template --><!-- wp:post-title /--><!-- /wp:post-template --></div><!-- /wp:query -->' )[0] ),
+			'A block WordPress renders with PHP can add anything.'
+		);
+		$this->assertFalse( tala_ads_only_wraps( parse_blocks( '<!-- wp:acme/box --><div>' . $hidden . '</div><!-- /wp:acme/box -->' )[0] ), 'A block nothing is known about.' );
+		$this->assertFalse( tala_ads_only_wraps( 'not a block' ) );
+
+		update_option( 'tala_ads', self::ALL );
+		$this->go_to( home_url( '/' ) );
+		$icon = '<!-- wp:html --><svg aria-hidden="true"></svg><!-- /wp:html -->';
+		$html = do_blocks( $group( $group( $group( $hidden . $icon ) ) . '<!-- wp:paragraph --><p>Text people read.</p><!-- /wp:paragraph -->' ) );
+		$this->assertMatchesRegularExpression( '#<p class="[^"]*\bgoogle-anno-skip\b[^"]*" aria-hidden="true">Decoration</p>#', $html );
+		$this->assertStringContainsString( '<svg class="google-anno-skip" aria-hidden="true"></svg>', $html );
+		$this->assertSame( 2, substr_count( $html, 'google-anno-skip' ), 'Each hidden element once, however deep.' );
+
+		$html = do_blocks( $group( '<!-- wp:paragraph --><p>Wordmark</p><!-- /wp:paragraph -->', ' aria-hidden="true"' ) );
+		$this->assertMatchesRegularExpression( '#^<div class="[^"]*\bgoogle-anno-skip\b[^"]*" aria-hidden="true">#', $html, 'A wrapper hidden in its saved markup.' );
+
+		// An attribute another plugin puts on a wrapper's first tag, before Tala Ads reads the block.
+		$hide = static fn( $html, $block ) => 'core/group' === ( $block['blockName'] ?? '' ) ? preg_replace( '/^<div /', '<div aria-hidden="true" ', (string) $html ) : $html;
+		add_filter( 'render_block', $hide, 5, 2 );
+		$html = do_blocks( $group( '<!-- wp:paragraph --><p>Hidden by a plugin</p><!-- /wp:paragraph -->' ) );
+		remove_filter( 'render_block', $hide, 5 );
+		$this->assertMatchesRegularExpression( '#^<div aria-hidden="true" class="[^"]*\bgoogle-anno-skip\b#', $html );
+		$this->assertSame( 1, substr_count( $html, 'google-anno-skip' ) );
+	}
+
+	/**
+	 * The settings are cleaned once for each stored value, not on every call (every block of a page
+	 * asks for them), and still follow every change within a request: a new value, a filter on the
+	 * option, and a results page that stops being a page.
+	 */
+	public function test_settings_follow_every_change_within_a_request(): void {
+		update_option( 'tala_ads', array( 'adsense' => 'ca-pub-1234567890123456' ) );
+		$this->assertSame( 'ca-pub-1234567890123456', tala_ads_settings()['adsense'] );
+		$this->assertSame( tala_ads_settings(), tala_ads_settings() );
+
+		update_option( 'tala_ads', array( 'adsense' => 'ca-pub-6543210987654321' ) );
+		$this->assertSame( 'ca-pub-6543210987654321', tala_ads_settings()['adsense'], 'A new value in the same request.' );
+
+		$filter = static fn() => array( 'gtm' => 'GTM-ABC1234' );
+		add_filter( 'pre_option_tala_ads', $filter );
+		$this->assertSame( 'GTM-ABC1234', tala_ads_settings()['gtm'], 'A value from a filter on the option.' );
+		$this->assertSame( '', tala_ads_settings()['adsense'] );
+		remove_filter( 'pre_option_tala_ads', $filter );
+		$this->assertSame( 'ca-pub-6543210987654321', tala_ads_settings()['adsense'] );
+
+		$page = $this->search_page();
+		$this->assertSame( $page, tala_ads_settings()['search_page'] );
+		wp_delete_post( $page, true );
+		$this->assertSame( 0, tala_ads_settings()['search_page'], 'The results page is looked at each time: whether it is still a page isn\'t in the option.' );
+
+		delete_option( 'tala_ads' );
+		$this->assertSame( '', tala_ads_settings()['adsense'], 'No settings.' );
+		$this->assertSame( tala_ads_sanitize_settings( array() ), tala_ads_settings() );
+	}
+
+	/**
 	 * The site header, and the site title, tagline and logo wherever they are, get google-anno-skip,
 	 * so ad intents keep out of the site's name and menu; a footer template part and the article's
 	 * text don't.
@@ -1069,5 +1139,140 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'editor' ) ) );
 		$this->assertSame( '', get_echo( 'tala_ads_settings_page' ), 'Only for people who manage options.' );
+	}
+
+	/**
+	 * The tala_ads_post_types filter chooses where the Innity box goes: posts and pages by default;
+	 * with pages taken out, a page gets none and a post still does.
+	 */
+	public function test_post_types_filter_chooses_where_innity_goes(): void {
+		update_option( 'tala_ads', self::ALL );
+		$text    = $this->paragraphs( 'One.', 'Two.', 'Three.' );
+		$page    = $this->post(
+			array(
+				'post_type'    => 'page',
+				'post_title'   => 'About the school', // Its own address: a page and a post can share a slug.
+				'post_content' => $text,
+			)
+		);
+		$post    = $this->post( array( 'post_content' => $text ) );
+		$content = function ( int $id ): string {
+			$GLOBALS['wp_scripts'] = new WP_Scripts();
+			$this->go_to( get_permalink( $id ) );
+			the_post();
+			return apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
+		};
+		$this->assertSame( array( 'post', 'page' ), tala_ads_post_types() );
+		$this->assertStringContainsString( 'tala-ads-innity', $content( $page ), 'On pages by default.' );
+
+		add_filter( 'tala_ads_post_types', static fn( array $types ): array => array_values( array_diff( $types, array( 'page' ) ) ) );
+		$this->assertStringNotContainsString( 'tala-ads-innity', $content( $page ), 'Not on a type taken out.' );
+		$this->assertStringContainsString( 'tala-ads-innity', $content( $post ), 'Still on posts.' );
+	}
+
+	/**
+	 * The tala_ads_unit_post_types filter chooses where the In-article and Multiplex ads go (posts by
+	 * default), and tala_ads_in_article_paragraphs how many paragraphs come before the In-article ad
+	 * (2 by default).
+	 */
+	public function test_unit_filters_choose_the_types_and_the_paragraph(): void {
+		update_option(
+			'tala_ads',
+			array(
+				'adsense'    => 'ca-pub-1234567890123456',
+				'in_article' => '3203298627',
+				'multiplex'  => '2403531897',
+			)
+		);
+		$text    = $this->paragraphs( 'One.', 'Two.', 'Three.', 'Four.' );
+		$page    = $this->post(
+			array(
+				'post_type'    => 'page',
+				'post_title'   => 'About the school', // Its own address: a page and a post can share a slug.
+				'post_content' => $text,
+			)
+		);
+		$post    = $this->post( array( 'post_content' => $text ) );
+		$content = function ( int $id ): string {
+			$GLOBALS['wp_scripts'] = new WP_Scripts();
+			$this->go_to( get_permalink( $id ) );
+			the_post();
+			return apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
+		};
+		$this->assertStringNotContainsString( 'adsbygoogle', $content( $page ), 'Not on pages by default.' );
+		$this->assertMatchesRegularExpression( '#Two\.</p>\s*<div class="tala-ads-in-article"#', $content( $post ), 'After the second paragraph by default.' );
+
+		add_filter( 'tala_ads_unit_post_types', static fn( array $types ): array => array_merge( $types, array( 'page' ) ) );
+		$on_page = $content( $page );
+		$this->assertStringContainsString( 'tala-ads-in-article', $on_page, 'On a type that was added.' );
+		$this->assertStringContainsString( 'tala-ads-multiplex', $on_page );
+
+		add_filter( 'tala_ads_in_article_paragraphs', static fn( int $paragraphs ): int => $paragraphs + 1 );
+		$this->assertMatchesRegularExpression( '#Three\.</p>\s*<div class="tala-ads-in-article"#', $content( $post ), 'After the paragraph the filter names.' );
+	}
+
+	/**
+	 * The tala_ads_search_placed action fires when Google's search box is put on the results page,
+	 * once per page.
+	 */
+	public function test_search_placed_action_fires_with_the_search_box(): void {
+		$fired = 0;
+		add_action(
+			'tala_ads_search_placed',
+			static function () use ( &$fired ): void {
+				++$fired;
+			}
+		);
+		$page = $this->search_page();
+		$this->go_to( get_permalink( $this->post() ) );
+		the_post();
+		apply_filters( 'the_content', get_post_field( 'post_content', get_the_ID() ) );
+		$this->assertSame( 0, $fired, 'Not on other pages.' );
+
+		$this->go_to( get_permalink( $page ) );
+		the_post();
+		$content = apply_filters( 'the_content', get_post_field( 'post_content', $page ) );
+		$this->assertStringContainsString( 'gcse-search', $content );
+		$this->assertSame( 1, $fired );
+		apply_filters( 'the_content', get_post_field( 'post_content', $page ) );
+		$this->assertSame( 1, $fired, 'The box comes once per page, and so does the action.' );
+	}
+
+	/**
+	 * Deleting Tala Ads from Plugins removes its settings, and nothing else.
+	 */
+	public function test_uninstall_removes_the_settings(): void {
+		update_option( 'tala_ads', array( 'adsense' => 'ca-pub-1234567890123456' ) );
+		$this->uninstall( 'tala-ads' );
+		$this->assertNull( get_option( 'tala_ads', null ) );
+		$this->assertNotSame( '', (string) get_option( 'blogname' ), 'WordPress\'s own settings stay.' );
+	}
+
+	/**
+	 * On a network, the settings of every site go, not only those of the site the plugin was deleted
+	 * from, and the request is left on the site it started on.
+	 *
+	 * @group ms-required
+	 */
+	public function test_uninstall_cleans_every_site_of_a_network(): void {
+		if ( ! is_multisite() ) {
+			$this->markTestSkipped( 'Runs on a network: composer test:multisite.' );
+		}
+		$here  = get_current_blog_id();
+		$other = self::factory()->blog->create();
+		foreach ( array( $here, $other ) as $site ) {
+			switch_to_blog( $site );
+			update_option( 'tala_ads', array( 'adsense' => 'ca-pub-1234567890123456' ) );
+			restore_current_blog();
+		}
+
+		$this->uninstall( 'tala-ads' );
+
+		$this->assertSame( $here, get_current_blog_id(), 'Back on the site it started on.' );
+		foreach ( array( $here, $other ) as $site ) {
+			switch_to_blog( $site );
+			$this->assertNull( get_option( 'tala_ads', null ), "Site $site" );
+			restore_current_blog();
+		}
 	}
 }

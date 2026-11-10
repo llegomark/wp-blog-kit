@@ -229,13 +229,46 @@ function tala_ads_skip_ad_intents( $html, $block = array() ) {
 	if ( ! str_contains( $html, 'aria-hidden' ) ) {
 		return $html;
 	}
-	$tags = new WP_HTML_Tag_Processor( $html );
+	// A block that only wraps other blocks holds nothing hidden past its own first tag: what is
+	// inside was marked when those blocks were rendered. Reading all of it again here, for every
+	// wrapper around it, cost a long article with nested Groups a walk of its text per level.
+	// What another plugin adds inside an inner block after this filter ran on it is then seen only
+	// by the next block around it that WordPress renders with PHP, such as the post's content.
+	$first_tag_only = tala_ads_only_wraps( $block );
+	$tags           = new WP_HTML_Tag_Processor( $html );
 	while ( $tags->next_tag() ) {
 		if ( 'true' === $tags->get_attribute( 'aria-hidden' ) ) {
 			$tags->add_class( 'google-anno-skip' );
 		}
+		if ( $first_tag_only ) {
+			break;
+		}
 	}
 	return $tags->get_updated_html();
+}
+
+/**
+ * Whether a block only wraps other blocks, like a Group or Columns: it has blocks inside, WordPress
+ * prints its saved markup as it is (no PHP renders it, which could add anything), and that markup
+ * hides nothing itself. Such a block's HTML is its inner blocks' HTML inside its own tags.
+ *
+ * @param mixed $block The block (an array, unless another filter broke it).
+ * @return bool
+ */
+function tala_ads_only_wraps( $block ) {
+	if ( ! is_array( $block ) || empty( $block['innerBlocks'] ) || ! is_string( $block['blockName'] ?? null ) ) {
+		return false;
+	}
+	$type = WP_Block_Type_Registry::get_instance()->get_registered( $block['blockName'] );
+	if ( ! $type || $type->is_dynamic() ) {
+		return false;
+	}
+	foreach ( (array) ( $block['innerContent'] ?? array() ) as $part ) {
+		if ( is_string( $part ) && str_contains( $part, 'aria-hidden' ) ) {
+			return false;
+		}
+	}
+	return true;
 }
 
 /**

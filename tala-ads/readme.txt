@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.9.8
+Stable tag: 1.9.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -31,7 +31,7 @@ Tala Ads puts a site's ad and tracking code in one place, outside the theme, so 
 * **ads.txt check.** Settings → Ads says whether the site's ads.txt lists the publisher ID, without which AdSense may hold back ads.
 * **Any theme.** Every script goes through WordPress's script loader, which keeps each one to a single copy per page, and the boxes are added to the post's content. A theme only needs to call `wp_body_open()`, as WordPress asks themes to.
 
-Developers can keep ads off a page with the `tala_ads_show` filter (return false), choose which post types get the Innity box and in-read place with `tala_ads_post_types` (posts and pages by default). Return true from `tala_ads_innity_in_image` to allow Innity's in-image ads. `tala_ads_unit_post_types` chooses which post types get the In-article and Multiplex ads (posts by default), and `tala_ads_in_article_paragraphs` (2) how many paragraphs come before the In-article ad.
+Developers can keep ads off a page with the `tala_ads_show` filter (return false), choose which post types get the Innity box and in-read place with `tala_ads_post_types` (posts and pages by default). Return true from `tala_ads_innity_in_image` to allow Innity's in-image ads. `tala_ads_unit_post_types` chooses which post types get the In-article and Multiplex ads (posts by default), and `tala_ads_in_article_paragraphs` (2) how many paragraphs come before the In-article ad. The `tala_ads_search_placed` action fires when Google's search box is put on the results page.
 
 == Installation ==
 
@@ -71,6 +71,11 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.9.9 =
+* Faster pages with AdSense, before they are cached: the settings are cleaned once per page view instead of once for every block, and a block that only wraps other blocks (a Group, Columns) is no longer read again for hidden text that its inner blocks were already checked for. On a long article with nested Groups this took a walk of the article's text for every level. WordPress's own blocks get Google's google-anno-skip class on the same elements as before.
+* Fixed: deleting the plugin from a network removes its settings on every site, not only on the site it was deleted from.
+* For developers: the `tala_ads_search_placed` action is listed in the readme, and every filter and action has a test.
 
 = 1.9.8 =
 * Fixed: with a theme or plugin that shows a post's excerpt before its text, the In-article and Multiplex units, the Innity box, the place for Innity's in-read ad and Google's search box on the results page appear in the text again. WordPress cuts an automatic excerpt from the text by running the text's filters once more, and that pass took the units, which come once per page, and stripped them. Nothing is placed while an excerpt is being cut.
