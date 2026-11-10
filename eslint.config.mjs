@@ -32,8 +32,8 @@ export default [
 		},
 	},
 	{
-		// Tools that run in Node: this file, lint-staged's, Playwright's, and bin/.
-		files: [ '*.mjs', 'bin/**/*.mjs' ],
+		// Tools that run in Node: this file, lint-staged's, Playwright's, bin/ and its tests.
+		files: [ '*.mjs', 'bin/**/*.mjs', 'tests/tooling/**/*.mjs' ],
 		languageOptions: {
 			sourceType: 'module',
 			globals: globals.node,

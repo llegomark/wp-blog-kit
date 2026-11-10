@@ -27,4 +27,7 @@ export default {
 	'{tala-seo/readme.txt,tala-seo/tala-seo.php,.wordpress-org/*}': () => 'node bin/validate-readme.mjs tala-seo',
 	'{tala-ads/readme.txt,tala-ads/tala-ads.php,.wordpress-org/tala-ads/*}': () => 'node bin/validate-readme.mjs tala-ads',
 	'{tala-guard/readme.txt,tala-guard/tala-guard.php,.wordpress-org/tala-guard/*}': () => 'node bin/validate-readme.mjs tala-guard',
+	// Each product's header, version constant, Stable tag and changelog entry agree.
+	'{tala-seo/tala-seo.php,tala-ads/tala-ads.php,tala-guard/tala-guard.php,tala-blog/style.css,tala-*/readme.txt}': () =>
+		'node bin/validate-versions.mjs',
 };

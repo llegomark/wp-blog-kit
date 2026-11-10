@@ -44,7 +44,8 @@ jobs:
       contents: write # tags and releases
       id-token: write # signs the build attestation
       attestations: write # stores it
-    # The token is given only to the steps that call gh, not to build.sh or the notes script.
+    # The token is given only to the steps that call gh, not to build.sh or the notes script
+    # (bin/release-notes.mjs), which both run before anything is attested or published.
     env:
       GH_REPO: ${{ github.repository }}
       SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
@@ -127,6 +128,17 @@ jobs:
             cat "$tag.zip.sha256"
           done
 
+      # Before anything is attested or published: a version without a changelog entry stops the run
+      # here, with no release of this push made yet (npm run lint:versions catches it earlier still).
+      - name: Write the release notes (bin/release-notes.mjs)
+        if: steps.new.outputs.tags != ''
+        env:
+          TAGS: ${{ steps.new.outputs.tags }}
+        run: |
+          for tag in $TAGS; do
+            node bin/release-notes.mjs "${tag%-*}" "$(cut -d' ' -f1 "dist/$tag.zip.sha256")" > "$RUNNER_TEMP/$tag.notes.md"
+          done
+
       - name: Attest the zips' build provenance
         if: steps.new.outputs.tags != ''
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
@@ -155,8 +167,7 @@ jobs:
               tala-guard) title="Tala Guard $version" ;;
               tala-blog) title="Tala Blog $version" ;;
             esac
-            node bin/release-notes.mjs "$product" "$(cut -d' ' -f1 "dist/$tag.zip.sha256")" > "$RUNNER_TEMP/notes.md"
             gh release create "$tag" "dist/$tag.zip" "dist/$tag.zip.sha256" \
-              --target "$SHA" --title "$title" --notes-file "$RUNNER_TEMP/notes.md"
+              --target "$SHA" --title "$title" --notes-file "$RUNNER_TEMP/$tag.notes.md"
             echo "Published $title: https://github.com/$GH_REPO/releases/tag/$tag"
           done

@@ -1,23 +1,25 @@
 {
 	"name": "wp-blog-kit",
 	"private": true,
-	"description": "Development tools for the Tala Blog theme and Tala SEO plugin: linters and browser tests. The theme and plugin ship as they are, with no build step.",
+	"description": "Development tools for the Tala Blog theme and the Tala SEO, Tala Ads and Tala Guard plugins: linters and browser tests. The theme and plugins ship as they are, with no build step.",
 	"license": "GPL-2.0-or-later",
 	"engines": {
 		"node": ">=24",
 		"npm": ">=11"
 	},
 	"scripts": {
-		"lint": "npm run lint:css && npm run lint:js && npm run lint:theme && npm run lint:readme && npm run lint:php",
+		"lint": "npm run lint:css && npm run lint:js && npm run lint:theme && npm run lint:readme && npm run lint:versions && npm run lint:php",
 		"lint:css": "stylelint \"**/*.css\"",
 		"lint:css:fix": "stylelint \"**/*.css\" --fix",
 		"lint:js": "eslint .",
 		"lint:js:fix": "eslint . --fix",
 		"lint:theme": "node bin/validate-theme.mjs",
 		"lint:readme": "node bin/validate-readme.mjs tala-seo && node bin/validate-readme.mjs tala-ads && node bin/validate-readme.mjs tala-guard",
+		"lint:versions": "node bin/validate-versions.mjs",
 		"lint:php": "composer run lint",
 		"prepare": "husky",
-		"test:e2e": "playwright test"
+		"test:e2e": "playwright test",
+		"test:tooling": "node --test \"tests/tooling/*.test.mjs\""
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.13.0",

@@ -1,7 +1,8 @@
 # The same checks as `composer check`, `npm run lint` and the tests, on GitHub's servers: WordPress
 # Coding Standards and PHPStan level 8 for the PHP, WordPress's CSS and JavaScript standards
 # (Stylelint, ESLint), theme.json and block.json against WordPress's schemas with the patterns and
-# block markup, the plugins' readmes by WordPress.org's readme rules, WordPress's Plugin Check for the
+# block markup, the plugins' readmes by WordPress.org's readme rules, each product's versions against
+# each other, WordPress's Plugin Check for the
 # plugins, the PHPUnit integration tests on WordPress's test framework, and the browser tests
 # (Playwright) on the demo site.
 # Every action is pinned to a full commit SHA (the comment names the release); Dependabot
@@ -82,6 +83,12 @@ jobs:
 
       - name: Plugin readme (WordPress.org's readme validator rules)
         run: npm run lint:readme
+
+      - name: Each product's versions agree (header, constant, Stable tag, changelog)
+        run: npm run lint:versions
+
+      - name: Tests of the release tools
+        run: npm run test:tooling
 
   phpunit:
     name: PHPUnit (WordPress latest)

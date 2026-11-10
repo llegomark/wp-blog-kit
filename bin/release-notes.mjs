@@ -14,14 +14,9 @@
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { PRODUCTS, entry, headerField } from './lib/readme.mjs';
 
 const ROOT = fileURLToPath( new URL( '..', import.meta.url ) );
-const PRODUCTS = {
-	'tala-seo': { name: 'Tala SEO', header: 'tala-seo/tala-seo.php', kind: 'plugin' },
-	'tala-ads': { name: 'Tala Ads', header: 'tala-ads/tala-ads.php', kind: 'plugin' },
-	'tala-guard': { name: 'Tala Guard', header: 'tala-guard/tala-guard.php', kind: 'plugin' },
-	'tala-blog': { name: 'Tala Blog', header: 'tala-blog/style.css', kind: 'theme' },
-};
 
 const [ slug, sha256 = '' ] = process.argv.slice( 2 );
 const product = PRODUCTS[ slug ];
@@ -31,22 +26,7 @@ if ( ! product ) {
 }
 
 const read = ( file ) => readFileSync( `${ ROOT }/${ file }`, 'utf8' ).replace( /\r\n?/g, '\n' );
-const header = ( field ) => read( product.header ).match( new RegExp( `^[ \\t/*#@]*${ field }:[ \\t]*(.+?)[ \\t]*$`, 'm' ) )?.[ 1 ] ?? '';
-
-/**
- * The text under "= <version> =" in a readme section, or ''.
- *
- * @param {string} readme  Readme text.
- * @param {string} section Section title ("Changelog").
- * @param {string} version Version.
- * @return {string} Text.
- */
-function entry( readme, section, version ) {
-	const body = readme.split( /^==\s*/m ).find( ( part ) => part.toLowerCase().startsWith( `${ section.toLowerCase() } ==` ) ) ?? '';
-	const items = body.split( /^=\s*/m ).slice( 1 );
-	const item = items.find( ( text ) => text.startsWith( `${ version } =` ) );
-	return item ? item.slice( item.indexOf( '\n' ) + 1 ).trim() : '';
-}
+const header = ( field ) => headerField( read( product.header ), field );
 
 const version = header( 'Version' );
 const readme = read( `${ slug }/readme.txt` );
