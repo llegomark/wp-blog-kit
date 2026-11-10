@@ -4,7 +4,7 @@ Tags: comments, spam, anti-spam, turnstile, captcha
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,10 @@ Yes, with Cloudflare's test keys (developers.cloudflare.com/turnstile/troublesho
 2. Settings → Discussion: the Turnstile keys, with the secret key saved and not shown.
 
 == Changelog ==
+
+= 1.1.1 =
+* Fixed: when the browser can't load Turnstile's script from Cloudflare (no connection, a blocked address), a comment that was sent no longer waits on "Checking that a person is writing" for good. The form says the check couldn't load, and sending the comment again loads the script again. A script that hasn't arrived after ten seconds ends the wait the same way, and the comment still goes if it is sent again and the script then arrives.
+* Fixed: in a browser without `requestSubmit`, a comment that waited for its token is sent. The fallback called the form's `submit`, which on WordPress's comment form is the button of that name.
 
 = 1.1.0 =
 * The widget follows the page's color scheme: light or dark when the page declares one (as a theme's Light/Dark switch does), the device's otherwise, and it switches with the page when a reader changes it.

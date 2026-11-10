@@ -60,7 +60,7 @@ function tala_guard_comment_form_widget( $submit_field ) {
 		esc_attr( $keys['site_key'] ),
 		esc_attr( TALA_GUARD_ACTION ),
 		esc_attr__( 'Checking that a person is writing. Your comment will be sent in a moment.', 'tala-guard' ),
-		esc_attr__( 'The check that keeps out spam couldn\'t finish. Reload the page and send your comment again.', 'tala-guard' ),
+		esc_attr__( 'The check that keeps out spam couldn\'t load or finish. Send your comment again, or reload the page first.', 'tala-guard' ),
 		esc_html__( 'Turn on JavaScript to post a comment: a quick check from Cloudflare Turnstile confirms that a person is writing.', 'tala-guard' )
 	);
 	return $widget . $submit_field;

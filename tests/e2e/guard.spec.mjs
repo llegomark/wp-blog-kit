@@ -1,7 +1,8 @@
 /**
  * Tala Guard in the browser: Cloudflare Turnstile renders in the comment form, a comment whose token
- * Siteverify confirms is saved, one it rejects is turned away with a way back, and a comment sent
- * before the token is ready waits for it and then goes by itself.
+ * Siteverify confirms is saved, one it rejects is turned away with a way back, a comment sent
+ * before the token is ready waits for it and then goes by itself, and one sent while Turnstile's
+ * script can't load or doesn't arrive is told so and can be sent again.
  *
  * With Cloudflare's test keys (developers.cloudflare.com/turnstile/troubleshooting/testing/): the
  * test site key gives the dummy token on any address, the "always passes" secret key confirms it
@@ -181,6 +182,107 @@ test.describe( 'Turnstile on the comment form', () => {
 		await expect( page.locator( '.tala-guard-status' ) ).toContainText( 'Checking that a person is writing' );
 		expect( page.url() ).not.toMatch( /#comment-/ );
 
+		release();
+		await page.waitForURL( /#comment-\d+$/, { timeout: 20_000 } );
+		const ids = commentsWith( text );
+		expect( ids ).toHaveLength( 1 );
+		wp( 'comment', 'delete', ...ids, '--force' );
+	} );
+
+	test( 'a comment sent while Turnstile\'s script can\'t load is told so, and the next try loads it again', async ( { page } ) => {
+		setKeys( PASSES );
+		let reachable = false;
+		let requests = 0;
+		// Counted until the comment is posted: the page shown after it asks for the script again.
+		let posted = false;
+		page.on( 'request', ( request ) => {
+			posted = posted || request.url().endsWith( '/wp-comments-post.php' );
+		} );
+		await page.route( 'https://challenges.cloudflare.com/turnstile/v0/api.js*', async ( route ) => {
+			requests += posted ? 0 : 1;
+			if ( reachable ) {
+				await route.continue();
+			} else {
+				await route.abort( 'internetdisconnected' );
+			}
+		} );
+		await page.goto( pages.withComments );
+		const text = await fillComment( page );
+		await page.locator( '#submit' ).click();
+		const status = page.locator( '.tala-guard-status' );
+		await expect( status ).toContainText( 'couldn\'t load or finish' );
+		await expect( status ).not.toContainText( 'Checking that a person is writing' );
+		expect( page.url() ).not.toMatch( /#comment-/ );
+		expect( commentsWith( text ) ).toEqual( [] );
+		await expect( page.locator( 'script[src*="challenges.cloudflare.com"]' ), 'The script that failed is gone' ).toHaveCount( 0 );
+
+		// The connection is back: sending again loads the script, runs the check and sends the comment.
+		reachable = true;
+		const failed = requests;
+		await page.locator( '#submit' ).click();
+		await expect( status ).toContainText( 'Checking that a person is writing' );
+		await page.waitForURL( /#comment-\d+$/, { timeout: 20_000 } );
+		const ids = commentsWith( text );
+		expect( ids ).toHaveLength( 1 );
+		wp( 'comment', 'delete', ...ids, '--force' );
+		expect( requests - failed, 'One new request for the script' ).toBe( 1 );
+	} );
+
+	test( 'a script that doesn\'t arrive ends the wait after 10 seconds, and still works when it comes', async ( { page } ) => {
+		setKeys( PASSES );
+		let release;
+		const held = new Promise( ( resolve ) => {
+			release = resolve;
+		} );
+		let requests = 0;
+		await page.route( 'https://challenges.cloudflare.com/turnstile/v0/api.js*', async ( route ) => {
+			requests += 1;
+			await held;
+			await route.continue();
+		} );
+		await page.clock.install();
+		await page.goto( pages.withComments );
+		const text = await fillComment( page );
+		await page.locator( '#submit' ).click();
+		const status = page.locator( '.tala-guard-status' );
+		await expect( status ).toContainText( 'Checking that a person is writing' );
+
+		await page.clock.runFor( 9_000 );
+		await expect( status, 'Still waiting after 9 seconds' ).toContainText( 'Checking that a person is writing' );
+		await page.clock.runFor( 1_500 );
+		await expect( status ).toContainText( 'couldn\'t load or finish' );
+
+		// Sending again waits again, without asking for the script a second time while the first
+		// request is still on its way; when the script arrives, the comment goes.
+		await page.locator( '#submit' ).click();
+		await expect( status ).toContainText( 'Checking that a person is writing' );
+		expect( requests ).toBe( 1 );
+		release();
+		await page.clock.resume();
+		await page.waitForURL( /#comment-\d+$/, { timeout: 20_000 } );
+		const ids = commentsWith( text );
+		expect( ids ).toHaveLength( 1 );
+		wp( 'comment', 'delete', ...ids, '--force' );
+	} );
+
+	test( 'in a browser without requestSubmit, a comment that waited for its token still goes', async ( { page } ) => {
+		setKeys( PASSES );
+		// WordPress names the form's button "submit", which hides the form's own submit() method.
+		await page.addInitScript( () => {
+			delete window.HTMLFormElement.prototype.requestSubmit;
+		} );
+		let release;
+		const held = new Promise( ( resolve ) => {
+			release = resolve;
+		} );
+		await page.route( 'https://challenges.cloudflare.com/turnstile/v0/api.js*', async ( route ) => {
+			await held;
+			await route.continue();
+		} );
+		await page.goto( pages.withComments );
+		const text = await fillComment( page );
+		await page.locator( '#submit' ).click();
+		await expect( page.locator( '.tala-guard-status' ) ).toContainText( 'Checking that a person is writing' );
 		release();
 		await page.waitForURL( /#comment-\d+$/, { timeout: 20_000 } );
 		const ids = commentsWith( text );
