@@ -226,45 +226,46 @@ function tala_ads_skip_ad_intents( $html, $block = array() ) {
 		}
 		$html = $root->get_updated_html();
 	}
-	if ( ! str_contains( $html, 'aria-hidden' ) ) {
+	// Nothing hidden here, or all of it marked when the blocks inside were rendered: reading it
+	// again, for every block around it, cost a long article with nested Groups a walk of its text
+	// per level.
+	if ( ! str_contains( $html, 'aria-hidden' ) || tala_ads_hidden_all_marked( $html ) ) {
 		return $html;
 	}
-	// A block that only wraps other blocks holds nothing hidden past its own first tag: what is
-	// inside was marked when those blocks were rendered. Reading all of it again here, for every
-	// wrapper around it, cost a long article with nested Groups a walk of its text per level.
-	// What another plugin adds inside an inner block after this filter ran on it is then seen only
-	// by the next block around it that WordPress renders with PHP, such as the post's content.
-	$first_tag_only = tala_ads_only_wraps( $block );
-	$tags           = new WP_HTML_Tag_Processor( $html );
+	$tags = new WP_HTML_Tag_Processor( $html );
 	while ( $tags->next_tag() ) {
 		if ( 'true' === $tags->get_attribute( 'aria-hidden' ) ) {
 			$tags->add_class( 'google-anno-skip' );
-		}
-		if ( $first_tag_only ) {
-			break;
 		}
 	}
 	return $tags->get_updated_html();
 }
 
 /**
- * Whether a block only wraps other blocks, like a Group or Columns: it has blocks inside, WordPress
- * prints its saved markup as it is (no PHP renders it, which could add anything), and that markup
- * hides nothing itself. Such a block's HTML is its inner blocks' HTML inside its own tags.
+ * Whether every element hidden from screen readers in a piece of HTML carries google-anno-skip
+ * already, so the HTML needn't be read tag by tag. A quick look at the text, not a parse: each
+ * aria-hidden="true", written exactly so, must sit in a tag that also holds the class. Anything
+ * else (another way of writing it, a tag this can't see the whole of) answers false, and the HTML
+ * is read properly. What a theme or plugin adds to a block after it was marked is found here, when
+ * the block around it is rendered.
  *
- * @param mixed $block The block (an array, unless another filter broke it).
+ * @param string $html HTML.
  * @return bool
  */
-function tala_ads_only_wraps( $block ) {
-	if ( ! is_array( $block ) || empty( $block['innerBlocks'] ) || ! is_string( $block['blockName'] ?? null ) ) {
-		return false;
-	}
-	$type = WP_Block_Type_Registry::get_instance()->get_registered( $block['blockName'] );
-	if ( ! $type || $type->is_dynamic() ) {
-		return false;
-	}
-	foreach ( (array) ( $block['innerContent'] ?? array() ) as $part ) {
-		if ( is_string( $part ) && str_contains( $part, 'aria-hidden' ) ) {
+function tala_ads_hidden_all_marked( $html ) {
+	for ( $at = stripos( $html, 'aria-hidden' ); false !== $at; $at = stripos( $html, 'aria-hidden', $at + 11 ) ) {
+		$value = substr( $html, $at + 11, 8 );
+		if ( '="false"' === $value ) {
+			continue;
+		}
+		$open  = strrpos( substr( $html, 0, $at ), '<' );
+		$close = strpos( $html, '>', $at );
+		if ( ! str_starts_with( $value, '="true"' ) || 'aria-hidden' !== substr( $html, $at, 11 ) || false === $open || false === $close ) {
+			return false;
+		}
+		$tag = substr( $html, $open, $close - $open );
+		// A ">" or "<" inside an attribute's value would cut the tag short: not sure, so read it.
+		if ( ! preg_match( '/\sclass="[^"]*(?<![\w-])google-anno-skip(?![\w-])/', $tag ) || str_contains( substr( $tag, 1 ), '<' ) || 0 !== substr_count( $tag, '"' ) % 2 ) {
 			return false;
 		}
 	}

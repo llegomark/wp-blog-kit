@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.9.9
+Stable tag: 1.9.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.9.10 =
+* Fixed: text hidden from screen readers that a theme or plugin adds to a block after Tala Ads has read it gets Google's google-anno-skip class again, so ad intents keep out of it. 1.9.9 stopped reading a Group or Columns block again for hidden text, and with it missed what was added inside it later: with Tala Blog, the numbers and icons of the "On this page" list. A block's HTML is now skipped only when everything hidden in it carries the class already, which keeps 1.9.9's speed.
 
 = 1.9.9 =
 * Faster pages with AdSense, before they are cached: the settings are cleaned once per page view instead of once for every block, and a block that only wraps other blocks (a Group, Columns) is no longer read again for hidden text that its inner blocks were already checked for. On a long article with nested Groups this took a walk of the article's text for every level. WordPress's own blocks get Google's google-anno-skip class on the same elements as before.

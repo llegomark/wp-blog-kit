@@ -225,6 +225,25 @@ for ( const [ name, device ] of Object.entries( { phone: PHONE, desktop: DESKTOP
 	} );
 }
 
+test( 'everything hidden from screen readers on an article is kept out of ad intents, the theme\'s contents list included', async ( { page } ) => {
+	await standIn( page );
+	// Tala Blog adds its "On this page" contents, with hidden numbers and icons, to the post's
+	// content after Tala Ads has read that block. The demo articles have two sections: enough here.
+	wp( 'theme', 'mod', 'set', 'tala_blog_contents_sections', '2' );
+	try {
+		await page.goto( pages.article );
+		await expect( page.locator( '.tala-contents .tala-contents-num[aria-hidden="true"]' ).first(), 'The article has a contents list' ).toBeAttached();
+		const unmarked = await page
+			.locator( '.wp-site-blocks [aria-hidden="true"]' )
+			.evaluateAll( ( elements ) =>
+				elements.filter( ( element ) => ! element.classList.contains( 'google-anno-skip' ) ).map( ( element ) => element.outerHTML.slice( 0, 120 ) ),
+			);
+		expect( unmarked ).toEqual( [] );
+	} finally {
+		wp( 'theme', 'mod', 'remove', 'tala_blog_contents_sections' );
+	}
+} );
+
 test( 'ad frames stay see-through on a dark page', async ( { page } ) => {
 	await standIn( page );
 	await page.emulateMedia( { colorScheme: 'dark' } );

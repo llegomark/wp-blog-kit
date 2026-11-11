@@ -632,25 +632,27 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * A block that only wraps other blocks (a Group, Columns) is not read again for hidden text:
-	 * the blocks inside it were marked when they were rendered, and reading them once more for every
-	 * wrapper around them made a long, nested article slow. What a wrapper holds of its own is still
-	 * marked: its saved markup, and an attribute put on its first tag.
+	 * A block's HTML is not read again for hidden text when everything hidden in it is marked
+	 * already: the blocks inside it were marked when they were rendered, and reading them once more
+	 * for every block around them made a long, nested article slow. Whatever is hidden and not
+	 * marked yet, wherever it came from, still gets the class: a wrapper's own markup, and what a
+	 * theme or plugin adds to a block after Tala Ads has read it (Tala Blog adds its "On this
+	 * page" contents to the post's content that way).
 	 */
-	public function test_wrapper_blocks_are_not_read_again_for_hidden_text(): void {
-		$hidden  = '<!-- wp:paragraph --><p aria-hidden="true">Decoration</p><!-- /wp:paragraph -->';
-		$group   = static fn( string $inner, string $attributes = '' ): string => '<!-- wp:group --><div class="wp-block-group"' . $attributes . '>' . $inner . '</div><!-- /wp:group -->';
-		$wrapper = parse_blocks( $group( $hidden ) )[0];
-		$this->assertTrue( tala_ads_only_wraps( $wrapper ), 'A Group around other blocks.' );
-		$this->assertFalse( tala_ads_only_wraps( $wrapper['innerBlocks'][0] ), 'A block with no blocks inside is read.' );
-		$this->assertFalse( tala_ads_only_wraps( parse_blocks( $group( $hidden, ' aria-hidden="true"' ) )[0] ), 'A wrapper that is hidden itself.' );
-		$this->assertFalse(
-			tala_ads_only_wraps( parse_blocks( '<!-- wp:query --><div class="wp-block-query"><!-- wp:post-template --><!-- wp:post-title /--><!-- /wp:post-template --></div><!-- /wp:query -->' )[0] ),
-			'A block WordPress renders with PHP can add anything.'
-		);
-		$this->assertFalse( tala_ads_only_wraps( parse_blocks( '<!-- wp:acme/box --><div>' . $hidden . '</div><!-- /wp:acme/box -->' )[0] ), 'A block nothing is known about.' );
-		$this->assertFalse( tala_ads_only_wraps( 'not a block' ) );
+	public function test_marked_html_is_not_read_again_for_hidden_text(): void {
+		$this->assertTrue( tala_ads_hidden_all_marked( '<div><p class="google-anno-skip" aria-hidden="true">A</p><svg aria-hidden="true" class="icon google-anno-skip"></svg></div>' ) );
+		$this->assertTrue( tala_ads_hidden_all_marked( '<div><span aria-hidden="false">Shown</span><p>Text</p></div>' ), 'Nothing hidden.' );
+		$this->assertFalse( tala_ads_hidden_all_marked( '<div><p class="google-anno-skip" aria-hidden="true">A</p><span aria-hidden="true">01</span></div>' ), 'One is not marked.' );
+		$this->assertFalse( tala_ads_hidden_all_marked( '<div aria-hidden="true"><p class="google-anno-skip">The class is on another element.</p></div>' ) );
+		$this->assertFalse( tala_ads_hidden_all_marked( "<p aria-hidden='true'>Single quotes</p>" ) );
+		$this->assertFalse( tala_ads_hidden_all_marked( '<p ARIA-HIDDEN="true">Capitals</p>' ) );
+		$this->assertFalse( tala_ads_hidden_all_marked( '<p aria-hidden=true>No quotes</p>' ) );
+		$this->assertFalse( tala_ads_hidden_all_marked( '<p aria-hidden="true" data-note="a > b" class="google-anno-skip">In doubt, the HTML is read.</p>' ) );
+		$this->assertFalse( tala_ads_hidden_all_marked( '<p class="google-anno-skip" data-note="a < b" aria-hidden="true">In doubt again.</p>' ) );
+		$this->assertFalse( tala_ads_hidden_all_marked( '<p aria-hidden="true" data-note="google-anno-skip">The words in another attribute are no class.</p>' ) );
 
+		$hidden = '<!-- wp:paragraph --><p aria-hidden="true">Decoration</p><!-- /wp:paragraph -->';
+		$group  = static fn( string $inner, string $attributes = '' ): string => '<!-- wp:group --><div class="wp-block-group"' . $attributes . '>' . $inner . '</div><!-- /wp:group -->';
 		update_option( 'tala_ads', self::ALL );
 		$this->go_to( home_url( '/' ) );
 		$icon = '<!-- wp:html --><svg aria-hidden="true"></svg><!-- /wp:html -->';
@@ -662,13 +664,14 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$html = do_blocks( $group( '<!-- wp:paragraph --><p>Wordmark</p><!-- /wp:paragraph -->', ' aria-hidden="true"' ) );
 		$this->assertMatchesRegularExpression( '#^<div class="[^"]*\bgoogle-anno-skip\b[^"]*" aria-hidden="true">#', $html, 'A wrapper hidden in its saved markup.' );
 
-		// An attribute another plugin puts on a wrapper's first tag, before Tala Ads reads the block.
-		$hide = static fn( $html, $block ) => 'core/group' === ( $block['blockName'] ?? '' ) ? preg_replace( '/^<div /', '<div aria-hidden="true" ', (string) $html ) : $html;
-		add_filter( 'render_block', $hide, 5, 2 );
-		$html = do_blocks( $group( '<!-- wp:paragraph --><p>Hidden by a plugin</p><!-- /wp:paragraph -->' ) );
-		remove_filter( 'render_block', $hide, 5 );
-		$this->assertMatchesRegularExpression( '#^<div aria-hidden="true" class="[^"]*\bgoogle-anno-skip\b#', $html );
-		$this->assertSame( 1, substr_count( $html, 'google-anno-skip' ) );
+		// What a theme adds to a block after Tala Ads has read it, through the block's own filter
+		// (it runs after "render_block"): marked when the block around it is read.
+		$number = static fn( $html ) => str_replace( '<p class="wp-block-paragraph">', '<p class="wp-block-paragraph"><span aria-hidden="true">01</span>', (string) $html );
+		add_filter( 'render_block_core/paragraph', $number );
+		$html   = do_blocks( $group( $group( '<!-- wp:paragraph --><p>A section</p><!-- /wp:paragraph -->' . $icon ) ) );
+		remove_filter( 'render_block_core/paragraph', $number );
+		$this->assertStringContainsString( '<span class="google-anno-skip" aria-hidden="true">01</span>A section', $html );
+		$this->assertSame( 2, substr_count( $html, 'google-anno-skip' ), 'And the icon, once.' );
 	}
 
 	/**
