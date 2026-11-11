@@ -266,6 +266,121 @@ test( 'ad frames stay see-through on a dark page', async ( { page } ) => {
 	expect( schemes.autoAd ).toBe( 'light' );
 } );
 
+test.describe( 'Innity', () => {
+	test.use( PHONE );
+
+	/**
+	 * Lets Innity's zones through the consent gate, as Google's message script does outside the
+	 * GDPR's reach.
+	 *
+	 * @param {import('@playwright/test').Page} page Page.
+	 */
+	const consentReady = ( page ) =>
+		page.evaluate( () => window.googlefc.callbackQueue.forEach( ( entry ) => entry.CONSENT_DATA_READY && entry.CONSENT_DATA_READY() ) );
+
+	/**
+	 * How many zones wait in Innity's queue.
+	 *
+	 * @param {import('@playwright/test').Page} page Page.
+	 */
+	const queued = ( page ) => page.evaluate( () => ( window.innity_adZoneAsync?.q ?? [] ).length );
+
+	/**
+	 * Opens the home page, which has no Innity box (so the only zone that can reach Innity's queue is
+	 * the Universal tag's), with one more image whose request the test answers; then stops the page's
+	 * clock, which the test moves on by hand, and opens the consent gate.
+	 *
+	 * @param {import('@playwright/test').Page} page  Page.
+	 * @param {string}                          image The image's path.
+	 */
+	const openHome = async ( page, image ) => {
+		await page.clock.install();
+		await page.addInitScript(
+			( src ) =>
+				document.addEventListener( 'DOMContentLoaded', () => {
+					const element = new Image();
+					element.src = src;
+					document.body.append( element );
+				} ),
+			image,
+		);
+		await page.goto( pages.home, { waitUntil: 'domcontentloaded' } );
+		expect( await page.evaluate( () => document.readyState ), 'The page is still loading when the gate opens' ).not.toBe( 'complete' );
+		await page.clock.pauseAt( new Date( Date.now() + 60_000 ) );
+		await consentReady( page );
+	};
+
+	test( 'the in-read place sits in the article after its sixth paragraph, and takes no room while empty', async ( { page } ) => {
+		await standIn( page );
+		const texts = [ 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight' ];
+		const post = wp(
+			'post',
+			'create',
+			'--post_status=publish',
+			'--post_title=Kit in-read place',
+			// Tala SEO's publish check wants a description and a featured image: the demo article's.
+			`--meta_input=${ JSON.stringify( {
+				_tala_seo_description: 'Eight paragraphs for the in-read place.',
+				_thumbnail_id: wp( 'post', 'meta', 'get', wp( 'post', 'list', '--post_type=post', '--name=keeping-school-forms-organized-all-year', '--field=ID' ), '_thumbnail_id' ),
+			} ) }`,
+			`--post_content=${ texts.map( ( text ) => `<!-- wp:paragraph --><p>${ text }.</p><!-- /wp:paragraph -->` ).join( '' ) }`,
+			'--porcelain',
+		);
+		try {
+			expect( wp( 'post', 'get', post, '--field=post_status' ), 'The test\'s post is published' ).toBe( 'publish' );
+			await page.goto( new URL( wp( 'post', 'url', post ) ).pathname );
+			const found = await page.evaluate( () => {
+				const place = document.getElementById( 'innity-in-post' );
+				const order = [ ...place.parentElement.children ]
+					.map( ( element ) => ( 'P' === element.tagName ? element.textContent.trim() : element.className.split( ' ' )[ 0 ] || element.id ) )
+					.filter( Boolean );
+				return { order, height: place.getBoundingClientRect().height, places: document.querySelectorAll( '[data-innity-slot="in-read"]' ).length };
+			} );
+			expect( found.order ).toEqual( [ 'One.', 'Two.', 'tala-ads-in-article', 'Three.', 'Four.', 'Five.', 'Six.', 'innity-in-post', 'Seven.', 'Eight.', 'tala-ads-multiplex', 'tala-ads-innity' ] );
+			expect( found.height, 'Empty, the place takes no room in the text' ).toBe( 0 );
+			expect( found.places ).toBe( 1 );
+		} finally {
+			wp( 'post', 'delete', post, '--force' );
+		}
+	} );
+
+	test( 'the Universal tag starts five seconds on when the page never finishes loading', async ( { page } ) => {
+		await standIn( page );
+		// One request that never ends, as an ad's or a tracker's sometimes is: the load event never comes.
+		await page.route( '**/kit-never-ends.png', () => {} );
+		await openHome( page, '/kit-never-ends.png' );
+
+		await page.clock.runFor( 4900 );
+		expect( await queued( page ), 'Not before five seconds: the page gets its first seconds to itself' ).toBe( 0 );
+		// The five seconds, then the browser's idle time (two seconds at most).
+		await page.clock.runFor( 2200 );
+		expect( await queued( page ), 'The Universal tag\'s zone, without the load event' ).toBe( 1 );
+		expect( await page.evaluate( () => document.readyState ), 'The page still hasn\'t finished loading' ).not.toBe( 'complete' );
+		await page.clock.runFor( 60_000 );
+		expect( await queued( page ), 'Once only' ).toBe( 1 );
+	} );
+
+	test( 'the Universal tag starts once the page has loaded, without waiting five seconds, and only once', async ( { page } ) => {
+		await standIn( page );
+		// A request that takes a moment: the gate opens while the page is still loading, so both the
+		// load event and the five-second timer are waiting.
+		const held = [];
+		let released = false;
+		await page.route( '**/kit-slow.png', ( route ) => ( released ? route.abort() : held.push( route ) ) );
+		await openHome( page, '/kit-slow.png' );
+
+		await expect.poll( () => held.length, { message: 'The image was asked for' } ).toBeGreaterThan( 0 );
+		released = true;
+		await Promise.all( held.map( ( route ) => route.abort() ) );
+		await expect.poll( () => page.evaluate( () => document.readyState ), { message: 'The page finishes loading' } ).toBe( 'complete' );
+		// The browser's idle time only: well short of five seconds.
+		await page.clock.runFor( 2200 );
+		expect( await queued( page ), 'Soon after the load event' ).toBe( 1 );
+		await page.clock.runFor( 60_000 );
+		expect( await queued( page ), 'The timer adds no second request' ).toBe( 1 );
+	} );
+} );
+
 test( 'with an ad blocker, pages have no script errors and search still gets its hint', async ( { page } ) => {
 	const asked = await standIn( page, { blocker: true } );
 	const errors = [];

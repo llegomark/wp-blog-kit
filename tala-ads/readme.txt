@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.9.10
+Stable tag: 1.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -22,16 +22,16 @@ Tala Ads puts a site's ad and tracking code in one place, outside the theme, so 
 * **Google's consent and ad blocking recovery messages.** One switch loads the messages set up under Privacy & messaging in AdSense, which come from one Google tag: the consent message, which Google needs to show personalized ads to visitors from the European Economic Area, the UK and Switzerland, and the ad blocking recovery message.
 * **Error protection.** Google's optional error protection code, which asks readers to allow ads when an ad blocker stops the recovery message itself, goes on pages with ads. It is the one piece of code the settings keep: only in the shape Google gives it, for the site's own publisher ID, naming only Google's addresses, and only from people WordPress lets add scripts.
 * **Google search.** With a Programmable Search Engine ID and a results page, Google answers every search on the site: WordPress's search forms send their searches to that page, where its Search block shows Google's search box (with the block's placeholder, or "Type here to search", as its hint) and results in the theme's look: its colors (light and dark), font, links, form field and button, from the theme.json presets block themes define. Results for a search get noindex, as Google asks for internal search results.
-* **Innity.** Each part optional, from the zone IDs in Innity's zone tags, and always below the AdSense ads:
+* **Innity.** Each part optional, from the zone IDs in Innity's zone tags, and behind AdSense's own units:
   * A 300 × 250 box after the text of each post and page, below the AdSense ads, centered, with its height kept free while the ad loads so the page doesn't move. The box is never hidden.
-  * Universal tags, one for wide screens and one for phones. Innity picks the format. Its in-read ad goes after the text and the box, below the AdSense ads, instead of after the second paragraph, where Innity would put it. The phones' tag also brings full-screen formats, which cover the page on top of AdSense's vignette and anchor ads; leave it empty to keep them off.
-  * Innity's tags read no consent signal of their own and set an identifier cookie. With Google's messages on, Innity waits for Google's consent data and stays off where the GDPR applies. It also stays off searches and Google's results page, whose addresses carry what readers typed. The Universal tag loads once the page has.
+  * Universal tags, one for wide screens and one for phones. Innity picks the format. Its in-read ad goes into the article after the sixth paragraph, below AdSense's In-article ad, instead of after the second paragraph, where Innity would put it. Innity loads and counts an in-read ad only once the reader scrolls to it, so it sits where readers still are; a shorter article gets it after the text and the box. The phones' tag also brings full-screen formats, which cover the page on top of AdSense's vignette and anchor ads; leave it empty to keep them off.
+  * Innity's tags read no consent signal of their own and set an identifier cookie. With Google's messages on, Innity waits for Google's consent data and stays off where the GDPR applies. It also stays off searches and Google's results page, whose addresses carry what readers typed. The Universal tag loads once the page has, or five seconds on when the page is still loading.
   * Innity's in-image ads, laid over the lower part of a large image, stay off: the site's images carry data-innity-allow-in-image="false", which Innity's image finder and its ads skip. On a scanned memo or an infographic they would cover its text.
 * **IDs, not code.** Each ID field keeps just the ID it asks for, even when the whole code is pasted, so nothing typed into those fields can put a script on the site.
 * **ads.txt check.** Settings → Ads says whether the site's ads.txt lists the publisher ID, without which AdSense may hold back ads.
 * **Any theme.** Every script goes through WordPress's script loader, which keeps each one to a single copy per page, and the boxes are added to the post's content. A theme only needs to call `wp_body_open()`, as WordPress asks themes to.
 
-Developers can keep ads off a page with the `tala_ads_show` filter (return false), choose which post types get the Innity box and in-read place with `tala_ads_post_types` (posts and pages by default). Return true from `tala_ads_innity_in_image` to allow Innity's in-image ads. `tala_ads_unit_post_types` chooses which post types get the In-article and Multiplex ads (posts by default), and `tala_ads_in_article_paragraphs` (2) how many paragraphs come before the In-article ad. The `tala_ads_search_placed` action fires when Google's search box is put on the results page.
+Developers can keep ads off a page with the `tala_ads_show` filter (return false), choose which post types get the Innity box and in-read place with `tala_ads_post_types` (posts and pages by default). Return true from `tala_ads_innity_in_image` to allow Innity's in-image ads. `tala_ads_unit_post_types` chooses which post types get the In-article and Multiplex ads (posts by default), and `tala_ads_in_article_paragraphs` (2) how many paragraphs come before the In-article ad. `tala_ads_innity_in_read_paragraphs` (6) is how many come before Innity's in-read place; 0 puts it after the text. The `tala_ads_search_placed` action fires when Google's search box is put on the results page.
 
 == Installation ==
 
@@ -71,6 +71,11 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.10.0 =
+* Changed: Innity's in-read ad goes into the article, after its sixth paragraph, instead of after the text, the Multiplex ad and the box. Innity loads and counts an in-read ad only once the reader has scrolled to its place, and few readers reach the end of a long article. AdSense's In-article ad stays ahead of it, after the second paragraph, and an article with six paragraphs or fewer keeps the place after the text. The `tala_ads_innity_in_read_paragraphs` filter changes the number; 0 puts the place back after the text.
+* Changed: Innity's Universal tag starts five seconds after the page's consent data is ready when the page still hasn't finished loading. It waited for the browser's load event, which one request that never ends holds back for good; on such a view Innity never started.
+* Fixed: a zone ID or ad unit ID saved as a number is kept. WP-CLI and JSON imports hand "120118" over as a number, and the ID was dropped without a word, and its ad with it.
 
 = 1.9.10 =
 * Fixed: text hidden from screen readers that a theme or plugin adds to a block after Tala Ads has read it gets Google's google-anno-skip class again, so ad intents keep out of it. 1.9.9 stopped reading a Group or Columns block again for hidden text, and with it missed what was added inside it later: with Tala Blog, the numbers and icons of the "On this page" list. A block's HTML is now skipped only when everything hidden in it carries the class already, which keeps 1.9.9's speed.
@@ -165,6 +170,9 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 * First release: AdSense Auto ads and ad units, Google Tag Manager, Google's consent message and an Innity box after posts and pages, each loaded once, set up with IDs only.
 
 == Upgrade Notice ==
+
+= 1.10.0 =
+Innity's in-read ad moves from the end of the article to after its sixth paragraph, below AdSense's In-article ad. To keep it after the text, return 0 from the tala_ads_innity_in_read_paragraphs filter.
 
 = 1.9.0 =
 Optional In-article and Multiplex AdSense units beside Auto ads (Settings → Ads), never hidden. Innity moves below the AdSense ads, after the post's text.

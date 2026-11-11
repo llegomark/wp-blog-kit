@@ -192,6 +192,21 @@ function tala_ads_sanitize_adsense( $value ) {
 }
 
 /**
+ * An ID as the text the checks below read: a whole number above zero becomes its digits, text stays
+ * as it is, anything else is ''. WP-CLI and a JSON import hand "120118" over as a number, and an
+ * ID that arrived that way was dropped without a word.
+ *
+ * @param mixed $value Value entered.
+ * @return string
+ */
+function tala_ads_id_text( $value ) {
+	if ( is_int( $value ) ) {
+		return $value > 0 ? (string) $value : '';
+	}
+	return is_string( $value ) ? $value : '';
+}
+
+/**
  * An AdSense ad unit ID: the ten digits of data-ad-slot, entered as is or taken from the ad unit's
  * code. '' when there is none.
  *
@@ -199,9 +214,7 @@ function tala_ads_sanitize_adsense( $value ) {
  * @return string
  */
 function tala_ads_sanitize_ad_unit( $value ) {
-	if ( ! is_string( $value ) ) {
-		return '';
-	}
+	$value = tala_ads_id_text( $value );
 	if ( preg_match( '/^\s*(\d{10})\s*$/', $value, $match ) ) {
 		return $match[1];
 	}
@@ -239,9 +252,7 @@ function tala_ads_sanitize_innity_key( $value ) {
  * @return string
  */
 function tala_ads_sanitize_innity_zone( $value ) {
-	if ( ! is_string( $value ) ) {
-		return '';
-	}
+	$value = tala_ads_id_text( $value );
 	if ( preg_match( '/^\s*(\d{1,12})\s*$/', $value, $match ) ) {
 		return $match[1];
 	}

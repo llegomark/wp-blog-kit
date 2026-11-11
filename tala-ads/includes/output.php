@@ -1,7 +1,7 @@
 <?php
 /**
  * What visitors get: Google Tag Manager, Google's consent message, the AdSense Auto ads code, the
- * In-article and Multiplex ad units, and Innity's box and Universal tags, below the AdSense ads.
+ * In-article and Multiplex ad units, and Innity's box and Universal tags, behind AdSense's units.
  * Every script goes through WordPress's script loader, once per page, so it works with any theme
  * and nothing loads twice. No ad is ever hidden, filled or not.
  *
@@ -327,7 +327,9 @@ function tala_ads_innity_allowed() {
 
 /**
  * The gate Innity's zones go through, window.talaAdsInnity( show, later ): show() runs, any
- * error it throws caught; with later, only once the page has loaded and the browser is idle (or after 2 seconds).
+ * error it throws caught; with later, only once the page has loaded and the browser is idle (or
+ * after 2 seconds), or five seconds on when the page still hasn't loaded: one request that never
+ * ends, an ad's or an image's, holds the load event back for good, and Innity never started.
  * With Google's messages on, it first waits for Google's consent data, and where the GDPR applies
  * doesn't run: Innity's tags read no consent signal of their own, and set an identifier cookie
  * (iUUID) and share it with partners.
@@ -342,7 +344,7 @@ function tala_ads_innity_gate(): void {
 	wp_register_script( 'tala-ads-innity-gate', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
 	wp_add_inline_script(
 		'tala-ads-innity-gate',
-		'window.talaAdsInnity=function(show,later){function go(){try{show()}catch(e){}}function run(){if(!later){go();return}function idle(){(window.requestIdleCallback||function(f){setTimeout(f,1)})(go,{timeout:2000})}if("complete"===document.readyState){idle()}else{window.addEventListener("load",idle)}}' . $consent . '};'
+		'window.talaAdsInnity=function(show,later){function go(){try{show()}catch(e){}}function run(){if(!later){go();return}var done=false;function idle(){if(done){return}done=true;(window.requestIdleCallback||function(f){setTimeout(f,1)})(go,{timeout:2000})}if("complete"===document.readyState){idle()}else{window.addEventListener("load",idle);setTimeout(idle,5000)}}' . $consent . '};'
 	);
 }
 
@@ -497,29 +499,76 @@ function tala_ads_innity_box( $content ) {
 	return $content . $box;
 }
 
-add_filter( 'the_content', 'tala_ads_innity_in_read', 22 );
+/**
+ * Whether the content being filtered still wants the place for Innity's in-read ad: a Universal
+ * tag is set (the zone that serves it), the content is the post or page the request shows, and the
+ * place isn't on the page yet.
+ *
+ * @return bool
+ */
+function tala_ads_innity_in_read_wanted() {
+	$settings = tala_ads_settings();
+	return ( '' !== $settings['innity_desktop'] || '' !== $settings['innity_mobile'] )
+		&& ! wp_script_is( 'tala-ads-innity-in-read' ) && tala_ads_innity_here();
+}
 
 /**
- * With a Universal tag set, the place for Innity's in-read ad in the post or page the request shows,
- * once: after its text, below the AdSense ads and the Innity box. Without it, Innity looks for the
- * article itself and puts its ad after the second paragraph, where the In-article ad is. Innity's
- * loader looks for the place by its data-innity-slot attribute or its id; its in-read ads look only
- * for a span with the id or class innity-in-post.
+ * The place for Innity's in-read ad, marked as taken for this page. Innity's loader looks for the
+ * place by its data-innity-slot attribute or its id; its in-read ads look only for a span with the
+ * id or class innity-in-post. Without a place, Innity looks for the article itself and puts its ad
+ * after the second paragraph, where the In-article ad is. Empty, the span takes no room.
+ *
+ * @return string
+ */
+function tala_ads_innity_in_read_place() {
+	// A script with no code, which prints nothing: it only marks the place as taken for this page.
+	wp_register_script( 'tala-ads-innity-in-read', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
+	wp_enqueue_script( 'tala-ads-innity-in-read' );
+	return '<span id="innity-in-post" class="innity-in-post" data-innity-slot="in-read" style="display:block"></span>';
+}
+
+// Before the In-article ad (19), which then goes ahead of it where both ask for the same paragraph,
+// and before anything is added after the text, so only the article's own elements count.
+add_filter( 'the_content', 'tala_ads_innity_in_read', 18 );
+
+/**
+ * With a Universal tag set, the place for Innity's in-read ad in the post or page the request
+ * shows, once: in the article, after its sixth paragraph (the "tala_ads_innity_in_read_paragraphs"
+ * filter changes the number; 0 keeps it after the text). Innity's in-read ad only loads, and only
+ * counts, once the reader has scrolled to its place, and few readers reach the end of a long
+ * article: after the text, the place was hardly ever seen. AdSense's In-article ad keeps the place
+ * Google suggests, after the second paragraph, ahead of this one.
  *
  * @param string $content Post content.
  * @return string
  */
 function tala_ads_innity_in_read( $content ) {
-	$settings = tala_ads_settings();
-	if ( ( '' === $settings['innity_desktop'] && '' === $settings['innity_mobile'] )
-		|| wp_script_is( 'tala-ads-innity-in-read' ) || ! tala_ads_innity_here() ) {
+	if ( ! tala_ads_innity_in_read_wanted() ) {
 		return $content;
 	}
-	// A script with no code, which prints nothing: it only marks the place as taken for this page.
-	wp_register_script( 'tala-ads-innity-in-read', false, array(), TALA_ADS_VERSION, array( 'in_footer' => true ) );
-	wp_enqueue_script( 'tala-ads-innity-in-read' );
-	$slot = '<span id="innity-in-post" class="innity-in-post" data-innity-slot="in-read" style="display:block"></span>';
-	return $content . $slot;
+	$paragraphs = apply_filters( 'tala_ads_innity_in_read_paragraphs', 6 );
+	$paragraphs = is_numeric( $paragraphs ) ? (int) $paragraphs : 0;
+	if ( $paragraphs < 1 ) {
+		return $content;
+	}
+	// The place's markup is only made once it has somewhere to go, as making it marks it placed.
+	$marker = '<!--tala-ads-innity-in-read-->';
+	$placed = tala_ads_after_paragraphs( $content, $paragraphs, $marker );
+	return null === $placed ? $content : str_replace( $marker, tala_ads_innity_in_read_place(), $placed );
+}
+
+// After the Multiplex ad (20) and the box (21).
+add_filter( 'the_content', 'tala_ads_innity_in_read_after_text', 22 );
+
+/**
+ * The place for Innity's in-read ad after the text, the Multiplex ad and the Innity box, when it
+ * found no place in the article: an article with fewer paragraphs, or with nothing after them.
+ *
+ * @param string $content Post content.
+ * @return string
+ */
+function tala_ads_innity_in_read_after_text( $content ) {
+	return tala_ads_innity_in_read_wanted() ? $content . tala_ads_innity_in_read_place() : $content;
 }
 
 /**
@@ -546,7 +595,8 @@ function tala_ads_push_unit( string $handle ): void {
 	wp_add_inline_script( $handle, '(adsbygoogle=window.adsbygoogle||[]).push({});' );
 }
 
-// Before the Multiplex ad (20) and Innity (21, 22).
+// After Innity's in-read place (18), which it goes ahead of at the same paragraph; before the
+// Multiplex ad (20) and the Innity box (21).
 add_filter( 'the_content', 'tala_ads_in_article', 19 );
 
 /**

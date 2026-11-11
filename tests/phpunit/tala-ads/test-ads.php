@@ -521,7 +521,8 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$this->assertSame( 1, substr_count( $footer, 'window.talaAdsInnity=function(show,later)' ), 'One gate for both zones.' );
 		$this->assertStringContainsString( 'googlefc.callbackQueue.push({CONSENT_DATA_READY:', $footer );
 		$this->assertStringContainsString( 'if(!(ok&&d&&true===d.gdprApplies))run()', $footer, 'No Innity where the GDPR applies.' );
-		$this->assertStringContainsString( 'window.addEventListener("load",idle)', $footer );
+		$this->assertStringContainsString( 'window.addEventListener("load",idle);setTimeout(idle,5000)', $footer, 'After the page has loaded, or five seconds on when it hasn\'t yet.' );
+		$this->assertStringContainsString( 'function idle(){if(done){return}done=true;', $footer, 'Once, whichever comes first.' );
 		$this->assertStringContainsString( '}catch(e){}})},true)}})(window.matchMedia("(min-width: 768px)")', $footer, 'The Universal tag after the page has loaded.' );
 		$this->assertStringContainsString( 'try{innity_adZoneAsync.display("0123456789abcdef0123456789abcdef",zone,', $footer, 'Errors in Innity\'s code are caught.' );
 		$this->assertStringContainsString( '}catch(e){}})},false);', $footer, 'The box at once.' );
@@ -535,8 +536,64 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		the_post();
 		apply_filters( 'the_content', get_post_field( 'post_content', $other ) );
 		$footer = get_echo( 'wp_print_footer_scripts' );
-		$this->assertStringContainsString( 'window.addEventListener("load",idle)}}run();};', $footer, 'Without Google\'s messages, no wait for consent.' );
+		$this->assertStringContainsString( 'window.addEventListener("load",idle);setTimeout(idle,5000)}}run();};', $footer, 'Without Google\'s messages, no wait for consent.' );
 		$this->assertStringNotContainsString( 'googlefc', $footer );
+	}
+
+	/**
+	 * Beside AdSense's units in a longer post: the In-article ad after the second paragraph, Innity's
+	 * in-read place after the sixth, the Multiplex ad right after the text, then the box. The
+	 * tala_ads_innity_in_read_paragraphs filter moves the in-read place; at the In-article ad's own
+	 * paragraph AdSense's ad stays first, and 0 puts the place back after the text.
+	 */
+	public function test_innity_in_read_beside_adsense_units(): void {
+		update_option(
+			'tala_ads',
+			array_merge(
+				self::ALL,
+				array(
+					'in_article'     => '3203298627',
+					'multiplex'      => '2403531897',
+					'innity_desktop' => '103008',
+				)
+			)
+		);
+		$order = function ( array $paragraphs ): array {
+			$GLOBALS['wp_scripts'] = new WP_Scripts();
+			$id                    = $this->post( array( 'post_content' => $this->paragraphs( ...$paragraphs ) ) );
+			$this->go_to( get_permalink( $id ) );
+			the_post();
+			$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
+			preg_match_all( '#<p[^>]*>(\w+)\.</p>|class="(tala-ads-in-article|tala-ads-multiplex|tala-ads-innity)"|id="(innity-in-post)"#', $content, $found, PREG_SET_ORDER );
+			return array_map( static fn( array $hit ): string => (string) end( $hit ), $found );
+		};
+		$eight = array( 'One.', 'Two.', 'Three.', 'Four.', 'Five.', 'Six.', 'Seven.', 'Eight.' );
+
+		$this->assertSame(
+			array( 'One', 'Two', 'tala-ads-in-article', 'Three', 'Four', 'Five', 'Six', 'innity-in-post', 'Seven', 'Eight', 'tala-ads-multiplex', 'tala-ads-innity' ),
+			$order( $eight )
+		);
+
+		$paragraphs = 2;
+		$filter     = static function () use ( &$paragraphs ) {
+			return $paragraphs;
+		};
+		add_filter( 'tala_ads_innity_in_read_paragraphs', $filter );
+		$this->assertSame(
+			array( 'One', 'Two', 'tala-ads-in-article', 'innity-in-post', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'tala-ads-multiplex', 'tala-ads-innity' ),
+			$order( $eight ),
+			'At the same paragraph, AdSense\'s In-article ad comes first.'
+		);
+		$paragraphs = 4;
+		$this->assertSame( array( 'One', 'Two', 'tala-ads-in-article', 'Three', 'Four', 'innity-in-post', 'Five', 'Six', 'Seven', 'Eight', 'tala-ads-multiplex', 'tala-ads-innity' ), $order( $eight ) );
+		foreach ( array( 0, -3, 'six', null ) as $paragraphs ) {
+			$this->assertSame(
+				array( 'One', 'Two', 'tala-ads-in-article', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'tala-ads-multiplex', 'tala-ads-innity', 'innity-in-post' ),
+				$order( $eight ),
+				'Nothing to count to: after the text, the Multiplex ad and the box.'
+			);
+		}
+		remove_filter( 'tala_ads_innity_in_read_paragraphs', $filter );
 	}
 
 	/**
@@ -745,6 +802,36 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * An ID that arrives as a number is kept: WP-CLI turns "120118" into one, as does a JSON import.
+	 * Before, a zone or ad unit ID saved that way was dropped without a word, and its ad with it.
+	 */
+	public function test_ids_given_as_numbers_are_kept(): void {
+		$this->assertSame( '120118', tala_ads_sanitize_innity_zone( 120118 ) );
+		$this->assertSame( '3203298627', tala_ads_sanitize_ad_unit( 3203298627 ) );
+		foreach ( array( -120118, 0, 1.5, true, null, array( 120118 ) ) as $bad ) {
+			$this->assertSame( '', tala_ads_sanitize_innity_zone( $bad ) );
+			$this->assertSame( '', tala_ads_sanitize_ad_unit( $bad ) );
+		}
+		$this->assertSame( '', tala_ads_sanitize_ad_unit( 320329862 ), 'Nine digits are no ad unit.' );
+
+		update_option(
+			'tala_ads',
+			array(
+				'innity_key'     => '0123456789abcdef0123456789abcdef',
+				'innity_zone'    => 120119,
+				'innity_desktop' => 120118,
+				'innity_mobile'  => 103009,
+				'in_article'     => 3203298627,
+			)
+		);
+		$settings = tala_ads_settings();
+		$this->assertSame( '120119', $settings['innity_zone'] );
+		$this->assertSame( '120118', $settings['innity_desktop'] );
+		$this->assertSame( '103009', $settings['innity_mobile'] );
+		$this->assertSame( '3203298627', $settings['in_article'] );
+	}
+
+	/**
 	 * The In-article and Multiplex units' IDs are kept from the ID or from the unit's code AdSense
 	 * gives; anything else is dropped.
 	 */
@@ -917,8 +1004,9 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 	}
 
 	/**
-	 * With a Universal tag, the place for Innity's in-read ad: once, after the post's text and the
-	 * box.
+	 * With a Universal tag, the place for Innity's in-read ad: once, in the article after its sixth
+	 * paragraph, where readers still are (the ad only loads when it is scrolled to); after the text
+	 * and the box when the article is shorter.
 	 */
 	public function test_innity_in_read(): void {
 		update_option( 'tala_ads', array_merge( self::ALL, array( 'innity_desktop' => '103008' ) ) );
@@ -928,7 +1016,7 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		the_post();
 
 		$content = apply_filters( 'the_content', get_post_field( 'post_content', $id ) );
-		$this->assertMatchesRegularExpression( '#<p[^>]*>Seven\.</p>\s*<div class="tala-ads-innity"[^>]*><div[^>]*></div></div><span id="innity-in-post" class="innity-in-post" data-innity-slot="in-read" style="display:block"></span>$#', $content, 'A span with the id and class Innity\'s in-read ads look for, after the text and the box.' );
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Six\.</p>\s*<span id="innity-in-post" class="innity-in-post" data-innity-slot="in-read" style="display:block"></span><p[^>]*>Seven\.</p>\s*<div class="tala-ads-innity"[^>]*><div[^>]*></div></div>$#', $content, 'A span with the id and class Innity\'s in-read ads look for, after the sixth paragraph; the box stays after the text.' );
 		$this->assertSame( 1, substr_count( $content, 'data-innity-slot' ) );
 		$this->assertStringNotContainsString( 'data-innity-slot', apply_filters( 'the_content', 'Again' ), 'Once per page.' );
 
@@ -936,7 +1024,15 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		$short                 = $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.' ) ) );
 		$this->go_to( get_permalink( $short ) );
 		the_post();
-		$this->assertMatchesRegularExpression( '#<span id="innity-in-post"[^>]*></span>$#', apply_filters( 'the_content', get_post_field( 'post_content', $short ) ), 'After the text of a shorter post.' );
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Two\.</p>\s*<div class="tala-ads-innity"[^>]*><div[^>]*></div></div><span id="innity-in-post"[^>]*></span>$#', apply_filters( 'the_content', get_post_field( 'post_content', $short ) ), 'After the text and the box of a shorter post.' );
+
+		$GLOBALS['wp_scripts'] = new WP_Scripts();
+		$six                   = $this->post( array( 'post_content' => $this->paragraphs( 'One.', 'Two.', 'Three.', 'Four.', 'Five.', 'Six.' ) ) );
+		$this->go_to( get_permalink( $six ) );
+		the_post();
+		$content = apply_filters( 'the_content', get_post_field( 'post_content', $six ) );
+		$this->assertMatchesRegularExpression( '#<p[^>]*>Six\.</p>\s*<div class="tala-ads-innity"[^>]*><div[^>]*></div></div><span id="innity-in-post"[^>]*></span>$#', $content, 'Nothing follows the sixth paragraph: after the text and the box, not between the text and what comes right after it.' );
+		$this->assertSame( 1, substr_count( $content, 'data-innity-slot' ) );
 
 		$GLOBALS['wp_scripts'] = new WP_Scripts();
 		$locked                = $this->post( array( 'post_password' => 'secret' ) );
