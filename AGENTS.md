@@ -118,11 +118,14 @@ commits to throwaway branches to read the secrets, then published malicious rele
 - Releases are immutable once published, with a build attestation; the deploy compares the zip
   with a local build before installing it.
 - Actions: only GitHub's own actions and the allowlisted ones (`shivammathur/setup-php`,
-  `WordPress/plugin-check-action`) may run, every `uses:` must pin a full
+  `WordPress/plugin-check-action`, and `nick-fields/retry`, which no workflow here names but
+  the Plugin Check action runs inside itself: the list covers the actions an action uses too)
+  may run, every `uses:` must pin a full
   commit SHA (GitHub refuses the run otherwise), the default token is read-only, workflows can't
   approve pull requests, and a pull request from any outside contributor runs only after approval.
-  Adding an action to a workflow means adding it to the allowlist in Settings → Actions, and
-  taking one out of the workflows means taking it off the list.
+  Adding an action to a workflow means adding it to the allowlist in Settings → Actions. Before
+  taking one off the list, check that no allowlisted action uses it (a blocked one fails the job
+  in "Set up job").
 - The repository holds no secrets, deploy keys or webhooks, and needs none: the release workflow
   uses its own token, and deploys run from the maintainer's machine. Keep it that way.
 - Secret scanning with push protection is on; Dependabot keeps the pins and tools current, with a
