@@ -14,6 +14,10 @@ Everything must follow official WordPress practice, as checked by WordPress's ow
    - speed: `wp-performance`
    - static analysis: `wp-phpstan`
    - a security review: `security-audit`
+   - HTML, CSS and client-side JavaScript (the theme's stylesheet and head script, the plugins'
+     scripts, styles and the markup they print): `modern-web-guidance`. Search its guides before
+     writing, and follow the fallback a guide gives for anything that isn't Baseline Widely available
+     (see "Browser support" below)
 
    For other work, add the matching skill from WordPress/agent-skills first, with
    `npx skills add WordPress/agent-skills --skill <name> --yes`.
@@ -68,6 +72,21 @@ kit during the run; a run of one spec checks it too. Then, on the local site (ht
   Ads' scripts that are no ad (the search hint) live in `tala-ads/js/`. Keep ad and tracking code in
   its own scripts, and never let a feature depend on one. Check a new script's path against EasyList
   and EasyPrivacy. Never try to get ads or tracking past a blocker.
+- Browser support: features that are Baseline Widely available are used as they are. A newer one
+  (Newly available, or in some browsers only) is used when the page is whole without it, or with the
+  small fallback its guide gives (`content: "#"` before `content: "#" / ""`); never a polyfill or a
+  script to stand in for it. So cross-document view transitions, `reading-flow`, `text-wrap: pretty`
+  and the `text-scale` meta are there for the browsers that have them, and nothing depends on them.
+- The reader's settings come first: the theme sets no font size on `<html>` and sizes everything in
+  rem (the `text-scale` meta opts in to the phone's own text size, and the layout must hold at 200%
+  on a 360 px phone, header included); state is never told by colour alone, and never only by a
+  fill, a shadow or a background image, which Windows' contrast themes (forced colours) drop: a
+  border, an underline or a mark shows it. The Light/Dark switch stores a choice only while it
+  differs from the device's theme; switching back to the device's own removes it.
+- The last step of the breadcrumbs, the current page, is text with `aria-current="page"`, not a
+  link to the page itself: a link to the page one is on goes nowhere. (Kept as it was in the
+  2026-11-12 review against `modern-web-guidance`, whose breadcrumbs guide links it; ask the
+  maintainer before changing it.) A trail has one current page.
 - No build step, no web fonts except Inter (self-hosted in the theme; maintainer's decision,
   2026-11-02), no jQuery. Keep the theme's CSS inlined (`assets/theme.css`). Node and npm are for the
   linters only; nothing they install ships in the theme or plugin.
