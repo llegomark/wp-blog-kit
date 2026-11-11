@@ -167,7 +167,7 @@ The one deliberate exception is the `Update URI: false` header, which keeps thes
 
 ### Test results (November 2026: WordPress 7.1, PHP 8.5.12)
 
-- `composer test`: 280 PHPUnit tests pass (four, the author photo per site and each plugin's uninstall on a network, run in the multisite pass). `npm run test:e2e`: 210 browser tests pass, axe included.
+- `composer test`: 280 PHPUnit tests pass (four, the author photo per site and each plugin's uninstall on a network, run in the multisite pass). `npm run test:e2e`: 211 browser tests pass, axe included.
 - Every page type renders without PHP notices, and every theme template passes the block editor's validator.
 - The publish check holds in the editor, over REST, in Quick Edit and WP-CLI saves (also under the real WP-CLI on the local site), and for scheduling.
 - The WP-CLI commands `audit`, `import`, `describe` (both including `--dry-run`) and `pdf-canonicals` work; Yoast titles built from `%%variables%%` are skipped.
