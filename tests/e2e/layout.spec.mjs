@@ -331,6 +331,121 @@ test.describe( 'text at 200%', () => {
 } );
 
 /**
+ * The phone's own text size (Android's font size setting): the page opts in (the text-scale meta),
+ * so its text, spacing and breakpoints grow with it. At 130%, a common setting, and at 200%, the
+ * largest, on a 412 and a 360 px phone: no page scrolls sideways, nothing sticks out of the window,
+ * and the header's buttons never cover the site title (they wrap under it instead).
+ */
+test.describe( 'the phone\'s text size', () => {
+	for ( const width of [ 412, 360 ] ) {
+		for ( const scale of [ 1.3, 2 ] ) {
+			test( `${ width } px at ${ scale * 100 }%: text grows, nothing covered or wider than the window`, async ( { browser } ) => {
+				const context = await browser.newContext( { viewport: { width, height: 800 }, isMobile: true, hasTouch: true } );
+				const page = await context.newPage();
+				const devtools = await context.newCDPSession( page );
+				await devtools.send( 'Emulation.setEmulatedOSTextScale', { scale } );
+				for ( const path of [ pages.home, pages.article, pages.withComments, pages.search, pages.notFound ] ) {
+					await page.goto( path );
+					const fit = await page.evaluate( () => {
+						const edge = document.documentElement.clientWidth;
+						const clipped = ( el ) => {
+							for ( let up = el.parentElement; up && up !== document.body; up = up.parentElement ) {
+								if ( 'visible' !== getComputedStyle( up ).overflowX ) {
+									return true;
+								}
+							}
+							return false;
+						};
+						const out = [ ...document.querySelectorAll( 'body *' ) ]
+							.filter( ( el ) => el.getClientRects().length && el.getBoundingClientRect().right > edge + 0.5 && ! clipped( el ) && ! el.closest( '[aria-hidden="true"]' ) )
+							.map( ( el ) => `${ el.tagName.toLowerCase() }.${ [ ...el.classList ].join( '.' ) } +${ Math.round( el.getBoundingClientRect().right - edge ) }` );
+						// The header's title against its buttons.
+						const letters = document.createRange();
+						letters.selectNodeContents( document.querySelector( '.tala-header .wp-block-site-title a' ) );
+						const title = letters.getBoundingClientRect();
+						const covering = [ ...document.querySelectorAll( '.tala-header button' ) ]
+							.filter( ( button ) => button.getClientRects().length )
+							.filter( ( button ) => {
+								const box = button.getBoundingClientRect();
+								return box.left < title.right - 0.5 && box.right > title.left + 0.5 && box.top < title.bottom - 0.5 && box.bottom > title.top + 0.5;
+							} )
+							.map( ( button ) => button.className );
+						return {
+							rem: parseFloat( getComputedStyle( document.documentElement ).fontSize ),
+							scroll: document.documentElement.scrollWidth - edge,
+							out,
+							covering,
+						};
+					} );
+					expect( Math.abs( fit.rem - ( 16 * scale ) ), `${ path }: 1rem is ${ fit.rem }px` ).toBeLessThanOrEqual( 0.5 );
+					expect( fit.out, `${ path }: past the window` ).toEqual( [] );
+					expect( fit.scroll, `${ path }: sideways scrolling` ).toBe( 0 );
+					expect( fit.covering, `${ path }: buttons over the site title` ).toEqual( [] );
+				}
+				await context.close();
+			} );
+		}
+	}
+} );
+
+/**
+ * Windows' contrast themes (forced colours) drop fills and shadows. A filled button keeps its
+ * shape with a border, and the current page of the numbered pages keeps its mark, a border too.
+ */
+test.describe( 'forced colours', () => {
+	test.beforeAll( () => {
+		wp( 'theme', 'mod', 'set', 'tala_blog_page_numbers', '1' );
+	} );
+
+	test.afterAll( () => {
+		wp( 'theme', 'mod', 'remove', 'tala_blog_page_numbers' );
+	} );
+
+	/**
+	 * The width of the border around each filled button on the page (the search form's, the comment
+	 * form's), and the mark under the current page number.
+	 *
+	 * @param {import('@playwright/test').Page} page Page.
+	 * @return {Promise<{buttons: string[], current: string[]}>} Borders.
+	 */
+	const borders = ( page ) =>
+		page.evaluate( () => ( {
+			buttons: [ ...document.querySelectorAll( 'main .wp-block-search__button, main #commentform input[type="submit"]' ) ].map( ( el ) => {
+				const style = getComputedStyle( el );
+				return [ style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth ].join( ' ' );
+			} ),
+			current: [ ...document.querySelectorAll( '.wp-block-query-pagination-numbers .current' ) ].map( ( el ) => {
+				const style = getComputedStyle( el );
+				const top = ( number ) => {
+					const text = document.createRange();
+					text.selectNodeContents( number );
+					return text.getBoundingClientRect().top;
+				};
+				// The number stays on the other numbers' line, in a box of their height.
+				const other = el.parentElement.querySelector( '.page-numbers:not(.current)' );
+				return [ style.borderBottomWidth, style.borderBottomStyle, style.boxShadow, el.getBoundingClientRect().height, Math.abs( top( el ) - top( other ) ) < 0.5 ].join( ' ' );
+			} ),
+		} ) );
+
+	for ( const [ forcedColors, title, button ] of [
+		[ 'active', 'on: filled buttons get a border', '1px 1px 1px 1px' ],
+		[ 'none', 'off: filled buttons have no border', '0px 0px 0px 0px' ],
+	] ) {
+		test( `${ title }; the current page number is marked by a border`, async ( { browser } ) => {
+			const context = await browser.newContext( { viewport: { width: 1280, height: 900 }, forcedColors } );
+			const page = await context.newPage();
+			await page.goto( pages.page2 );
+			expect( ( await borders( page ) ).current ).toEqual( [ '2px solid none 44 true' ] );
+			await page.goto( pages.notFound );
+			expect( ( await borders( page ) ).buttons ).toEqual( [ button ] );
+			await page.goto( pages.withComments );
+			expect( ( await borders( page ) ).buttons ).toEqual( [ button ] );
+			await context.close();
+		} );
+	}
+} );
+
+/**
  * The author box: the photo beside the name and biography on a desktop, above them on a phone,
  * laid out by wrapping, without making the text column a size container (which would wrap every
  * ad slot in it too).

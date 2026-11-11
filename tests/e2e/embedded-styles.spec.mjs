@@ -189,9 +189,17 @@ test.describe( 'light device', () => {
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
 		expect( await colours( page ), 'Dark, chosen with the switch' ).toEqual( expected( 'dark' ) );
 
+		// Back to the device's own theme: the page follows the device again.
+		await button.click();
+		await expect( page.locator( 'html' ) ).not.toHaveAttribute( 'data-theme' );
+		expect( await colours( page ), 'Light again' ).toEqual( expected( 'light' ) );
+
+		// The device turns dark, and the page with it; there, Light is a choice, and wins.
+		await page.emulateMedia( { colorScheme: 'dark' } );
+		expect( await colours( page ), 'Dark, with the device' ).toEqual( expected( 'dark' ) );
 		await button.click();
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'light' );
-		expect( await colours( page ), 'Light again' ).toEqual( expected( 'light' ) );
+		expect( await colours( page ), 'Light, chosen on a dark device' ).toEqual( expected( 'light' ) );
 	} );
 } );
 

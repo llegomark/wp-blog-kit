@@ -375,3 +375,46 @@ test.describe( 'desktop header', () => {
 		await expect( page ).toHaveURL( /[?&]s=reading/ );
 	} );
 } );
+
+/**
+ * The current page's link in the menu is marked by more than its colour: a 2px underline in the
+ * accent colour, in the header and in the phone menu. Other links have none.
+ */
+test.describe( 'the current page in the menu', () => {
+	/**
+	 * Each link of a menu: its text, whether it is the current page, and its underline.
+	 *
+	 * @param {import('@playwright/test').Page} page     Page.
+	 * @param {string}                          selector The menu's links.
+	 * @return {Promise<Array<Array<string|boolean>>>} Links.
+	 */
+	const marks = ( page, selector ) =>
+		page.locator( selector ).evaluateAll( ( links ) =>
+			links.map( ( a ) => {
+				const style = getComputedStyle( a );
+				return [ a.textContent.trim(), 'page' === a.getAttribute( 'aria-current' ), style.textDecorationLine, 'none' === style.textDecorationLine ? '' : style.textDecorationThickness ];
+			} ),
+		);
+
+	test( 'desktop header', async ( { page } ) => {
+		await page.setViewportSize( DESKTOP.viewport );
+		await page.goto( pages.page );
+		const links = await marks( page, '.tala-header .wp-block-navigation__responsive-container-content > ul > li > a' );
+		expect( links ).toContainEqual( [ 'About', true, 'underline', '2px' ] );
+		expect( links.filter( ( link ) => ! link[ 1 ] ).map( ( link ) => link[ 2 ] ), 'No other link is underlined' ).toEqual( links.slice( 1 ).map( () => 'none' ) );
+		const colours = await page.locator( '.tala-header a[aria-current="page"]' ).first().evaluate( ( a ) => [ getComputedStyle( a ).textDecorationColor, getComputedStyle( document.documentElement ).getPropertyValue( '--wp--preset--color--accent' ).trim() ] );
+		expect( colours ).toEqual( [ 'rgb(19, 72, 220)', '#1348dc' ] );
+	} );
+
+	test.describe( 'phone', () => {
+		test.use( PHONE );
+
+		test( 'phone menu', async ( { page } ) => {
+			await page.goto( pages.page );
+			await openMenu( page );
+			const links = await marks( page, '.tala-overlay-menu a[href]' );
+			expect( links ).toContainEqual( [ 'About', true, 'underline', '2px' ] );
+			expect( links.filter( ( link ) => ! link[ 1 ] ).every( ( link ) => 'none' === link[ 2 ] ) ).toBe( true );
+		} );
+	} );
+} );

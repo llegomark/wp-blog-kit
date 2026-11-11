@@ -268,6 +268,16 @@ a {
 	color: var(--wp--preset--color--heading);
 }
 
+/* Windows' contrast themes (forced colours) drop fills and shadows, which are all a filled button
+   is: there it gets a border in the system's button colour. Outline buttons have a border already.
+   (:root, to weigh as much as WordPress's own rule, which sets the buttons' border to none.) */
+@media (forced-colors: active) {
+
+	:root :where(.wp-element-button, .wp-block-button__link) {
+		border: 1px solid ButtonBorder;
+	}
+}
+
 /* The header's icon buttons: 44px squares. (The menu button keeps WordPress's display, which
    hides it while the menu shows.) */
 .tala-header .wp-block-search__button,
@@ -600,6 +610,16 @@ footer.wp-block-template-part,
 	}
 }
 
+/* The current page's link, in the menu, its submenus and the phone menu: a 2px cobalt underline, so
+   it isn't told apart by colour alone (WCAG 1.4.1), and shows in Windows' contrast themes. */
+.tala-header .wp-block-navigation__responsive-container-content .wp-block-navigation__container .wp-block-navigation-item .wp-block-navigation-item__content[aria-current="page"] {
+	text-decoration-line: underline;
+	text-decoration-style: solid;
+	text-decoration-color: var(--wp--preset--color--accent);
+	text-decoration-thickness: 2px;
+	text-underline-offset: 0.4em;
+}
+
 /* A submenu's title opens it on click (WordPress makes it a button). Its arrow sits in the button's
    end, above its hover colour, and lets clicks through to the button. */
 .tala-header .wp-block-navigation__responsive-container-content > .wp-block-navigation__container > .open-on-click > .wp-block-navigation-submenu__toggle {
@@ -647,9 +667,10 @@ footer.wp-block-template-part,
 
 	/* The menu button ends the row, after the search and the switch, where the thumb reaches it and
 	   where the overlay's close button opens over it. It keeps its 44px: the brand takes what the
-	   buttons leave (it starts from nothing here, so it never pushes them). When even the buttons
-	   don't fit beside it (very large text on a small phone), they wrap to a second row at its end,
-	   rather than overlap or make the page scroll sideways. */
+	   buttons leave (it starts from nothing here, so it never pushes them), but never less than its
+	   logo and longest word. When the buttons don't fit beside that (very large text on a small
+	   phone: the phone's text size counts, see tala_blog_reader_settings()), they wrap to a second
+	   row at its end, rather than cover the title or make the page scroll sideways. */
 	.tala-header > .tala-rail {
 		flex-wrap: wrap;
 		justify-content: flex-end;
@@ -657,6 +678,7 @@ footer.wp-block-template-part,
 
 	.tala-header .tala-brand {
 		flex-basis: 0;
+		min-inline-size: min-content;
 	}
 
 	.tala-header .wp-block-navigation {
@@ -749,7 +771,8 @@ footer.wp-block-template-part,
 }
 
 /* The menu: the rail runs on down the sheet; links 17px, at least 48px tall, with hairlines
-   between them, the current page in cobalt. Submenus are indented under their item. */
+   between them, the current page in cobalt and underlined (above). Submenus are indented under
+   their item. */
 .tala-overlay > .tala-overlay-body {
 	flex: 1 0 auto;
 	margin-block: 0;
@@ -1084,10 +1107,6 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 
 .tala-copyright {
 	gap: 0.4em;
-}
-
-.tala-year::before {
-	content: "© ";
 }
 
 /* The wordmark: the site title in giant outlined capitals on the design system's -45deg hatching, sized from
@@ -1451,7 +1470,9 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	color: var(--wp--preset--color--rule);
 }
 
-/* Inline code and keys: small hairline boxes; preformatted text keeps its lines and scrolls sideways. */
+/* Inline code and keys: small hairline boxes. Preformatted text keeps its line breaks and wraps a
+   line too long for the column, as WordPress's Code and Preformatted blocks do, so it never becomes
+   a box that scrolls sideways (one the keyboard can't reach in every browser). */
 .wp-block-post-content :not(pre) > code {
 	padding: 0.0625em 0.375em;
 	border: 1px solid var(--wp--preset--color--border);
@@ -1480,6 +1501,8 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 
 :where(pre) {
 	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
 }
 
 .wp-block-post-content figcaption {
@@ -1715,7 +1738,10 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 	display: none;
 }
 
+/* The second declaration hides the mark from screen readers; a browser that doesn't know it keeps
+   the first. */
 .tala-chips [class~="taxonomy-post_tag"] a::before {
+	content: "#";
 	content: "#" / "";
 }
 
@@ -2423,7 +2449,8 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 }
 
 /* Numbered pages (when Appearance → Customize → Article lists asks for them): 44px targets, the
-   current page marked by a 2px cobalt rule. */
+   current page marked by a 2px cobalt rule: a border, which Windows' contrast themes keep (they drop
+   shadows), with as much padding above it, so the number stays on the others' line. */
 .tala-rows .wp-block-query-pagination-numbers {
 	display: flex;
 	flex-wrap: wrap;
@@ -2444,7 +2471,8 @@ html:not(.tala-js) body:not(.editor-styles-wrapper) .tala-theme-switch,
 }
 
 .tala-rows .wp-block-query-pagination-numbers .current {
-	box-shadow: inset 0 -2px 0 0 var(--wp--preset--color--accent);
+	padding-block-start: 2px;
+	border-block-end: 2px solid var(--wp--preset--color--accent);
 	font-weight: 500;
 }
 

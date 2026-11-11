@@ -59,6 +59,9 @@ for ( const [ kind, path ] of Object.entries( pages ) ) {
 
 		expect( html ).toContain( '<meta name="theme-color" content="#f4f4f2" media="(prefers-color-scheme: light)">' );
 		expect( html ).toContain( '<meta name="theme-color" content="#16181d" media="(prefers-color-scheme: dark)">' );
+		// The page has a light and a dark look, and its text follows the device's text size.
+		expect( html ).toContain( '<meta name="color-scheme" content="light dark">' );
+		expect( html ).toContain( '<meta name="text-scale" content="scale">' );
 	} );
 }
 

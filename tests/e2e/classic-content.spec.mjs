@@ -1,7 +1,8 @@
 /**
  * Classic content, the cases of WordPress's Theme Unit Test that blocks don't cover: images
  * aligned by the classic editor's classes, [caption] and [gallery], fixed-width embeds, plain tables
- * and quotes, password forms, and titles with very long words. On a phone nothing may widen the page.
+ * and quotes, preformatted text, password forms, and titles with very long words. On a phone nothing
+ * may widen the page.
  */
 import { test, expect } from '@playwright/test';
 import { wp, axeViolations, PHONE } from './utils.mjs';
@@ -26,6 +27,8 @@ function classicContent( images ) {
 		// As the Advanced Editor Tools plugin and pastes from word processors write it: a width of its own.
 		'<table style="width: 100%;"><thead><tr><th>Grade</th><th>Learners</th></tr></thead><tbody><tr><td>1</td><td>32</td></tr></tbody></table>',
 		`[gallery ids="${ images.slice( 0, 3 ).join( ',' ) }"]`,
+		// One line far longer than a phone's column, with a word longer than it too.
+		`<pre>first line\n${ 'a line of preformatted text that goes on and on ' }${ 'x'.repeat( 80 ) } to its end</pre>`,
 	].join( '\n\n' );
 }
 
@@ -65,6 +68,8 @@ test.describe( 'phone', () => {
 				table: style( '.tala-table-scroll[role="region"][tabindex="0"]', 'borderTopWidth' ),
 				cell: style( 'th', 'borderBottomWidth' ),
 				galleryColumns: style( '.gallery', 'gridTemplateColumns' ).split( ' ' ).length,
+				// Preformatted text keeps its line breaks and wraps: no box that scrolls sideways.
+				pre: ( ( pre ) => [ getComputedStyle( pre ).whiteSpaceCollapse, pre.scrollWidth <= pre.clientWidth, pre.getBoundingClientRect().height > 3 * parseFloat( getComputedStyle( pre ).lineHeight ) ] )( content.querySelector( 'pre' ) ),
 			};
 		} );
 		expect( layout ).toEqual( {
@@ -77,6 +82,7 @@ test.describe( 'phone', () => {
 			table: '1px',
 			cell: '1px',
 			galleryColumns: 3,
+			pre: [ 'preserve', true, true ],
 		} );
 		expect( await axeViolations( page ) ).toEqual( [] );
 	} );

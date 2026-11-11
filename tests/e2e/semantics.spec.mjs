@@ -44,7 +44,9 @@ test( '"Read next" is a navigation landmark after the topics, before the author 
 	const rows = await nav.locator( '.tala-related .wp-block-post' ).count();
 	expect( rules, 'Top rules: the list\'s and one between each pair of rows; bottom rule: the list\'s' ).toEqual( [ rows, 1 ] );
 	await expect( nav.getByRole( 'link', { name: /Older article/ } ) ).toBeVisible();
-	await expect( page.locator( 'main .tala-measure > footer.tala-terms + nav[aria-label="Read next"] + .wp-block-post-author' ) ).toHaveCount( 1 );
+	await expect( page.locator( 'main .tala-measure > footer.tala-terms + nav.tala-post-nav + .wp-block-post-author' ) ).toHaveCount( 1 );
+	// Named by its heading, once.
+	expect( await nav.evaluate( ( el ) => [ el.getAttribute( 'aria-labelledby' ) === el.querySelector( 'h2' ).id, el.hasAttribute( 'aria-label' ) ] ) ).toEqual( [ true, false ] );
 
 	// The newest article has only an older one: its cell takes the whole row.
 	await page.goto( pages.withComments );

@@ -139,26 +139,48 @@ function tala_blog_empty_navigation( $html, $block ) {
 add_filter( 'render_block_core/group', 'tala_blog_topics_label', 10, 2 );
 
 /**
- * The home page's topics (the Group with the class "tala-topics") are a navigation landmark named
- * by their visible label, the paragraph with the class "tala-topics__label", through aria-labelledby,
- * so screen readers announce "Browse by topic" once, as the landmark's name. (A Group can save an
- * aria-label, but not a reference to another block.)
+ * A navigation landmark with a visible label is named by that label, through aria-labelledby, so
+ * screen readers announce it once, as the landmark's name, and the name can never differ from the
+ * words on the page: the home page's topics (the Group with the class "tala-topics") by the
+ * paragraph with the class "tala-topics__label", "Browse by topic"; "Read next" under an article
+ * (the class "tala-post-nav") by its heading, the class "tala-post-nav__title". (A Group can save
+ * an aria-label, but not a reference to another block: the one the pattern saves stays the name
+ * where the label was taken out.)
  *
  * @param string               $html  Rendered Group.
  * @param array<string, mixed> $block Parsed block.
  * @return string
  */
 function tala_blog_topics_label( $html, $block ) {
-	if ( ! tala_blog_block_has_class( $block, 'tala-topics' ) ) {
-		return $html;
+	foreach ( array(
+		'tala-topics'   => 'tala-topics__label',
+		'tala-post-nav' => 'tala-post-nav__title',
+	) as $landmark => $label ) {
+		if ( tala_blog_block_has_class( $block, $landmark ) ) {
+			return tala_blog_labelled_by( $html, $label, $landmark . '-label-' );
+		}
 	}
+	return $html;
+}
+
+/**
+ * Some HTML with its first element named by the element inside it that has the class $label:
+ * aria-labelledby in place of any aria-label, the label given an id when it has none. Left as it
+ * is without such a label.
+ *
+ * @param string $html   HTML of one element.
+ * @param string $label  Class of the label inside it.
+ * @param string $prefix Start of the id a label without one gets.
+ * @return string
+ */
+function tala_blog_labelled_by( $html, $label, $prefix ) {
 	$tags = new WP_HTML_Tag_Processor( $html );
-	if ( ! $tags->next_tag() || ! $tags->set_bookmark( 'landmark' ) || ! $tags->next_tag( array( 'class_name' => 'tala-topics__label' ) ) ) {
+	if ( ! $tags->next_tag() || ! $tags->set_bookmark( 'landmark' ) || ! $tags->next_tag( array( 'class_name' => $label ) ) ) {
 		return $html;
 	}
 	$id = $tags->get_attribute( 'id' );
 	if ( ! is_string( $id ) || '' === $id ) {
-		$id = wp_unique_id( 'tala-topics-label-' );
+		$id = wp_unique_id( $prefix );
 		$tags->set_attribute( 'id', $id );
 	}
 	$tags->seek( 'landmark' );
@@ -488,6 +510,28 @@ function tala_blog_empty_reading_time( $html, $block ) {
 	return tala_blog_block_has_class( $block, 'tala-reading-time' ) && '' === trim( wp_strip_all_tags( $html ) ) ? '' : $html;
 }
 
+add_filter( 'render_block_core/paragraph', 'tala_blog_copyright_sign', 10, 2 );
+
+/**
+ * The year in the footer's copyright line (the paragraph with the class "tala-year", bound to
+ * "tala-blog/year") starts with the copyright sign, as text: "© 2026". In the page, not drawn by
+ * the stylesheet, it is there for readers who copy, search or translate the page, and without the
+ * theme's CSS. Added here and not by the binding, so the binding stays the year alone, and a footer
+ * a site saved in the Site Editor gets the sign too. Nothing is added to an empty paragraph, or to
+ * one that already has the sign.
+ *
+ * @param string               $html  Rendered Paragraph.
+ * @param array<string, mixed> $block Parsed block.
+ * @return string
+ */
+function tala_blog_copyright_sign( $html, $block ) {
+	if ( ! tala_blog_block_has_class( $block, 'tala-year' ) || '' === trim( wp_strip_all_tags( $html ) ) || str_contains( $html, '©' ) ) {
+		return $html;
+	}
+	$start = strpos( $html, '>' ); // The paragraph's start tag ends at the first ">" (WordPress escapes ">" in attributes).
+	return false === $start || ! str_starts_with( ltrim( $html ), '<p' ) ? $html : substr_replace( $html, '© ', $start + 1, 0 );
+}
+
 /**
  * "N min read" for the post a block shows (its postId context), or the current post; nothing for a
  * post behind a password.
@@ -788,66 +832,95 @@ function tala_blog_styles(): void {
 	wp_add_inline_style( 'tala-blog', trim( $css ) );
 }
 
+add_action( 'wp_head', 'tala_blog_reader_settings', 0 );
+
+/**
+ * What the page tells the browser about the reader's own settings, first in <head>:
+ *
+ * - color-scheme: the page has a light and a dark look, so the browser paints its own parts (the
+ *   empty window before the CSS arrives, scrollbars, form controls) in the reader's scheme from
+ *   the start. The CSS says the same (color-scheme on :root); the Light/Dark switch's script,
+ *   printed right after, sets both to the reader's choice.
+ * - text-scale: the page's text follows the text size set on the phone or computer (Android's
+ *   font size, say), as it follows the browser's: the theme's sizes, spacing and breakpoints are in
+ *   rem, and it never sets a font size on <html>. Browsers that don't know the tag ignore it.
+ */
+function tala_blog_reader_settings(): void {
+	echo '<meta name="color-scheme" content="light dark">' . "\n" . '<meta name="text-scale" content="scale">' . "\n";
+}
+
 add_action( 'wp_head', 'tala_blog_theme_switch_script', 0 );
 
 /**
- * The Light/Dark switch's script, first in <head>, so it runs before any CSS is painted:
+ * The Light/Dark switch's script, first in <head> (after the color-scheme meta it sets), so it
+ * runs before any CSS is painted:
  *
  * - It applies the reader's choice, kept in localStorage ("tala-theme": "light" or "dark"), as
- *   data-theme on <html>. Until the reader chooses, the page follows the device.
+ *   data-theme on <html> and as the color-scheme meta's content. Without a choice the page
+ *   follows the device ("light dark").
  * - It adds the class tala-js to <html>, which shows the switch. Without JavaScript the switch
  *   can't work, so it stays hidden and the page follows the device.
- * - A click on the switch (.tala-theme-switch, in the header) changes the theme and stores it for
- *   the next pages. The new colors are computed with transitions off (class tala-switching and a
- *   forced style pass), so nothing fades. The switch's state and the browser's color (the
- *   theme-color metas) follow, as they follow the device until a choice.
- * - A choice made elsewhere on the same site also holds on an open page: in another tab (the
- *   storage event), or before the reader came back to a page the browser kept in its back/forward
- *   cache (pageshow). That includes other apps on the same origin that keep the same key, such as
- *   a directory served beside WordPress.
+ * - A click on the switch (.tala-theme-switch, in the header) shows the other theme than the one
+ *   on the page. When that differs from the device's, it is the reader's choice, stored for the
+ *   next pages. When it is the device's own, the reader has undone the choice: nothing stays
+ *   stored and the page follows the device again, also when the device changes later (at night,
+ *   say); a stored "light" would have kept the page light for good. A choice, once stored, stays
+ *   until the reader clicks again, whatever the device does meanwhile. The new colors are computed
+ *   with transitions off (class tala-switching and a forced style pass), so nothing fades. The
+ *   switch's state and the browser's color (the theme-color metas, each back to its own color
+ *   when the page follows the device) follow.
+ * - A choice made or undone elsewhere on the same site also holds on an open page: in another tab
+ *   (the storage event), or before the reader came back to a page the browser kept in its
+ *   back/forward cache (pageshow). That includes other apps on the same origin that keep the same
+ *   key, such as a directory served beside WordPress.
  * - The switch is a toggle button with one name, "Dark theme" (the header pattern): its state is
  *   aria-pressed, true while the page is dark, and the script never changes its name.
  *
  * Storage can be blocked (a private window, site data turned off), so every use of it is in try:
- * the switch then works for the visit. The script is under 1 KB, so its names are short: d the
- * document, h <html>, k its classes, q the device's dark mode, c the paper of each theme, M the
- * theme-color metas, S the class that turns transitions off, t the theme, n the theme shown now,
- * E runs a function on each match of a selector, w shows the state, u reads the stored choice, F
- * changes the theme. Its listeners are on the window, where clicks and DOMContentLoaded arrive
- * too. A browser too old for arrow functions can't run it at all, and keeps the page without
- * JavaScript.
+ * the switch then works for the visit. The script is about 1 KB, so its names are short: d the
+ * document, h <html>, o its data attributes, k its classes, q the device's dark mode, c the paper
+ * of each theme, M the theme-color metas, S the class that turns transitions off, K the storage
+ * key, t the choice, D the device's theme, A shows the choice, P the theme a theme-color meta is
+ * for, n the theme shown now, E runs a function on each match of a selector, w shows the state, u
+ * reads the stored choice, F changes the theme. Its listeners are on the window, where clicks and
+ * DOMContentLoaded arrive too. A browser too old for arrow functions can't run it at all, and keeps
+ * the page without JavaScript.
  */
 function tala_blog_theme_switch_script(): void {
 	wp_print_inline_script_tag(
 		'(()=>{' .
-		'const d=document,h=d.documentElement,k=h.classList,q=matchMedia("(prefers-color-scheme: dark)"),c={},M="meta[name=theme-color]",S="tala-switching";' .
+		'const d=document,h=d.documentElement,o=h.dataset,k=h.classList,q=matchMedia("(prefers-color-scheme: dark)"),c={},M="meta[name=theme-color]",S="tala-switching",K="tala-theme";' .
 		'let t;' .
-		// u: the stored choice. Only "light" or "dark" becomes the theme; anything else (or blocked
-		// storage) leaves the page as it is.
-		'const u=()=>{try{t=localStorage.getItem("tala-theme")}catch(e){}if("light"===t||"dark"===t)h.dataset.theme=t};' .
+		// A: only "light" or "dark" is a choice; anything else, the device's scheme.
+		'const D=()=>q.matches?"dark":"light",' .
+		'A=()=>{if("light"===t||"dark"===t)o.theme=t;else delete o.theme;(d.querySelector("meta[name=color-scheme]")||{}).content=o.theme||"light dark"},' .
+		// u: the stored choice. Blocked storage leaves the choice of this visit.
+		'u=()=>{try{t=localStorage.getItem(K)}catch(e){}A()};' .
 		'u();' .
 		'k.add("tala-js");' .
-		'const n=()=>h.dataset.theme||(q.matches?"dark":"light"),' .
+		'const n=()=>o.theme||D(),' .
 		'E=(s,f)=>d.querySelectorAll(s).forEach(f),' .
+		'P=m=>/dark/.test(m.media)?"dark":"light",' .
 		'w=()=>{' .
-		'const on="dark"===n();' .
-		'E(".tala-theme-switch",b=>b.setAttribute("aria-pressed",on));' .
-		'E(M,m=>m.content=c[h.dataset.theme]||m.content)' .
+		'E(".tala-theme-switch",b=>b.setAttribute("aria-pressed","dark"===n()));' .
+		'E(M,m=>m.content=c[o.theme||P(m)]||m.content)' .
 		'},' .
 		// F: a change of theme, its colors computed with transitions off, then the switch's state.
 		'F=f=>{k.add(S);f();h.offsetWidth;k.remove(S);w()};' .
 		// The paper of each theme, from the metas as printed (one per color scheme), then the switch's state.
-		'addEventListener("DOMContentLoaded",()=>{E(M,m=>c[/dark/.test(m.media)?"dark":"light"]=m.content);w()});' .
+		'addEventListener("DOMContentLoaded",()=>{E(M,m=>c[P(m)]=m.content);w()});' .
 		'addEventListener("click",e=>{' .
 		'if(e.target.closest&&e.target.closest(".tala-theme-switch")){' .
+		// The other theme; the device's own is no choice.
 		't="dark"===n()?"light":"dark";' .
-		'F(()=>{h.dataset.theme=t});' .
-		'try{localStorage.setItem("tala-theme",t)}catch(e){}' .
+		't===D()&&(t="");' .
+		'F(A);' .
+		'try{t?localStorage.setItem(K,t):localStorage.removeItem(K)}catch(e){}' .
 		'}' .
 		'});' .
 		// A choice made in another tab, or on another page before this one came back from the
 		// back/forward cache.
-		'addEventListener("storage",e=>{"tala-theme"===e.key&&F(u)});' .
+		'addEventListener("storage",e=>{K===e.key&&F(u)});' .
 		'addEventListener("pageshow",e=>{e.persisted&&F(u)});' .
 		'q.onchange=w' .
 		'})();',
@@ -1390,7 +1463,7 @@ function tala_blog_reserved_ids() {
 /**
  * The table of contents, as the design system's: a disclosure that starts closed at every width, its summary
  * "On this page · 4 sections" between a list icon and a chevron, which opens into a navigation
- * landmark named "On this page": the sections numbered 01, 02… (numbers the eye needs, hidden from
+ * landmark named by that label, "On this page" (aria-labelledby): the sections numbered 01, 02… (numbers the eye needs, hidden from
  * screen readers, so each link is named by its heading's words alone), each with its subsections.
  *
  * @param list<array{id: string, text: string, children: list<array{id: string, text: string}>}> $sections Sections.
@@ -1412,13 +1485,15 @@ function tala_blog_contents_box( $sections ) {
 		_n( '%s section', '%s sections', count( $sections ), 'tala-blog' ),
 		number_format_i18n( count( $sections ) )
 	);
-	$svg = '<svg class="%s" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">%s</svg>';
+	// The navigation is named by the label the summary shows.
+	$label = wp_unique_id( 'tala-contents-label-' );
+	$svg   = '<svg class="%s" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">%s</svg>';
 	return '<details class="tala-contents"><summary>'
 		. sprintf( $svg, 'tala-contents-icon', '<path d="M4 7h.5M4 12h.5M4 17h.5M9 7h11M9 12h11M9 17h7"/>' )
-		. '<span class="tala-contents-label"><span class="tala-contents-title">' . esc_html( $title ) . '</span> '
+		. '<span class="tala-contents-label"><span class="tala-contents-title" id="' . esc_attr( $label ) . '">' . esc_html( $title ) . '</span> '
 		. '<span class="tala-contents-count">' . esc_html( $count ) . '</span></span>'
 		. sprintf( $svg, 'tala-contents-chevron', '<polyline points="5 8.5 12 15.5 19 8.5"/>' )
-		. '</summary><nav aria-label="' . esc_attr( $title ) . '"><ol>' . $items . '</ol></nav></details>';
+		. '</summary><nav aria-labelledby="' . esc_attr( $label ) . '"><ol>' . $items . '</ol></nav></details>';
 }
 
 /**

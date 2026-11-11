@@ -14,7 +14,8 @@ Tala Blog is a block theme for blogs that are mostly read on phones.
 
 * A "drafting paper" look: dark ink on a warm paper color, one cobalt accent used sparingly, and every section a full-width band ruled underneath, with a centered rail (60rem, so side-rail ads keep room beside it) whose side rules meet the bands at small diamond nodes. Graph paper shows only behind the title bands, the call to action and the 404 panel, never behind text.
 * Inter, self-hosted: the variable Latin font (and its Latin Extended and italic subsets only for the characters that need them) ships with the theme and is preloaded, with metric-matched fallbacks so the page barely moves when it arrives. No font service is called, and the theme's CSS is inlined, so a page needs no stylesheet requests.
-* A Light/Dark switch in the header: until the reader chooses, the page follows their device; their choice is kept in the browser and applied on every page before it paints, so it never flashes. It is a toggle button named "Dark theme", pressed in dark mode. Without JavaScript the page follows the device and the switch is hidden.
+* A Light/Dark switch in the header: until the reader chooses, the page follows their device; their choice is kept in the browser and applied on every page before it paints, so it never flashes; switching back to the device's own theme undoes it, and the page follows the device again. It is a toggle button named "Dark theme", pressed in dark mode. Without JavaScript the page follows the device and the switch is hidden.
+* Text that follows the reader's settings: sizes, spacing and breakpoints are in rem, so the page grows with the browser's text size and, in browsers that support it, with the text size set on the phone itself. At 200% on a small phone nothing is cut off or scrolls sideways.
 * A header with the site logo (when the site has one) beside the site title, the site's menu (or its pages until there is one), a search button that opens into a field, and the switch. On narrow screens the menu folds behind a button and opens as a side sheet.
 * A cobalt footer: the site title and tagline, a "Footer note" template part under them, a menu as columns (the header's, or one chosen for the footer; one column per item with a submenu, headed by its title, the other items in a last column), the copyright line, and the site title as a giant outlined wordmark (hidden from screen readers).
 * Article lists (home page, archives, search results) as ruled rows without pictures: the date and first category on the left, the title and summary on the right, then "Previous page" and "Next page". The home page opens with the site title, a search field and the top-level categories as chips. Numbered pages are a choice in Appearance → Customize → Article lists, off by default.
@@ -66,6 +67,15 @@ Yes. Forms take the theme's colors, font and controls, in light and dark mode an
 With Orbital, the theme's colors replace the colors set in a form block's style settings, so every form matches the page. Other form plugins that leave their fields to the browser follow the page's light or dark mode as well.
 
 == Changelog ==
+
+= 2.1.0 =
+* Added: the page's text follows the text size set on the phone or computer (Android's font size, say), in browsers that support it (Chrome): the theme's sizes, spacing and breakpoints grow with it. Other browsers show the page as before.
+* Changed: the Light/Dark switch. Switching back to the device's own theme now undoes the choice, and the page follows the device again; before, a page switched to dark and back stayed light for good, also when the device turned dark at night. Choosing the other theme than the device's is kept for every page, as before.
+* Added: the page tells the browser it has a light and a dark look (the color-scheme meta, first in the head), so the browser's own parts match from the start; the switch sets it to the reader's choice.
+* Fixed: with very large text on a phone, the header's buttons wrap under the site title instead of covering it.
+* Fixed: the current page is told apart by more than its color: underlined in the header menu and the phone menu, and marked by a border under its number in the numbered pages. In Windows' contrast themes, which drop fills and shadows, that mark stays and filled buttons (Search, Post Comment) get a border.
+* Fixed: preformatted text from the classic editor wraps a long line, as WordPress's Code and Preformatted blocks do, instead of becoming a box that scrolls sideways, which the keyboard can't reach in every browser.
+* Changed: the "©" of the footer's copyright line is text in the page, where it was drawn by the stylesheet (a footer saved in the Site Editor gets it too). "Read next" and "On this page" are named by the labels they show. The "#" before a tag shows in browsers that don't know alternative text for generated content.
 
 = 2.0.9 =
 * Added: a "Before Read next" template part between a post's topics and Read next, empty until a site fills it, and a "Call to action before Read next" pattern to fill it with: a card in the text column (eyebrow, heading, lead, one button, a line of detail) on the closing call to action's surface.
@@ -219,6 +229,9 @@ With Orbital, the theme's colors replace the colors set in a form block's style 
 * First release.
 
 == Upgrade Notice ==
+
+= 2.1.0 =
+On phones, the text now follows the device's text size setting (in Chrome), so readers with larger text see larger pages. The Light/Dark switch follows the device again once a reader switches back to the device's own theme. Nothing to do.
 
 = 2.0.0 =
 A new look. A 1.x color or typography preset you picked stays saved and overrides the new colors or Inter: reset Appearance → Editor → Styles. The Call to action and Footer note parts are empty until filled. Templates or parts customized in the Site Editor keep their old markup until cleared.

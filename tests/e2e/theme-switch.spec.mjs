@@ -1,9 +1,11 @@
 /**
- * The Light/Dark switch in the header: the page follows the device until the reader chooses Light
- * or Dark, the choice is kept for every page (localStorage "tala-theme") and applied before the
- * first paint, a choice made in another tab or before going Back shows on the open page, the
- * switch still works for the visit when storage is blocked, and without
- * JavaScript it isn't shown (the Site Editor, which doesn't run the theme's script, shows it).
+ * The Light/Dark switch in the header: the page follows the device until the reader chooses the
+ * other theme, the choice is kept for every page (localStorage "tala-theme") and applied before the
+ * first paint, switching back to the device's own theme undoes it (nothing stays stored, and the
+ * page follows the device again), a choice made or undone in another tab or before going Back shows
+ * on the open page, the switch still works for the visit when storage is blocked, and without
+ * JavaScript it isn't shown (the Site Editor, which doesn't run the theme's script, shows it). The
+ * page's color-scheme meta says which schemes it has now.
  */
 import { test, expect } from '@playwright/test';
 import { demoPages, logIn } from './utils.mjs';
@@ -31,6 +33,14 @@ const background = ( page ) => page.evaluate( () => getComputedStyle( document.b
 const themeColors = ( page ) => page.locator( 'meta[name="theme-color"]' ).evaluateAll( ( metas ) => metas.map( ( meta ) => meta.content ) );
 
 /**
+ * The color schemes the page declares to the browser, and the choice in storage.
+ *
+ * @param {import('@playwright/test').Page} page Page.
+ * @return {Promise<Array<string|null>>} The color-scheme meta's content, the stored choice.
+ */
+const declared = ( page ) => page.evaluate( () => [ document.querySelector( 'meta[name="color-scheme"]' ).content, window.localStorage.getItem( 'tala-theme' ) ] );
+
+/**
  * Starts every page of the test with this choice stored, as an earlier visit would have left it.
  *
  * @param {import('@playwright/test').Page} page   Page.
@@ -46,11 +56,12 @@ const storeChoice = ( page, choice ) =>
 test.describe( 'light device', () => {
 	test.use( { colorScheme: 'light' } );
 
-	test( 'switches to dark and back, and remembers it', async ( { page } ) => {
+	test( 'switches to dark and remembers it; switching back follows the device again', async ( { page } ) => {
 		await page.goto( pages.article );
 		const button = page.locator( '.tala-theme-switch' );
 		await expect( button ).toHaveAttribute( 'aria-pressed', 'false' );
 		await expect( button ).toHaveAccessibleName( 'Dark theme' );
+		expect( await declared( page ), 'Both schemes, nothing stored' ).toEqual( [ 'light dark', null ] );
 
 		await button.click();
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
@@ -58,7 +69,7 @@ test.describe( 'light device', () => {
 		await expect( button ).toHaveAttribute( 'aria-pressed', 'true' );
 		await expect( button ).toHaveAccessibleName( 'Dark theme' );
 		expect( await themeColors( page ), 'The browser\'s colour follows' ).toEqual( [ themeColor.dark, themeColor.dark ] );
-		expect( await page.evaluate( () => window.localStorage.getItem( 'tala-theme' ) ) ).toBe( 'dark' );
+		expect( await declared( page ) ).toEqual( [ 'dark', 'dark' ] );
 
 		await page.reload();
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
@@ -66,17 +77,49 @@ test.describe( 'light device', () => {
 		await expect( button ).toHaveAttribute( 'aria-pressed', 'true' );
 		await expect( button ).toHaveAccessibleName( 'Dark theme' );
 		expect( await themeColors( page ) ).toEqual( [ themeColor.dark, themeColor.dark ] );
+		expect( await declared( page ), 'Declared before the first paint' ).toEqual( [ 'dark', 'dark' ] );
 
 		await page.goto( pages.home );
 		await expect( page.locator( 'html' ), 'On every page' ).toHaveAttribute( 'data-theme', 'dark' );
 
+		// Back to the device's own theme: the choice is undone, not replaced by "light".
 		await button.click();
-		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'light' );
+		await expect( page.locator( 'html' ) ).not.toHaveAttribute( 'data-theme' );
 		expect( await background( page ) ).toBe( paper.light );
 		await expect( button ).toHaveAttribute( 'aria-pressed', 'false' );
 		await expect( button ).toHaveAccessibleName( 'Dark theme' );
+		expect( await themeColors( page ), 'Each of the browser\'s colours is its own again' ).toEqual( [ themeColor.light, themeColor.dark ] );
+		expect( await declared( page ) ).toEqual( [ 'light dark', null ] );
+
+		// So the page turns dark with the device (at night, say).
+		await page.emulateMedia( { colorScheme: 'dark' } );
+		expect( await background( page ) ).toBe( paper.dark );
+		await expect( button ).toHaveAttribute( 'aria-pressed', 'true' );
+	} );
+
+	test( 'a choice holds while the device changes, until the reader switches back', async ( { page } ) => {
+		await page.goto( pages.article );
+		const button = page.locator( '.tala-theme-switch' );
+		await button.click();
+		expect( await declared( page ) ).toEqual( [ 'dark', 'dark' ] );
+		// The device turns dark too (the choice now matches it, and is kept), then light again.
+		for ( const colorScheme of [ 'dark', 'light' ] ) {
+			await page.emulateMedia( { colorScheme } );
+			await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
+			expect( await background( page ) ).toBe( paper.dark );
+			expect( await declared( page ), `Kept on a ${ colorScheme } device` ).toEqual( [ 'dark', 'dark' ] );
+		}
+		// On a dark device, the other theme is Light, and that is a choice.
+		await page.emulateMedia( { colorScheme: 'dark' } );
+		await button.click();
+		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'light' );
+		expect( await background( page ) ).toBe( paper.light );
+		expect( await declared( page ) ).toEqual( [ 'light', 'light' ] );
 		expect( await themeColors( page ) ).toEqual( [ themeColor.light, themeColor.light ] );
-		expect( await page.evaluate( () => window.localStorage.getItem( 'tala-theme' ) ) ).toBe( 'light' );
+		await button.click();
+		await expect( page.locator( 'html' ) ).not.toHaveAttribute( 'data-theme' );
+		expect( await background( page ) ).toBe( paper.dark );
+		expect( await declared( page ) ).toEqual( [ 'light dark', null ] );
 	} );
 
 	test( 'shows the theme it switches to: a moon on a light page, a sun on a dark one', async ( { page } ) => {
@@ -105,7 +148,8 @@ test.describe( 'light device', () => {
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
 		await page.keyboard.press( 'Space' );
 		expect( await transitions() ).toEqual( [] );
-		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'light' );
+		await expect( page.locator( 'html' ) ).not.toHaveAttribute( 'data-theme' );
+		expect( await background( page ) ).toBe( paper.light );
 		await expect( page.locator( 'html' ) ).not.toHaveClass( /tala-switching/ );
 	} );
 
@@ -128,6 +172,13 @@ test.describe( 'light device', () => {
 		await other.evaluate( () => window.localStorage.setItem( 'something-else', 'light' ) );
 		await expect.poll( () => page.evaluate( () => window.heard ) ).toContain( 'something-else' );
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
+		// Undone in the other tab: this page follows the device again.
+		await other.locator( '.tala-theme-switch' ).click();
+		await expect( page.locator( 'html' ) ).not.toHaveAttribute( 'data-theme' );
+		await expect( page.locator( '.tala-theme-switch' ) ).toHaveAttribute( 'aria-pressed', 'false' );
+		expect( await background( page ) ).toBe( paper.light );
+		expect( await themeColors( page ) ).toEqual( [ themeColor.light, themeColor.dark ] );
+		expect( await declared( page ) ).toEqual( [ 'light dark', null ] );
 		await other.close();
 	} );
 
@@ -162,6 +213,7 @@ test.describe( 'light device', () => {
 			};
 			window.Storage.prototype.getItem = blocked;
 			window.Storage.prototype.setItem = blocked;
+			window.Storage.prototype.removeItem = blocked;
 		} );
 		await page.goto( pages.article );
 		expect( await background( page ), 'The page follows the device' ).toBe( paper.light );
@@ -172,8 +224,11 @@ test.describe( 'light device', () => {
 		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
 		expect( await background( page ) ).toBe( paper.dark );
 		await expect( button ).toHaveAttribute( 'aria-pressed', 'true' );
+		// A page back from the back/forward cache can't read storage either: the visit's choice stays.
+		await page.evaluate( () => window.dispatchEvent( new PageTransitionEvent( 'pageshow', { persisted: true } ) ) );
+		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'dark' );
 		await button.click();
-		await expect( page.locator( 'html' ) ).toHaveAttribute( 'data-theme', 'light' );
+		await expect( page.locator( 'html' ) ).not.toHaveAttribute( 'data-theme' );
 		expect( await background( page ) ).toBe( paper.light );
 		await expect( button ).toHaveAttribute( 'aria-pressed', 'false' );
 		await expect( button ).toHaveAccessibleName( 'Dark theme' );
@@ -229,6 +284,7 @@ test.describe( 'dark device', () => {
 		await page.goto( pages.article );
 		await expect( page.locator( 'html' ) ).not.toHaveAttribute( 'data-theme' );
 		expect( await background( page ) ).toBe( paper.dark );
+		await expect( page.locator( 'meta[name="color-scheme"]' ) ).toHaveAttribute( 'content', 'light dark' );
 	} );
 } );
 

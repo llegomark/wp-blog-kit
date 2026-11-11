@@ -96,8 +96,10 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 	/**
 	 * The Light/Dark switch. A small script in <head>, printed before any CSS, applies the reader's
 	 * stored choice (only "light" or "dark", read inside try: storage can be blocked) and marks the
-	 * page as running JavaScript; it sets the button's state (aria-pressed) and never its name. The
-	 * header has the button: one name, "Dark theme" (translatable), its state and two decorative icons.
+	 * page as running JavaScript; it sets the button's state (aria-pressed) and never its name. A
+	 * click that brings back the device's own theme stores nothing, and removes the choice. The page
+	 * declares both color schemes in a meta right before the script, which sets it to the choice.
+	 * The header has the button: one name, "Dark theme" (translatable), its state and two decorative icons.
 	 */
 	public function test_theme_switch(): void {
 		add_filter( 'gettext_with_context_tala-blog', static fn( $translation, $text ) => 'Dark theme' === $text ? "($text)" : $translation, 10, 2 );
@@ -118,13 +120,21 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 
 		$this->assertSame( 1, preg_match( '#' . preg_quote( $tag, '#' ) . '(.*?)</script>#s', $head, $script ) );
 		$js = $script[1];
-		$this->assertLessThan( 1024, strlen( $js ), 'A tiny script' );
-		$this->assertMatchesRegularExpression( '/try\s*\{\s*(\w+)\s*=\s*localStorage\.getItem\("tala-theme"\)/', $js, 'Reads the choice inside try' );
-		$this->assertMatchesRegularExpression( '/try\s*\{\s*localStorage\.setItem\("tala-theme",/', $js, 'Stores the choice inside try' );
-		$this->assertMatchesRegularExpression( '/if\s*\(\s*"light"\s*===\s*(\w+)\s*\|\|\s*"dark"\s*===\s*\1\s*\)\s*\{?\s*\w+\.dataset\.theme\s*=\s*\1\b/', $js, 'Only "light" or "dark" becomes the theme' );
+		$this->assertLessThan( 1200, strlen( $js ), 'A tiny script' );
+		$this->assertStringContainsString( 'K="tala-theme"', $js, 'One storage key' );
+		$this->assertMatchesRegularExpression( '/try\s*\{\s*(\w+)\s*=\s*localStorage\.getItem\(K\)/', $js, 'Reads the choice inside try' );
+		$this->assertMatchesRegularExpression( '/try\s*\{\s*(\w+)\s*\?\s*localStorage\.setItem\(K,\1\)\s*:\s*localStorage\.removeItem\(K\)\s*\}\s*catch/', $js, 'Stores the choice, or removes it, inside try' );
+		$this->assertMatchesRegularExpression( '/if\s*\(\s*"light"\s*===\s*(\w+)\s*\|\|\s*"dark"\s*===\s*\1\s*\)\s*\{?\s*\w+\.theme\s*=\s*\1\s*;\s*else delete \w+\.theme\b/', $js, 'Only "light" or "dark" becomes the theme; anything else, none' );
 		$this->assertMatchesRegularExpression( '/\.add\("tala-js"\)/', $js, '<html> gets the class tala-js' );
 		$this->assertMatchesRegularExpression( '/\.setAttribute\("aria-pressed",/', $js, 'Sets the state' );
-		$this->assertMatchesRegularExpression( '/addEventListener\("storage",(\w+)=>\{"tala-theme"===\1\.key&&/', $js, 'Follows a choice made in another tab' );
+		$this->assertMatchesRegularExpression( '/addEventListener\("storage",(\w+)=>\{K===\1\.key&&/', $js, 'Follows a choice made in another tab' );
+
+		// The page's color schemes and its text size, declared right before the script.
+		$metas = '<meta name="color-scheme" content="light dark">' . "\n" . '<meta name="text-scale" content="scale">' . "\n";
+		$this->assertSame( 1, substr_count( $head, $metas ) );
+		$this->assertSame( $at, strpos( $head, $metas ) + strlen( $metas ), 'Right before the script that sets the scheme' );
+		$this->assertStringContainsString( 'meta[name=color-scheme]', $js );
+		$this->assertDoesNotMatchRegularExpression( '/(?:^|\})\s*(?:html|:root)[^{]*\{[^}]*font-size/', (string) file_get_contents( get_theme_file_path( 'assets/theme.css' ) ), 'No font size on <html>: the browser sets it from the reader\'s text size' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
 		$this->assertMatchesRegularExpression( '/addEventListener\("pageshow",(\w+)=>\{\1\.persisted&&/', $js, 'Reads the choice again on a page back from the back/forward cache' );
 		$this->assertStringNotContainsString( 'aria-label', $js, 'Never changes the name' );
 		$this->assertStringNotContainsString( 'Dark theme', $js );
@@ -141,6 +151,19 @@ class Test_Tala_Blog_Theme extends Tala_SEO_Test_Case {
 		$this->assertSame( 2, preg_match_all( '#<svg[^>]* aria-hidden="true" focusable="false"#', $button[1] ), 'A sun and a moon, decorative' );
 		$this->assertStringContainsString( 'tala-theme-switch__sun', $button[1] );
 		$this->assertStringContainsString( 'tala-theme-switch__moon', $button[1] );
+	}
+
+	/**
+	 * The "#" before a tag's chip is decoration, hidden from screen readers by the alternative text
+	 * of generated content (content: "#" / ""). A browser that doesn't know that syntax drops the
+	 * whole declaration, so the plain one comes first, and such a browser keeps the mark.
+	 */
+	public function test_generated_content_has_a_fallback(): void {
+		$css = (string) file_get_contents( get_theme_file_path( 'assets/theme.css' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
+		$this->assertSame( 1, preg_match_all( '#content:\s*("[^"]*")\s*/\s*""\s*;#', $css, $marks, PREG_OFFSET_CAPTURE ) );
+		foreach ( $marks[0] as $i => $mark ) {
+			$this->assertMatchesRegularExpression( '#content:\s*' . preg_quote( $marks[1][ $i ][0], '#' ) . '\s*;\s*$#', substr( $css, 0, $mark[1] ), 'The plain declaration right before it' );
+		}
 	}
 
 	/**
@@ -229,8 +252,9 @@ HTML;
 		$this->go_to( get_permalink( $post ) );
 		$html = $this->render( '<!-- wp:post-content /-->', $post );
 
-		$this->assertSame( 1, preg_match( '#Opening paragraph\.</p>\s*<details class="tala-contents"><summary>(.*?)</summary><nav aria-label="On this page"><ol>#s', $html, $summary ), 'After the opening, closed.' );
-		$this->assertStringContainsString( '<span class="tala-contents-title">On this page</span> <span class="tala-contents-count">6 sections</span>', $summary[1] );
+		$this->assertSame( 1, preg_match( '#Opening paragraph\.</p>\s*<details class="tala-contents"><summary>(.*?)</summary><nav aria-labelledby="(tala-contents-label-\d+)"><ol>#s', $html, $summary ), 'After the opening, closed.' );
+		$this->assertStringContainsString( '<span class="tala-contents-title" id="' . $summary[2] . '">On this page</span> <span class="tala-contents-count">6 sections</span>', $summary[1], 'The navigation is named by the label the summary shows' );
+		$this->assertStringNotContainsString( 'aria-label=', $summary[0], 'Named once' );
 		$this->assertSame( 2, preg_match_all( '#<svg[^>]* aria-hidden="true" focusable="false"#', $summary[1] ), 'A list icon and a chevron, decorative' );
 		$num = static fn( string $n ): string => '<span class="tala-contents-num" aria-hidden="true">' . $n . '</span>';
 		$this->assertStringContainsString(
@@ -1202,7 +1226,9 @@ HTML;
 
 	/**
 	 * The year in the footer's copyright line comes from the "tala-blog/year" Block Bindings
-	 * source: this year in the site's time zone, never a year written into the pattern.
+	 * source: this year in the site's time zone, never a year written into the pattern. In the
+	 * footer it starts with the copyright sign, as text in the page (not drawn by the stylesheet),
+	 * once, also in a footer a site saved; the binding itself stays the year alone.
 	 */
 	public function test_year_binding(): void {
 		$this->assertTrue( get_block_bindings_source( 'tala-blog/year' ) instanceof WP_Block_Bindings_Source );
@@ -1210,7 +1236,15 @@ HTML;
 		$this->assertMatchesRegularExpression( '#^<p[^>]*>' . wp_date( 'Y' ) . '</p>$#', trim( $year ) );
 
 		$footer = $this->footer();
-		$this->assertMatchesRegularExpression( '#<p class="tala-year[ "][^>]*>' . wp_date( 'Y' ) . '</p>#', $footer );
+		$this->assertMatchesRegularExpression( '#<p class="tala-year[ "][^>]*>© ' . wp_date( 'Y' ) . '</p>#', $footer );
+		$this->assertSame( 1, substr_count( $footer, '©' ) );
+		$this->assertDoesNotMatchRegularExpression( '/content:\s*"©/', (string) file_get_contents( get_theme_file_path( 'assets/theme.css' ) ), 'Not generated by the stylesheet' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local file.
+		$saved = '<!-- wp:paragraph {"className":"tala-year"} --><p class="tala-year">%s</p><!-- /wp:paragraph -->';
+		$text  = static fn( string $year ): string => (string) preg_replace( '#^<p class="tala-year[ "][^>]*>(.*)</p>$#', '[$1]', trim( do_blocks( sprintf( $saved, $year ) ) ) );
+		$this->assertSame( '[© 2019]', $text( '2019' ) );
+		$this->assertSame( '[© 2019]', $text( '© 2019' ), 'Never twice' );
+		$this->assertSame( '[]', $text( '' ), 'Nothing to sign' );
+		$this->assertStringNotContainsString( '©', do_blocks( '<!-- wp:paragraph --><p>2019</p><!-- /wp:paragraph -->' ), 'Other paragraphs are left alone' );
 		$this->assertDoesNotMatchRegularExpression( '/\b20\d\d\b(?<!' . wp_date( 'Y' ) . ')/', wp_strip_all_tags( $footer ), 'No other year' );
 	}
 
@@ -1710,8 +1744,14 @@ HTML;
 		$html = $this->render( $after, $newer );
 		$tags = new WP_HTML_Tag_Processor( $html );
 		$this->assertTrue( $tags->next_tag( array( 'tag_name' => 'nav' ) ), 'A navigation landmark' );
-		$this->assertSame( 'Read next', $tags->get_attribute( 'aria-label' ) );
-		$this->assertMatchesRegularExpression( '#<nav\b.*<h2 class="[^"]*\btala-eyebrow\b[^"]*">Read next</h2>.*</nav>#s', $html );
+		$this->assertNull( $tags->get_attribute( 'aria-label' ), 'Named once, by its heading' );
+		$label = (string) $tags->get_attribute( 'aria-labelledby' );
+		$this->assertMatchesRegularExpression( '/^tala-post-nav-label-\d+$/', $label );
+		$this->assertMatchesRegularExpression( '#<nav\b.*<h2 (?=[^>]*\bclass="[^"]*\btala-eyebrow\b[^"]*")(?=[^>]*\bid="' . $label . '")[^>]*>Read next</h2>.*</nav>#s', $html );
+		// Without its heading (a site took it out), the name the pattern saves stays.
+		$bare = do_blocks( '<!-- wp:group {"tagName":"nav","ariaLabel":"Read next","className":"tala-post-nav"} --><nav class="wp-block-group tala-post-nav" aria-label="Read next"><p><a href="/about/">About</a></p></nav><!-- /wp:group -->' );
+		$this->assertStringContainsString( 'aria-label="Read next"', $bare );
+		$this->assertStringNotContainsString( 'aria-labelledby', $bare );
 		$this->assertMatchesRegularExpression( '#<nav\b.*<div class="wp-block-group tala-post-nav__links[ "][^>]*>\s*<div class="post-navigation-link-previous wp-block-post-navigation-link">.*?<a [^>]*rel="prev"[^>]*><span class="post-navigation-link__label">Older article</span> <span class="post-navigation-link__title">Seating plans</span></a>.*</nav>#s', $html, 'A cell; the label is part of the link, so the whole cell is the target.' );
 		$this->assertStringNotContainsString( '<img', substr( $html, 0, (int) strpos( $html, 'wp-block-post-author' ) ), 'No pictures' );
 		$this->assertStringNotContainsString( 'Newer article', $html, 'The newest article has no newer one.' );
