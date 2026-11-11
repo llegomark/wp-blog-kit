@@ -1226,6 +1226,11 @@ class Test_Tala_Ads extends Tala_SEO_Test_Case {
 		}
 		$this->assertStringContainsString( 'value="ca-pub-1234567890123456"', $page );
 		$this->assertStringContainsString( 'There is no ads.txt', $page );
+		// Notes describe their fields, the checkbox has its label, and ID fields aren't corrected.
+		$this->assertFieldsAreWired( $page );
+		$this->assertMatchesRegularExpression( '/<select (?=[^>]*\bid=["\']tala-ads-search-page["\'])(?=[^>]*\baria-describedby="tala-ads-search-page-help")/', $page );
+		$this->assertSame( substr_count( $page, 'type="text"' ), substr_count( $page, 'autocapitalize="none" autocorrect="off" spellcheck="false"' ) - 1, 'Every ID field, and the code' );
+		$this->assertStringNotContainsString( '#00a32a', $page, 'A mark of 3:1 or more on the screen\'s grey' );
 
 		$file = ABSPATH . 'ads.txt';
 		file_put_contents( $file, "google.com, pub-1234567890123456, DIRECT, f08c47fec0942fa0\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents

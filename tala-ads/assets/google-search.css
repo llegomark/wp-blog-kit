@@ -105,6 +105,15 @@
 	fill: currentcolor;
 }
 
+/* Windows' contrast themes (forced colours) drop the button's fill, which is all its shape is: there
+   it gets a border in the system's button colour. */
+@media (forced-colors: active) {
+
+	.tala-ads-google-search button.gsc-search-button {
+		border: 1px solid ButtonBorder !important;
+	}
+}
+
 /* Above the results: the count and the order, small and muted, over a fine rule. */
 .tala-ads-google-search .gsc-above-wrapper-area {
 	padding: 0 0 0.5rem !important;

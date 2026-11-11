@@ -4,7 +4,7 @@ Tags: adsense, ads, google tag manager, google search, ad blocking
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.10.0
+Stable tag: 1.10.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,6 +71,10 @@ AdSense's policies don't allow Google ads on pages without the site's own conten
 1. Settings → Ads: the AdSense publisher ID with the ads.txt check, Google's messages and error protection, the Tag Manager container ID, Google search and Innity's box, Universal tags and channels.
 
 == Changelog ==
+
+= 1.10.1 =
+* Fixed: on Settings → Ads, for screen readers and voice control: the note under the results page list is its description, and the "Google's messages" checkbox has a label tied to it. Phone keyboards no longer capitalize or correct the ID fields, and the green check marks have more contrast.
+* Fixed: on Google's results page, the search button keeps its shape in Windows' contrast themes, which drop its fill: it gets a border there.
 
 = 1.10.0 =
 * Changed: Innity's in-read ad goes into the article, after its sixth paragraph, instead of after the text, the Multiplex ad and the box. Innity loads and counts an in-read ad only once the reader has scrolled to its place, and few readers reach the end of a long article. AdSense's In-article ad stays ahead of it, after the second paragraph, and an article with six paragraphs or fewer keeps the place after the text. The `tala_ads_innity_in_read_paragraphs` filter changes the number; 0 puts the place back after the text.

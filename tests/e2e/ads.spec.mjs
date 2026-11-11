@@ -61,7 +61,7 @@ const ADSENSE_STUB = `( () => {
 /** Stands in for Google's search script: draws the field Google's own script draws. */
 const SEARCH_STUB = `( () => {
 	const draw = () => document.querySelectorAll( '.gcse-search' ).forEach( ( box ) => {
-		box.innerHTML = '<form class="gsc-search-box"><input class="gsc-input" type="text" name="search"></form>';
+		box.innerHTML = '<form class="gsc-search-box"><input class="gsc-input" type="text" name="search"><button class="gsc-search-button gsc-search-button-v2" type="submit">Search</button></form>';
 	} );
 	if ( 'loading' === document.readyState ) {
 		document.addEventListener( 'DOMContentLoaded', draw );
@@ -398,6 +398,12 @@ test( 'with an ad blocker, pages have no script errors and search still gets its
 	await page.goto( '/?s=reading' );
 	await expect( page ).toHaveURL( /\/kit-search-results\/\?q=reading$/ );
 	await expect( page.locator( '.tala-ads-google-search input.gsc-input' ) ).toHaveAttribute( 'placeholder', 'Search the guides' );
+	// Its button is a fill without a border; in Windows' contrast themes, which drop fills, a border.
+	const border = () => page.locator( '.tala-ads-google-search button.gsc-search-button' ).evaluate( ( button ) => getComputedStyle( button ).borderTopWidth );
+	expect( await border() ).toBe( '0px' );
+	await page.emulateMedia( { forcedColors: 'active' } );
+	expect( await border() ).toBe( '1px' );
+	await page.emulateMedia( { forcedColors: 'none' } );
 	expect( errors ).toEqual( [] );
 } );
 
