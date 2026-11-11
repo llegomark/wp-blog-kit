@@ -16,8 +16,8 @@
 
 	const el = wp.element.createElement;
 	const Fragment = wp.element.Fragment;
-	const { __, _n, sprintf } = wp.i18n;
-	const { SelectControl, TextControl, TextareaControl, ToggleControl } = wp.components;
+	const { __, _n, _x, sprintf } = wp.i18n;
+	const { SelectControl, TextControl, TextareaControl, ToggleControl, VisuallyHidden } = wp.components;
 	const decodeEntities = wp.htmlEntities.decodeEntities;
 	const { useSelect } = wp.data;
 	const { useEntityProp } = wp.coreData;
@@ -384,7 +384,7 @@
 		return el(
 			Fragment,
 			null,
-			el( 'p', { className: 'tala-seo-checklist__title' }, __( 'Videos', 'tala-seo' ) ),
+			el( 'h3', { className: 'tala-seo-checklist__title' }, __( 'Videos', 'tala-seo' ) ),
 			el(
 				'p',
 				{ className: 'tala-seo-videos__help' },
@@ -407,6 +407,21 @@
 	const CHECK_MARKS = { ok: '✓', missing: '✕', advice: '!' };
 
 	/**
+	 * What a mark means, in words, for screen readers (the marks themselves are hidden from them).
+	 *
+	 * @param {string} state ok, missing or advice.
+	 * @return {string} The state, to read before the item.
+	 */
+	function checkWord( state ) {
+		if ( 'ok' === state ) {
+			return _x( 'Done:', 'state of a checklist item, read before it', 'tala-seo' );
+		}
+		return 'missing' === state
+			? _x( 'Missing:', 'state of a checklist item, read before it', 'tala-seo' )
+			: _x( 'Advice:', 'state of a checklist item, read before it', 'tala-seo' );
+	}
+
+	/**
 	 * A checklist item's state: done, missing (needed to publish) or advice.
 	 *
 	 * @param {Object}  item     Item with an `ok` flag.
@@ -427,7 +442,7 @@
 		return el(
 			Fragment,
 			null,
-			el( 'p', { className: 'tala-seo-checklist__title' }, props.title ),
+			el( 'h3', { className: 'tala-seo-checklist__title' }, props.title ),
 			el(
 				'ul',
 				{ className: 'tala-seo-checklist' },
@@ -437,7 +452,7 @@
 						'li',
 						{ key: i, className: 'is-' + state },
 						el( 'span', { className: 'tala-seo-checklist__mark', 'aria-hidden': 'true' }, CHECK_MARKS[ state ] ),
-						el( 'span', null, item.label ),
+						el( 'span', null, el( VisuallyHidden, null, checkWord( state ) + ' ' ), item.label ),
 					);
 				} ),
 			),
@@ -557,6 +572,7 @@
 				__nextHasNoMarginBottom: true,
 				label: descriptionRequired ? __( 'Meta description (required)', 'tala-seo' ) : __( 'Meta description', 'tala-seo' ),
 				value: description,
+				'aria-required': descriptionRequired ? 'true' : undefined,
 				rows: 4,
 				help: el(
 					Fragment,
@@ -637,7 +653,7 @@
 				className: blocked ? 'tala-seo-prepublish is-blocked' : 'tala-seo-prepublish',
 			},
 			blocked
-				? el( 'p', { className: 'tala-seo-prepublish__note' }, __( 'Publishing will be refused until the items marked ✕ are done.', 'tala-seo' ) )
+				? el( 'p', { className: 'tala-seo-prepublish__note' }, __( 'Publishing will be refused until every item under "Needed to publish" is done (the ones marked ✕).', 'tala-seo' ) )
 				: null,
 			el( Checks, { seo: s } ),
 		);

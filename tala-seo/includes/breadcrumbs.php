@@ -283,8 +283,11 @@ function tala_seo_render_breadcrumbs( $attributes = array(), $content = '', $blo
 	$items = '';
 	$last  = count( $trail ) - 1;
 	foreach ( $trail as $i => $crumb ) {
-		if ( $i === $last || '' === $crumb['url'] ) {
+		if ( $i === $last ) {
 			$items .= sprintf( '<li aria-current="page">%s</li>', esc_html( $crumb['name'] ) );
+		} elseif ( '' === $crumb['url'] ) {
+			// A step without an address is text, but not the current page: a trail has one.
+			$items .= sprintf( '<li>%s</li>', esc_html( $crumb['name'] ) );
 		} else {
 			$items .= sprintf( '<li><a href="%s">%s</a></li>', esc_url( $crumb['url'] ), esc_html( $crumb['name'] ) );
 		}

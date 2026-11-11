@@ -4,7 +4,7 @@ Tags: seo, schema, json-ld, sitemap, breadcrumbs
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.21.0
+Stable tag: 1.21.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -113,6 +113,13 @@ Include that file in nginx's `http` block, and in the site's PDF location add `a
 5. The Event and Course blocks on a phone.
 
 == Changelog ==
+
+= 1.21.1 =
+* Fixed: for screen readers and voice control, on Settings → SEO, the category and tag forms and the profile screen: the note under each field is that field's description, checkboxes and radio buttons have labels tied to them, "Who runs this site" is a named group, and each "Fix" link of the setup checklist says what it fixes.
+* Fixed: the checklist in the SEO panel and on Publish says each item's state in words to screen readers ("Done", "Missing", "Advice"); its marks were hidden from them. The lists' titles are headings, and a required meta description is marked required.
+* Fixed: a breadcrumb step without an address (a category whose link can't be made) is plain text, no longer marked as the current page: a trail has one current page, its last step.
+* Changed: the Course block's "Enroll" link and the Event block's "Get tickets" link say which course or event to screen readers, for pages with several.
+* Changed: phone keyboards no longer capitalize or correct fields for addresses, codes and handles, and the green check marks on the settings screen and in the SEO panel have more contrast.
 
 = 1.21.0 =
 * Changed: a post whose canonical URL names another address leaves the sitemap. Its page tells search engines the original is elsewhere, and a sitemap that listed it said the opposite. A canonical that is the post's own address, however it was typed (http or https, with or without "www." or the closing slash, letters written as escapes or not), changes nothing; the checklist in the editor reads addresses the same way. This also holds for a canonical set with a previous SEO plugin. A sitemap page left without addresses this way is served empty, as WordPress 7.2 does, instead of answering 404.

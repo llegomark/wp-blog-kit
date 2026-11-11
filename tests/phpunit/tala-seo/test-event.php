@@ -109,7 +109,7 @@ class Test_Tala_SEO_Event extends Tala_SEO_Test_Case {
 			$card
 		);
 		$this->assertStringContainsString( '<dt>Where</dt><dd>Quezon City Hall<br>Elliptical Road, Quezon City, PH</dd>', $card );
-		$this->assertStringContainsString( '<dt>Tickets</dt><dd>PHP 500 · On sale · <a href="https://tickets.example.com/reading">Get tickets</a></dd>', $card );
+		$this->assertStringContainsString( '<dt>Tickets</dt><dd>PHP 500 · On sale · <a href="https://tickets.example.com/reading" aria-label="Get tickets: Reading workshop">Get tickets</a></dd>', $card, 'The link says which event, for a page with several' );
 		$this->assertStringContainsString( '<dt>Organizer</dt><dd><a href="https://guronotes.example.com">Guro Notes</a></dd>', $card );
 		$this->assertStringContainsString( '<p>A day of reading games for grade 1 teachers.</p>', $card );
 

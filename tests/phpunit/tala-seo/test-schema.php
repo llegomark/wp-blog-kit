@@ -217,6 +217,16 @@ class Test_Tala_SEO_Schema extends Tala_SEO_Test_Case {
 		$this->go_to( home_url( '/' ) );
 		$this->show_breadcrumbs();
 		$this->assertArrayNotHasKey( 'BreadcrumbList', $this->schema(), 'Not on the home page' );
+
+		// A step without an address (a category whose link can't be made) is text, and the trail
+		// still has one current page: its last step.
+		$this->go_to( get_permalink( $post ) );
+		$broken = static fn() => new WP_Error( 'no_link' );
+		add_filter( 'term_link', $broken );
+		$trail  = $this->show_breadcrumbs();
+		remove_filter( 'term_link', $broken );
+		$this->assertSame( 1, substr_count( $trail, 'aria-current="page"' ) );
+		$this->assertStringContainsString( '<li>Guides</li><li>Classroom</li><li aria-current="page">Planning a lesson</li>', $trail );
 	}
 
 	/**

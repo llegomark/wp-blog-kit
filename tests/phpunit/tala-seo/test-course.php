@@ -89,7 +89,7 @@ class Test_Tala_SEO_Course extends Tala_SEO_Test_Case {
 		$this->assertStringContainsString( '<h2 class="wp-block-tala-seo-course__name">Teaching early reading</h2>', $card );
 		$this->assertStringContainsString( '<p>Plan phonics lessons that get every grade 1 learner reading.</p>', $card );
 		$this->assertStringContainsString(
-			'<dt>Offered by</dt><dd>Guro Notes</dd><dt>Level</dt><dd>Beginner</dd><dt>Format</dt><dd>Online</dd><dt>Time</dt><dd>About 6 hours</dd><dt>Instructor</dt><dd>Ana Reyes</dd><dt>Cost</dt><dd>PHP 1,500 · <a href="https://learn.example.com/reading">Enroll</a></dd>',
+			'<dt>Offered by</dt><dd>Guro Notes</dd><dt>Level</dt><dd>Beginner</dd><dt>Format</dt><dd>Online</dd><dt>Time</dt><dd>About 6 hours</dd><dt>Instructor</dt><dd>Ana Reyes</dd><dt>Cost</dt><dd>PHP 1,500 · <a href="https://learn.example.com/reading" aria-label="Enroll: Teaching early reading">Enroll</a></dd>',
 			$card
 		);
 

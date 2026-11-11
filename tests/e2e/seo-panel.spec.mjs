@@ -268,6 +268,12 @@ test.describe( 'the SEO panel while writing', () => {
 		await expect( needed.locator( 'li.is-missing', { hasText: 'Add a meta description' } ) ).toHaveCount( 1 );
 		await expect( needed.locator( 'li.is-missing', { hasText: 'Set a featured image' } ) ).toHaveCount( 1 );
 		await expect( needed.locator( 'li.is-missing .tala-seo-checklist__mark' ).first(), 'A mark as well as a colour' ).toHaveText( '✕' );
+		// The marks are hidden from screen readers, which hear the state in words; the lists' titles are headings.
+		await expect( needed.locator( 'li.is-missing' ).first() ).toHaveText( /^✕Missing: / );
+		await expect( needed.locator( 'li.is-missing .tala-seo-checklist__mark' ).first() ).toHaveAttribute( 'aria-hidden', 'true' );
+		expect( await needed.locator( 'li.is-missing .components-visually-hidden' ).first().evaluate( ( word ) => [ word.textContent, word.getBoundingClientRect().width <= 1 ] ), 'In words, for screen readers only' ).toEqual( [ 'Missing: ', true ] );
+		await expect( panel.getByRole( 'heading', { level: 3, name: 'Needed to publish' } ) ).toBeVisible();
+		await expect( panel.getByLabel( 'Meta description (required)' ) ).toHaveAttribute( 'aria-required', 'true' );
 		await expect( panel.getByLabel( 'Meta description (required)' ) ).toBeVisible();
 
 		await panel.getByLabel( /^Meta description/ ).fill( 'How to mark a quiz in ten minutes.' );
@@ -282,6 +288,7 @@ test.describe( 'the SEO panel while writing', () => {
 		await expect( needed.locator( 'li.is-ok', { hasText: 'Featured image has alternative text' } ) ).toHaveCount( 1 );
 		await expect( needed.locator( 'li.is-missing' ) ).toHaveCount( 0 );
 		await expect( needed.locator( 'li.is-ok .tala-seo-checklist__mark' ).first() ).toHaveText( '✓' );
+		await expect( needed.locator( 'li.is-ok' ).first() ).toHaveText( /^✓Done: / );
 	} );
 
 	test( 'pressing Publish on an unfinished post says it is not ready, and the server\'s refusal is shown', async ( { page } ) => {
@@ -291,7 +298,7 @@ test.describe( 'the SEO panel while writing', () => {
 		const prePublish = page.locator( '.tala-seo-prepublish' );
 		await expect( prePublish.getByRole( 'button', { name: 'SEO: not ready to publish' } ) ).toBeVisible();
 		await expect( prePublish ).toHaveClass( /is-blocked/ );
-		await expect( prePublish.getByText( 'Publishing will be refused until the items marked ✕ are done.' ) ).toBeVisible();
+		await expect( prePublish.getByText( 'Publishing will be refused until every item under "Needed to publish" is done (the ones marked ✕).' ) ).toBeVisible();
 		await expect( prePublish.locator( 'li.is-missing', { hasText: 'Add a meta description' } ) ).toHaveCount( 1 );
 
 		// Publishing anyway: the server refuses, the editor says why, and the post stays a draft.
@@ -313,6 +320,8 @@ test.describe( 'the SEO panel while writing', () => {
 
 		await expect( advice.locator( 'li.is-advice', { hasText: 'Choose a category other than the default one' } ) ).toHaveCount( 1 );
 		await expect( advice.locator( 'li.is-advice .tala-seo-checklist__mark' ).first(), 'Advice is marked differently from what is missing' ).toHaveText( '!' );
+		await expect( advice.locator( 'li.is-advice' ).first() ).toHaveText( /^!Advice: / );
+		await expect( panel.getByRole( 'heading', { level: 3, name: 'Recommended by Google' } ) ).toBeVisible();
 		await expect( advice.locator( 'li.is-ok', { hasText: 'Every image in the article has alternative text' } ) ).toHaveCount( 1 );
 		await expect( advice.getByText( /Featured image is/ ), 'Nothing about the image\'s width before there is one' ).toHaveCount( 0 );
 

@@ -251,7 +251,7 @@ function tala_seo_field_verification( $args ): void {
 		'facebook' => __( 'In Meta Business Suite, open Business settings → Brand safety → Domains, add the domain, choose "Meta-tag verification" and paste the code or the whole tag. Needed for Facebook and Instagram ads, the Meta Pixel and editing link previews; shared links look right without it.', 'tala-seo' ),
 	);
 	printf(
-		'<input type="text" class="regular-text code" id="%1$s" name="tala_seo[verify][%2$s]" value="%3$s" autocomplete="off" spellcheck="false" aria-describedby="%1$s-help"><p class="description" id="%1$s-help">%4$s</p>',
+		'<input type="text" class="regular-text code" id="%1$s" name="tala_seo[verify][%2$s]" value="%3$s" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="%1$s-help"><p class="description" id="%1$s-help">%4$s</p>',
 		esc_attr( $args['label_for'] ),
 		esc_attr( $args['service'] ),
 		esc_attr( tala_seo_settings()['verify'][ $args['service'] ] ?? '' ),
@@ -260,14 +260,16 @@ function tala_seo_field_verification( $args ): void {
 }
 
 /**
- * Field: organization or person.
+ * Field: organization or person. The two choices are a group named by the field's question (a
+ * legend for screen readers: the question beside them is a table cell, not their label).
  */
 function tala_seo_field_publisher_type(): void {
 	$type = tala_seo_settings()['publisher_type'];
 	?>
 	<fieldset>
-		<label><input type="radio" name="tala_seo[publisher_type]" value="organization" <?php checked( 'person' !== $type ); ?>> <?php esc_html_e( 'An organization or brand', 'tala-seo' ); ?></label><br>
-		<label><input type="radio" name="tala_seo[publisher_type]" value="person" <?php checked( 'person' === $type ); ?>> <?php esc_html_e( 'A person', 'tala-seo' ); ?></label>
+		<legend class="screen-reader-text"><span><?php esc_html_e( 'Who runs this site', 'tala-seo' ); ?></span></legend>
+		<label for="tala-seo-publisher-organization"><input type="radio" id="tala-seo-publisher-organization" name="tala_seo[publisher_type]" value="organization" <?php checked( 'person' !== $type ); ?>> <?php esc_html_e( 'An organization or brand', 'tala-seo' ); ?></label><br>
+		<label for="tala-seo-publisher-person"><input type="radio" id="tala-seo-publisher-person" name="tala_seo[publisher_type]" value="person" <?php checked( 'person' === $type ); ?>> <?php esc_html_e( 'A person', 'tala-seo' ); ?></label>
 	</fieldset>
 	<?php
 }
@@ -277,7 +279,7 @@ function tala_seo_field_publisher_type(): void {
  */
 function tala_seo_field_publisher_name(): void {
 	printf(
-		'<input type="text" class="regular-text" id="tala-seo-publisher-name" name="tala_seo[publisher_name]" value="%s" placeholder="%s"><p class="description">%s</p>',
+		'<input type="text" class="regular-text" id="tala-seo-publisher-name" name="tala_seo[publisher_name]" value="%s" placeholder="%s" aria-describedby="tala-seo-publisher-name-help"><p class="description" id="tala-seo-publisher-name-help">%s</p>',
 		esc_attr( tala_seo_settings()['publisher_name'] ),
 		esc_attr( tala_seo_site_name() ),
 		esc_html__( 'Leave empty to use the site title. Google expects the same name as the site name.', 'tala-seo' )
@@ -289,7 +291,7 @@ function tala_seo_field_publisher_name(): void {
  */
 function tala_seo_field_same_as(): void {
 	printf(
-		'<textarea class="large-text" rows="4" id="tala-seo-same-as" name="tala_seo[same_as]" placeholder="https://www.facebook.com/yourpage">%s</textarea><p class="description">%s</p>',
+		'<textarea class="large-text" rows="4" id="tala-seo-same-as" name="tala_seo[same_as]" placeholder="https://www.facebook.com/yourpage" autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="tala-seo-same-as-help">%s</textarea><p class="description" id="tala-seo-same-as-help">%s</p>',
 		esc_textarea( implode( "\n", tala_seo_settings()['same_as'] ) ),
 		esc_html__( 'One URL per line: Facebook page, YouTube channel and so on.', 'tala-seo' )
 	);
@@ -300,7 +302,7 @@ function tala_seo_field_same_as(): void {
  */
 function tala_seo_field_home_description(): void {
 	printf(
-		'<textarea class="large-text" rows="3" id="tala-seo-home-description" name="tala_seo[home_description]" placeholder="%s">%s</textarea><p class="description">%s</p>',
+		'<textarea class="large-text" rows="3" id="tala-seo-home-description" name="tala_seo[home_description]" placeholder="%s" aria-describedby="tala-seo-home-description-help">%s</textarea><p class="description" id="tala-seo-home-description-help">%s</p>',
 		esc_attr( get_bloginfo( 'description' ) ),
 		esc_textarea( tala_seo_settings()['home_description'] ),
 		esc_html__( 'Leave empty to use the tagline.', 'tala-seo' )
@@ -316,9 +318,9 @@ function tala_seo_field_default_image(): void {
 	?>
 	<img id="tala-seo-default-image-preview" src="<?php echo esc_url( $image ); ?>" alt="" style="max-width:300px;height:auto;display:block;margin-bottom:8px" <?php echo $image ? '' : 'hidden'; ?>>
 	<input type="hidden" id="tala-seo-default-image" name="tala_seo[default_image]" value="<?php echo esc_attr( $id ? (string) $id : '' ); ?>">
-	<button type="button" class="button" data-tala-media="tala-seo-default-image" data-preview="tala-seo-default-image-preview" data-title="<?php esc_attr_e( 'Default share image', 'tala-seo' ); ?>" data-button="<?php esc_attr_e( 'Use this image', 'tala-seo' ); ?>"><?php esc_html_e( 'Choose image', 'tala-seo' ); ?></button>
+	<button type="button" class="button" aria-describedby="tala-seo-default-image-help" data-tala-media="tala-seo-default-image" data-preview="tala-seo-default-image-preview" data-title="<?php esc_attr_e( 'Default share image', 'tala-seo' ); ?>" data-button="<?php esc_attr_e( 'Use this image', 'tala-seo' ); ?>"><?php esc_html_e( 'Choose image', 'tala-seo' ); ?></button>
 	<button type="button" class="button-link" data-tala-media-clear="tala-seo-default-image" data-preview="tala-seo-default-image-preview"><?php esc_html_e( 'Remove', 'tala-seo' ); ?></button>
-	<p class="description"><?php esc_html_e( 'Shown when the home page or a page without a featured image is shared. Use a 1200 × 630 px picture (the shape of link previews), not the logo.', 'tala-seo' ); ?></p>
+	<p class="description" id="tala-seo-default-image-help"><?php esc_html_e( 'Shown when the home page or a page without a featured image is shared. Use a 1200 × 630 px picture (the shape of link previews), not the logo.', 'tala-seo' ); ?></p>
 	<?php
 }
 
@@ -425,7 +427,8 @@ function tala_seo_settings_page(): void {
 		<ul>
 			<?php foreach ( tala_seo_readiness() as $check ) : ?>
 				<li>
-					<span aria-hidden="true" style="color:<?php echo esc_attr( $check['ok'] ? '#00a32a' : '#d63638' ); ?>"><?php echo $check['ok'] ? '✓' : '✕'; ?></span>
+					<?php // The mark's colors keep 3:1 or more on the screen's grey (#00a32a, WordPress's green, has 2.9:1). ?>
+					<span aria-hidden="true" style="color:<?php echo esc_attr( $check['ok'] ? '#007017' : '#d63638' ); ?>"><?php echo $check['ok'] ? '✓' : '✕'; ?></span>
 					<?php echo esc_html( $check['text'] ); ?>
 					<?php if ( ! $check['ok'] && isset( $buttons[ $check['action'] ?? '' ] ) ) : ?>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
@@ -434,7 +437,8 @@ function tala_seo_settings_page(): void {
 							<?php submit_button( $buttons[ $check['action'] ], 'secondary small', 'submit', false ); ?>
 						</form>
 					<?php elseif ( ! $check['ok'] ) : ?>
-						<a href="<?php echo esc_url( $check['link'] ); ?>"><?php esc_html_e( 'Fix', 'tala-seo' ); ?></a>
+						<?php // Each "Fix" goes to another screen: screen readers hear which item it fixes. ?>
+						<a href="<?php echo esc_url( $check['link'] ); ?>"><?php esc_html_e( 'Fix', 'tala-seo' ); ?><span class="screen-reader-text">: <?php echo esc_html( $check['text'] ); ?></span></a>
 					<?php endif; ?>
 				</li>
 			<?php endforeach; ?>
@@ -636,9 +640,9 @@ function tala_seo_photo_field( $user ): void {
 				<img id="tala-seo-photo-preview" src="<?php echo esc_url( $src ); ?>" alt="" width="96" height="96" style="border-radius:50%;object-fit:cover;display:block;margin-bottom:8px" <?php echo $src ? '' : 'hidden'; ?>>
 				<input type="hidden" id="tala-seo-photo" name="tala_seo_photo" value="<?php echo esc_attr( $id ? (string) $id : '' ); ?>">
 				<?php if ( current_user_can( 'upload_files' ) ) : // The picker is the media library, which needs this. ?>
-					<button type="button" class="button" data-tala-media="tala-seo-photo" data-preview="tala-seo-photo-preview" data-title="<?php esc_attr_e( 'Author photo', 'tala-seo' ); ?>" data-button="<?php esc_attr_e( 'Use this photo', 'tala-seo' ); ?>"><?php esc_html_e( 'Choose photo', 'tala-seo' ); ?></button>
+					<button type="button" class="button" aria-describedby="tala-seo-photo-help" data-tala-media="tala-seo-photo" data-preview="tala-seo-photo-preview" data-title="<?php esc_attr_e( 'Author photo', 'tala-seo' ); ?>" data-button="<?php esc_attr_e( 'Use this photo', 'tala-seo' ); ?>"><?php esc_html_e( 'Choose photo', 'tala-seo' ); ?></button>
 					<button type="button" class="button-link" data-tala-media-clear="tala-seo-photo" data-preview="tala-seo-photo-preview"><?php esc_html_e( 'Remove', 'tala-seo' ); ?></button>
-					<p class="description"><?php esc_html_e( 'A real photo of the author: square, at least 300 × 300 px. Shown with their articles and on their author page instead of Gravatar.', 'tala-seo' ); ?></p>
+					<p class="description" id="tala-seo-photo-help"><?php esc_html_e( 'A real photo of the author: square, at least 300 × 300 px. Shown with their articles and on their author page instead of Gravatar.', 'tala-seo' ); ?></p>
 				<?php else : ?>
 					<p class="description"><?php esc_html_e( 'A real photo of the author, shown with their articles and on their author page. Someone who can upload files, such as an editor, can choose it here.', 'tala-seo' ); ?></p>
 				<?php endif; ?>
@@ -667,7 +671,7 @@ function tala_seo_profiles_field( $user ): void {
 		<tr>
 			<th scope="row"><label for="tala-seo-profiles"><?php esc_html_e( 'Profile addresses', 'tala-seo' ); ?></label></th>
 			<td>
-				<textarea id="tala-seo-profiles" name="tala_seo_profiles" rows="6" class="large-text code" aria-describedby="tala-seo-profiles-description"><?php echo esc_textarea( implode( "\n", $lines ) ); ?></textarea>
+				<textarea id="tala-seo-profiles" name="tala_seo_profiles" rows="6" class="large-text code" autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="tala-seo-profiles-description"><?php echo esc_textarea( implode( "\n", $lines ) ); ?></textarea>
 				<p class="description" id="tala-seo-profiles-description">
 					<?php
 					/* translators: %d: how many addresses can be listed. */

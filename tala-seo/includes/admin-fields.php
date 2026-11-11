@@ -53,8 +53,8 @@ function tala_seo_term_add_fields(): void {
 		<p id="tala-seo-description-help"><?php echo esc_html( $help['description'] ); ?></p>
 	</div>
 	<div class="form-field">
-		<label><input type="checkbox" name="tala_seo_noindex" value="1"> <?php esc_html_e( 'Hide this page from search engines', 'tala-seo' ); ?></label>
-		<p><?php echo esc_html( $help['noindex'] ); ?></p>
+		<label for="tala-seo-noindex"><input type="checkbox" id="tala-seo-noindex" name="tala_seo_noindex" value="1" aria-describedby="tala-seo-noindex-help"> <?php esc_html_e( 'Hide this page from search engines', 'tala-seo' ); ?></label>
+		<p id="tala-seo-noindex-help"><?php echo esc_html( $help['noindex'] ); ?></p>
 	</div>
 	<?php
 }
@@ -89,10 +89,10 @@ function tala_seo_term_edit_fields( $term ): void {
 	<tr class="form-field">
 		<th scope="row"><?php esc_html_e( 'Search engines', 'tala-seo' ); ?></th>
 		<td>
-			<label><input type="checkbox" name="tala_seo_noindex" value="1" <?php checked( (bool) get_term_meta( $term->term_id, TALA_SEO_NOINDEX, true ) ); ?>> <?php esc_html_e( 'Hide this page from search engines', 'tala-seo' ); ?></label>
-			<p class="description"><?php echo esc_html( $help['noindex'] ); ?></p>
+			<label for="tala-seo-noindex"><input type="checkbox" id="tala-seo-noindex" name="tala_seo_noindex" value="1" aria-describedby="tala-seo-noindex-help<?php echo $legacy_hidden ? ' tala-seo-noindex-legacy' : ''; ?>" <?php checked( (bool) get_term_meta( $term->term_id, TALA_SEO_NOINDEX, true ) ); ?>> <?php esc_html_e( 'Hide this page from search engines', 'tala-seo' ); ?></label>
+			<p class="description" id="tala-seo-noindex-help"><?php echo esc_html( $help['noindex'] ); ?></p>
 			<?php if ( $legacy_hidden ) : ?>
-				<p class="description"><?php esc_html_e( 'Hidden now by a setting from another SEO plugin. Run "wp tala-seo import" to manage it here.', 'tala-seo' ); ?></p>
+				<p class="description" id="tala-seo-noindex-legacy"><?php esc_html_e( 'Hidden now by a setting from another SEO plugin. Run "wp tala-seo import" to manage it here.', 'tala-seo' ); ?></p>
 			<?php endif; ?>
 		</td>
 	</tr>
@@ -172,29 +172,29 @@ function tala_seo_author_fields( $user ): void {
 			<th scope="row"><label for="tala-seo-author-title"><?php esc_html_e( 'SEO title', 'tala-seo' ); ?></label></th>
 			<td>
 				<?php wp_nonce_field( 'tala_seo_author_' . $user->ID, 'tala_seo_author_nonce' ); ?>
-				<input type="text" class="regular-text" id="tala-seo-author-title" name="tala_seo_author_title" value="<?php echo esc_attr( (string) get_user_meta( $user->ID, TALA_SEO_TITLE, true ) ); ?>" placeholder="<?php echo esc_attr( $user->display_name ); ?>">
-				<p class="description"><?php esc_html_e( 'Leave empty to use the display name.', 'tala-seo' ); ?></p>
+				<input type="text" class="regular-text" id="tala-seo-author-title" name="tala_seo_author_title" value="<?php echo esc_attr( (string) get_user_meta( $user->ID, TALA_SEO_TITLE, true ) ); ?>" placeholder="<?php echo esc_attr( $user->display_name ); ?>" aria-describedby="tala-seo-author-title-help">
+				<p class="description" id="tala-seo-author-title-help"><?php esc_html_e( 'Leave empty to use the display name.', 'tala-seo' ); ?></p>
 			</td>
 		</tr>
 		<tr>
 			<th scope="row"><label for="tala-seo-author-description"><?php esc_html_e( 'Meta description', 'tala-seo' ); ?></label></th>
 			<td>
-				<textarea class="large-text" rows="3" id="tala-seo-author-description" name="tala_seo_author_description"><?php echo esc_textarea( (string) get_user_meta( $user->ID, TALA_SEO_DESCRIPTION, true ) ); ?></textarea>
-				<p class="description"><?php esc_html_e( 'Leave empty to use the Biographical Info.', 'tala-seo' ); ?></p>
+				<textarea class="large-text" rows="3" id="tala-seo-author-description" name="tala_seo_author_description" aria-describedby="tala-seo-author-description-help"><?php echo esc_textarea( (string) get_user_meta( $user->ID, TALA_SEO_DESCRIPTION, true ) ); ?></textarea>
+				<p class="description" id="tala-seo-author-description-help"><?php esc_html_e( 'Leave empty to use the Biographical Info.', 'tala-seo' ); ?></p>
 			</td>
 		</tr>
 		<tr>
 			<th scope="row"><?php esc_html_e( 'Search engines', 'tala-seo' ); ?></th>
 			<td>
-				<label><input type="checkbox" name="tala_seo_author_noindex" value="1" <?php checked( (bool) get_user_meta( $user->ID, TALA_SEO_NOINDEX, true ) ); ?>> <?php esc_html_e( 'Hide the author page from search engines', 'tala-seo' ); ?></label>
-				<p class="description"><?php esc_html_e( 'Adds noindex and leaves the author page out of the sitemap. The articles themselves stay indexed.', 'tala-seo' ); ?></p>
+				<label for="tala-seo-author-noindex"><input type="checkbox" id="tala-seo-author-noindex" name="tala_seo_author_noindex" value="1" aria-describedby="tala-seo-author-noindex-help" <?php checked( (bool) get_user_meta( $user->ID, TALA_SEO_NOINDEX, true ) ); ?>> <?php esc_html_e( 'Hide the author page from search engines', 'tala-seo' ); ?></label>
+				<p class="description" id="tala-seo-author-noindex-help"><?php esc_html_e( 'Adds noindex and leaves the author page out of the sitemap. The articles themselves stay indexed.', 'tala-seo' ); ?></p>
 			</td>
 		</tr>
 		<tr>
 			<th scope="row"><label for="tala-seo-fediverse"><?php esc_html_e( 'Fediverse handle', 'tala-seo' ); ?></label></th>
 			<td>
-				<input type="text" class="regular-text" id="tala-seo-fediverse" name="tala_seo_fediverse" value="<?php echo esc_attr( (string) get_user_meta( $user->ID, 'tala_seo_fediverse', true ) ); ?>" placeholder="@name@mastodon.social" autocomplete="off" spellcheck="false">
-				<p class="description"><?php esc_html_e( 'Your handle on Mastodon or another Fediverse server. When your articles are shared there, they credit you (fediverse:creator). Put your profile address under Contact Info as well.', 'tala-seo' ); ?></p>
+				<input type="text" class="regular-text" id="tala-seo-fediverse" name="tala_seo_fediverse" value="<?php echo esc_attr( (string) get_user_meta( $user->ID, 'tala_seo_fediverse', true ) ); ?>" placeholder="@name@mastodon.social" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="tala-seo-fediverse-help">
+				<p class="description" id="tala-seo-fediverse-help"><?php esc_html_e( 'Your handle on Mastodon or another Fediverse server. When your articles are shared there, they credit you (fediverse:creator). Put your profile address under Contact Info as well.', 'tala-seo' ); ?></p>
 			</td>
 		</tr>
 	</table>

@@ -187,7 +187,9 @@ function tala_seo_render_event( $attributes ) {
 		$tickets[] = esc_html( tala_seo_ticket_availabilities()[ $event['availability'] ] );
 	}
 	if ( '' !== $event['tickets'] && 'SoldOut' !== $event['availability'] ) {
-		$tickets[] = '<a href="' . esc_url( $event['tickets'] ) . '">' . esc_html__( 'Get tickets', 'tala-seo' ) . '</a>';
+		// A page can list several events: each link says which one, for screen readers ("Get tickets: Name").
+		/* translators: %s: the event's name. */
+		$tickets[] = '<a href="' . esc_url( $event['tickets'] ) . '" aria-label="' . esc_attr( sprintf( __( 'Get tickets: %s', 'tala-seo' ), $event['name'] ) ) . '">' . esc_html__( 'Get tickets', 'tala-seo' ) . '</a>';
 	}
 	if ( $tickets ) {
 		$rows[ __( 'Tickets', 'tala-seo' ) ] = implode( ' · ', $tickets );

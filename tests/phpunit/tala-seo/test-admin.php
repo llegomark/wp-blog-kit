@@ -597,4 +597,37 @@ class Test_Tala_SEO_Admin extends Tala_SEO_Test_Case {
 		}
 		$this->assertStringContainsString( 'type="tel"', $page );
 	}
+
+	/**
+	 * The settings screen, the category form and the profile's fields are wired for screen readers
+	 * and voice control: each note describes its field (aria-describedby), each checkbox and radio
+	 * button has a label for it, the two "Who runs this site" choices are a named group, each "Fix"
+	 * link says what it fixes, and fields for addresses and codes aren't capitalized or corrected.
+	 */
+	public function test_fields_are_wired_for_assistive_technology(): void {
+		wp_set_current_user( $this->admin );
+		update_option( 'blog_public', '0' ); // A setup item to fix.
+		tala_seo_settings_fields();
+		$page = get_echo( 'tala_seo_settings_page' );
+		$this->assertFieldsAreWired( $page );
+		$this->assertMatchesRegularExpression( '#<fieldset>\s*<legend class="screen-reader-text"><span>Who runs this site</span></legend>\s*<label for="tala-seo-publisher-organization"><input type="radio" id="tala-seo-publisher-organization"#', $page );
+		$this->assertGreaterThan( 0, preg_match_all( '#<a href="[^"]+">Fix<span class="screen-reader-text">: ([^<]+)</span></a>#', $page, $fixes ) );
+		$this->assertSame( $fixes[1], array_unique( $fixes[1] ), 'Each "Fix" has a name of its own' );
+		$this->assertMatchesRegularExpression( '/<textarea [^>]*name="tala_seo\[same_as\]"[^>]* autocapitalize="none" autocorrect="off" spellcheck="false"/', $page );
+		$this->assertStringNotContainsString( '#00a32a', $page, 'Marks of 3:1 or more on the screen\'s grey' );
+
+		$term = get_term( self::factory()->category->create() );
+		foreach ( array( get_echo( 'tala_seo_term_edit_fields', array( $term ) ), get_echo( 'tala_seo_term_add_fields' ) ) as $form ) {
+			$this->assertFieldsAreWired( $form );
+			$this->assertSame( 3, substr_count( $form, 'aria-describedby="tala-seo-' ), 'Title, description and the checkbox' );
+			$this->assertMatchesRegularExpression( '#<label for="tala-seo-noindex"><input type="checkbox" id="tala-seo-noindex"[^>]* aria-describedby="tala-seo-noindex-help"#', $form );
+			$this->assertStringContainsString( ' id="tala-seo-noindex-help">', $form );
+		}
+
+		$user    = get_userdata( $this->admin );
+		$profile = get_echo( 'tala_seo_author_fields', array( $user ) ) . get_echo( 'tala_seo_photo_field', array( $user ) ) . get_echo( 'tala_seo_profiles_field', array( $user ) );
+		$this->assertFieldsAreWired( $profile );
+		$this->assertMatchesRegularExpression( '/<input [^>]*id="tala-seo-fediverse"[^>]* autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="tala-seo-fediverse-help"/', $profile );
+		$this->assertMatchesRegularExpression( '/<button type="button" class="button" aria-describedby="tala-seo-photo-help"/', $profile, 'The photo\'s note describes its button' );
+	}
 }

@@ -214,4 +214,46 @@ abstract class Tala_SEO_Test_Case extends WP_UnitTestCase {
 		$settings[ $key ] = $value;
 		update_option( 'tala_seo', $settings );
 	}
+
+	/**
+	 * Asserts that the fields in some settings HTML are wired for screen readers and voice control:
+	 * every note under a field (class "description") has an id that a field names in its
+	 * aria-describedby, and every checkbox and radio button has an id that a label names in its
+	 * "for".
+	 *
+	 * @param string $html Settings HTML.
+	 */
+	protected function assertFieldsAreWired( string $html ): void {
+		$notes     = array();
+		$ids       = array();
+		$described = array();
+		$choices   = array();
+		$labelled  = array();
+		$tags      = new WP_HTML_Tag_Processor( $html );
+		while ( $tags->next_tag() ) {
+			$tag = $tags->get_tag();
+			$id  = $tags->get_attribute( 'id' );
+			if ( is_string( $id ) ) {
+				$ids[] = $id;
+			}
+			if ( $tags->has_class( 'description' ) ) {
+				$this->assertIsString( $id, 'A note under a field has an id' );
+				$notes[] = $id;
+			}
+			if ( is_string( $tags->get_attribute( 'aria-describedby' ) ) ) {
+				array_push( $described, ...explode( ' ', $tags->get_attribute( 'aria-describedby' ) ) );
+			}
+			if ( 'INPUT' === $tag && in_array( $tags->get_attribute( 'type' ), array( 'checkbox', 'radio' ), true ) ) {
+				$this->assertIsString( $id, 'A checkbox or radio button has an id: ' . $tags->get_attribute( 'name' ) );
+				$choices[] = $id;
+			}
+			if ( 'LABEL' === $tag && is_string( $tags->get_attribute( 'for' ) ) ) {
+				$labelled[] = $tags->get_attribute( 'for' );
+			}
+		}
+		$this->assertSame( array(), array_values( array_diff( $notes, $described ) ), 'Every note describes a field (aria-describedby)' );
+		$this->assertSame( array(), array_values( array_diff( $described, $ids ) ), 'Every aria-describedby names an element' );
+		$this->assertSame( array(), array_values( array_diff( $choices, $labelled ) ), 'Every checkbox and radio button has a label for it' );
+		$this->assertSame( count( $ids ), count( array_unique( $ids ) ), 'No id twice' );
+	}
 }

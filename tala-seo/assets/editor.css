@@ -39,9 +39,12 @@
 	font-style: italic;
 }
 
+/* A heading (h3, under the panel's own h2) at the text's size. */
 .tala-seo-checklist__title {
 	margin: 16px 0 8px;
+	font-size: inherit;
 	font-weight: 600;
+	line-height: inherit;
 }
 
 .tala-seo-checklist {
@@ -64,7 +67,7 @@
 }
 
 .tala-seo-checklist .is-ok .tala-seo-checklist__mark {
-	color: #00a32a;
+	color: #007017;
 }
 
 .tala-seo-checklist .is-missing .tala-seo-checklist__mark {

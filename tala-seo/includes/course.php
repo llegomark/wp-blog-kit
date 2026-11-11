@@ -138,7 +138,9 @@ function tala_seo_render_course( $attributes ) {
 		$cost[] = tala_seo_price_html( $course['price'], $course['currency'] );
 	}
 	if ( '' !== $course['enroll'] ) {
-		$cost[] = '<a href="' . esc_url( $course['enroll'] ) . '">' . esc_html__( 'Enroll', 'tala-seo' ) . '</a>';
+		// A page can list several courses: each link says which one, for screen readers ("Enroll: Name").
+		/* translators: %s: the course's name. */
+		$cost[] = '<a href="' . esc_url( $course['enroll'] ) . '" aria-label="' . esc_attr( sprintf( __( 'Enroll: %s', 'tala-seo' ), $course['name'] ) ) . '">' . esc_html__( 'Enroll', 'tala-seo' ) . '</a>';
 	}
 	if ( $cost ) {
 		$rows[ __( 'Cost', 'tala-seo' ) ] = implode( ' · ', $cost );
