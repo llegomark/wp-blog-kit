@@ -295,8 +295,12 @@ test.describe( 'Turnstile on the comment form', () => {
 		wp( 'config', 'set', 'TALA_GUARD_SITE_KEY', SITE_KEY, '--type=constant' );
 		try {
 			await logIn( page );
-			await page.goto( '/wp-admin/options-discussion.php' );
-			await expect( page.locator( '#tala-guard-site-key' ), 'The site key is shown, but can\'t be changed here' ).toBeDisabled();
+			// PHP keeps a compiled wp-config.php for a moment (OPcache checks a file for changes every
+			// couple of seconds), so the first requests may not see the constant yet.
+			await expect( async () => {
+				await page.goto( '/wp-admin/options-discussion.php' );
+				await expect( page.locator( '#tala-guard-site-key' ), 'The site key is shown, but can\'t be changed here' ).toBeDisabled( { timeout: 500 } );
+			} ).toPass( { timeout: 15_000 } );
 			await expect( page.locator( '#tala-guard-site-key' ) ).toHaveValue( SITE_KEY );
 			await expect( page.locator( '#tala-guard-secret-key' ), 'The secret is never shown' ).toHaveValue( '' );
 
