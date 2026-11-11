@@ -299,6 +299,18 @@ class Test_Tala_Guard extends Tala_SEO_Test_Case {
 	}
 
 	/**
+	 * Each key's note is its field's description for screen readers, and the site key, an ID, is
+	 * never capitalized or corrected by a phone's keyboard.
+	 */
+	public function test_fields_are_described(): void {
+		$this->set_keys();
+		$fields = get_echo( 'tala_guard_field_site_key' ) . get_echo( 'tala_guard_field_secret_key' );
+		$this->assertFieldsAreWired( $fields );
+		$this->assertSame( 2, substr_count( $fields, 'aria-describedby="tala-guard-' ) );
+		$this->assertMatchesRegularExpression( '/<input type="text" id="tala-guard-site-key"[^>]* autocapitalize="none" autocorrect="off" spellcheck="false"/', $fields );
+	}
+
+	/**
 	 * Without both keys the comment form is WordPress's own, nothing is loaded, and comments are
 	 * saved as before, without asking Cloudflare.
 	 */

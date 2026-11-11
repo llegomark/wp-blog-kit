@@ -47,19 +47,20 @@ function tala_guard_section(): void {
 }
 
 /**
- * The site key field.
+ * The site key field. Its note is the field's description for screen readers (aria-describedby),
+ * as on the secret key's.
  */
 function tala_guard_field_site_key(): void {
 	if ( defined( 'TALA_GUARD_SITE_KEY' ) ) {
-		printf( '<input type="text" id="tala-guard-site-key" class="regular-text code" value="%s" disabled>', esc_attr( tala_guard_keys()['site_key'] ) );
-		echo '<p class="description">' . esc_html__( 'Set in wp-config.php (TALA_GUARD_SITE_KEY).', 'tala-guard' ) . '</p>';
+		printf( '<input type="text" id="tala-guard-site-key" class="regular-text code" value="%s" aria-describedby="tala-guard-site-key-help" disabled>', esc_attr( tala_guard_keys()['site_key'] ) );
+		echo '<p class="description" id="tala-guard-site-key-help">' . esc_html__( 'Set in wp-config.php (TALA_GUARD_SITE_KEY).', 'tala-guard' ) . '</p>';
 		return;
 	}
 	printf(
-		'<input type="text" id="tala-guard-site-key" name="tala_guard[site_key]" class="regular-text code" value="%s" placeholder="0x4AAAAAAA…" autocomplete="off" spellcheck="false">',
+		'<input type="text" id="tala-guard-site-key" name="tala_guard[site_key]" class="regular-text code" value="%s" placeholder="0x4AAAAAAA…" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="tala-guard-site-key-help">',
 		esc_attr( tala_guard_keys()['site_key'] )
 	);
-	echo '<p class="description">' . esc_html__( 'Public: it goes into the comment form.', 'tala-guard' ) . '</p>';
+	echo '<p class="description" id="tala-guard-site-key-help">' . esc_html__( 'Public: it goes into the comment form.', 'tala-guard' ) . '</p>';
 }
 
 /**
@@ -67,16 +68,16 @@ function tala_guard_field_site_key(): void {
  */
 function tala_guard_field_secret_key(): void {
 	if ( defined( 'TALA_GUARD_SECRET_KEY' ) ) {
-		echo '<input type="password" id="tala-guard-secret-key" class="regular-text code" value="" disabled>';
-		echo '<p class="description">' . esc_html__( 'Set in wp-config.php (TALA_GUARD_SECRET_KEY).', 'tala-guard' ) . '</p>';
+		echo '<input type="password" id="tala-guard-secret-key" class="regular-text code" value="" aria-describedby="tala-guard-secret-key-help" disabled>';
+		echo '<p class="description" id="tala-guard-secret-key-help">' . esc_html__( 'Set in wp-config.php (TALA_GUARD_SECRET_KEY).', 'tala-guard' ) . '</p>';
 		return;
 	}
 	$saved = '' !== tala_guard_keys()['secret_key'];
 	printf(
-		'<input type="password" id="tala-guard-secret-key" name="tala_guard[secret_key]" class="regular-text code" value="" placeholder="%s" autocomplete="new-password" spellcheck="false">',
+		'<input type="password" id="tala-guard-secret-key" name="tala_guard[secret_key]" class="regular-text code" value="" placeholder="%s" autocomplete="new-password" spellcheck="false" aria-describedby="tala-guard-secret-key-help">',
 		esc_attr( $saved ? __( 'Saved (not shown)', 'tala-guard' ) : '' )
 	);
-	echo '<p class="description">' . esc_html(
+	echo '<p class="description" id="tala-guard-secret-key-help">' . esc_html(
 		$saved
 			? __( 'A secret key is saved. It isn\'t shown; enter a new one only to replace it.', 'tala-guard' )
 			: __( 'Private: it stays on the server and is only sent to Cloudflare. It can also be set in wp-config.php as TALA_GUARD_SECRET_KEY.', 'tala-guard' )

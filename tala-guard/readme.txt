@@ -4,7 +4,7 @@ Tags: comments, spam, anti-spam, turnstile, captcha
 Requires at least: 7.0
 Tested up to: 7.1
 Requires PHP: 8.5
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -82,6 +82,9 @@ Yes, with Cloudflare's test keys (developers.cloudflare.com/turnstile/troublesho
 2. Settings → Discussion: the Turnstile keys, with the secret key saved and not shown.
 
 == Changelog ==
+
+= 1.1.3 =
+* Fixed: on Settings → Discussion, the note under each Turnstile key is that field's description for screen readers, and phone keyboards no longer capitalize or correct the site key.
 
 = 1.1.2 =
 * Fixed: with the site key in wp-config.php (`TALA_GUARD_SITE_KEY`) and the secret key saved in Settings → Discussion, saving that screen no longer forgets the secret key and turns the check off. The site key field is shown but not sent, and the save took that for an emptied site key.
