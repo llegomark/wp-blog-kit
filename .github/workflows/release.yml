@@ -115,6 +115,10 @@ jobs:
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
+          # No cache is restored into the job that publishes: the Checks jobs can write to it, and
+          # they run tools downloaded on the day. (setup-node would turn its cache on by itself
+          # once package.json names a packageManager.)
+          package-manager-cache: false
 
       - name: Build the zips (build.sh) and their checksums
         if: steps.new.outputs.tags != ''

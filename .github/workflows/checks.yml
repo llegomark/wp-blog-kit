@@ -6,7 +6,7 @@
 # plugins, the PHPUnit integration tests on WordPress's test framework, and the browser tests
 # (Playwright) on the demo site.
 # Every action is pinned to a full commit SHA (the comment names the release); Dependabot
-# proposes updates (.github/dependabot.yml).
+# proposes updates (.github/dependabot.yml). The database image is pinned by its digest.
 name: Checks
 
 on:
@@ -98,10 +98,13 @@ jobs:
     name: PHPUnit (WordPress latest)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # A throwaway database for the tests (they empty it on every run).
+    # A throwaway database for the tests (they empty it on every run). The image is pinned by its
+    # digest (the tag names the release), like the actions: a tag can be pointed at another image.
+    # Dependabot doesn't update service images, so a newer 8.4 release is taken by hand: the tag's
+    # index digest from https://hub.docker.com/_/mysql/tags?name=8.4, in all three jobs.
     services:
       database:
-        image: mysql:8.4
+        image: mysql:8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
         env:
           MYSQL_ROOT_PASSWORD: root
         ports:
@@ -145,7 +148,7 @@ jobs:
     timeout-minutes: 15
     services:
       database:
-        image: mysql:8.4
+        image: mysql:8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
         env:
           MYSQL_ROOT_PASSWORD: root
         ports:
@@ -185,7 +188,7 @@ jobs:
     timeout-minutes: 20
     services:
       database:
-        image: mysql:8.4
+        image: mysql:8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902
         env:
           MYSQL_ROOT_PASSWORD: root
         ports:
